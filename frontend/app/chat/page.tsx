@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient, Session, Message } from '@/lib/api';
 
 export default function ChatPage() {
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -17,13 +17,16 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
     if (!user) {
       router.push('/login');
       return;
     }
 
     loadSessions();
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

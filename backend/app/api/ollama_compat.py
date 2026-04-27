@@ -57,7 +57,7 @@ async def ollama_chat_endpoint(request: Request):
 
     Open WebUI sends requests in Ollama's format:
     {
-      "model": "llama3.2:1b",
+      "model": "qwen2.5-coder:32b",
       "messages": [
         {"role": "user", "content": "Hello"}
       ],
@@ -73,7 +73,7 @@ async def ollama_chat_endpoint(request: Request):
     """
     try:
         body = await request.json()
-        model = body.get("model", "llama3.2:1b")
+        model = body.get("model", "qwen2.5-coder:32b")
         messages = body.get("messages", [])
         stream = body.get("stream", False)
 

@@ -93,16 +93,12 @@ class ApiClient {
 
   // Auth endpoints
   async login(email: string, password: string): Promise<LoginResponse> {
-    const formData = new URLSearchParams();
-    formData.append('email', email);
-    formData.append('password', password);
-
     const response = await fetch(`${this.baseURL}/api/auth/login`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({ email, password }),
     });
 
     if (!response.ok) {

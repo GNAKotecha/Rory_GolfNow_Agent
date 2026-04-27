@@ -14,7 +14,7 @@ class OllamaClient:
 
     def __init__(self):
         self.base_url = settings.ollama_url
-        self.default_model = "llama3.2:1b"  # Small model for testing
+        self.default_model = "qwen2.5-coder:32b"  # Code generation model
 
     async def check_connection(self) -> bool:
         """Check if Ollama service is reachable."""
