@@ -7,7 +7,7 @@ interface LoginResponse {
 
 interface User {
   id: number;
-  username: string;
+  name: string;
   email: string;
   role: string;
 }
@@ -92,9 +92,9 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(username: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string): Promise<LoginResponse> {
     const formData = new URLSearchParams();
-    formData.append('username', username);
+    formData.append('email', email);
     formData.append('password', password);
 
     const response = await fetch(`${this.baseURL}/api/auth/login`, {

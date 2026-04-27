@@ -157,7 +157,7 @@ export default function ChatPage() {
         <div className="p-4 border-t border-gray-700">
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <div className="font-medium">{user.username}</div>
+              <div className="font-medium">{user.name}</div>
               <div className="text-xs text-gray-400">{user.role}</div>
             </div>
             <button

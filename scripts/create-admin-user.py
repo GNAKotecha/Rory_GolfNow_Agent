@@ -8,7 +8,7 @@ Usage:
     python scripts/create-admin-user.py
 
     # Command-line args:
-    python scripts/create-admin-user.py --username admin --email admin@test.com --password MyPass123
+    python scripts/create-admin-user.py --name admin --email admin@test.com --password MyPass123
 """
 
 import os
@@ -32,7 +32,7 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_admin_user(database_url: str, username: str, email: str, password: str):
+def create_admin_user(database_url: str, name: str, email: str, password: str):
     """Create an admin user in the database."""
 
     # Create database engine
@@ -43,25 +43,25 @@ def create_admin_user(database_url: str, username: str, email: str, password: st
 
     # SQL to insert admin user
     insert_sql = text("""
-        INSERT INTO users (username, email, hashed_password, role, status, created_at)
-        VALUES (:username, :email, :hashed_password, 'ADMIN', 'APPROVED', :created_at)
-        RETURNING id, username, email, role, status;
+        INSERT INTO users (name, email, password_hash, role, approval_status, created_at)
+        VALUES (:name, :email, :password_hash, 'ADMIN', 'APPROVED', :created_at)
+        RETURNING id, name, email, role, approval_status;
     """)
 
     try:
         with engine.connect() as conn:
             # Check if user already exists
-            check_sql = text("SELECT id FROM users WHERE username = :username OR email = :email")
-            result = conn.execute(check_sql, {"username": username, "email": email})
+            check_sql = text("SELECT id FROM users WHERE name = :name OR email = :email")
+            result = conn.execute(check_sql, {"name": name, "email": email})
             if result.fetchone():
-                print(f"❌ Error: User with username '{username}' or email '{email}' already exists")
+                print(f"❌ Error: User with name '{name}' or email '{email}' already exists")
                 return False
 
             # Insert admin user
             result = conn.execute(insert_sql, {
-                "username": username,
+                "name": name,
                 "email": email,
-                "hashed_password": hashed_password,
+                "password_hash": hashed_password,
                 "created_at": datetime.utcnow()
             })
             conn.commit()
@@ -69,12 +69,12 @@ def create_admin_user(database_url: str, username: str, email: str, password: st
             user = result.fetchone()
             print("\n✅ Admin user created successfully!")
             print(f"   ID: {user[0]}")
-            print(f"   Username: {user[1]}")
+            print(f"   Name: {user[1]}")
             print(f"   Email: {user[2]}")
             print(f"   Role: {user[3]}")
             print(f"   Status: {user[4]}")
             print("\n🔐 You can now login with:")
-            print(f"   Username: {username}")
+            print(f"   Email: {email}")
             print(f"   Password: [the password you entered]")
             return True
 
@@ -89,7 +89,7 @@ def main():
     """Main function."""
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Create an admin user in the database")
-    parser.add_argument("--username", "-u", help="Admin username")
+    parser.add_argument("--name", "-n", help="Admin name")
     parser.add_argument("--email", "-e", help="Admin email")
     parser.add_argument("--password", "-p", help="Admin password")
     args = parser.parse_args()
@@ -110,15 +110,15 @@ def main():
         return 1
 
     # Get user details (from args or prompt)
-    if args.username:
-        username = args.username
+    if args.name:
+        name = args.name
     else:
         print("Enter admin user details:")
         print()
-        username = input("Username: ").strip()
+        name = input("Name: ").strip()
 
-    if not username:
-        print("❌ Error: Username cannot be empty")
+    if not name:
+        print("❌ Error: Name cannot be empty")
         return 1
 
     if args.email:
@@ -144,11 +144,11 @@ def main():
             return 1
 
     print()
-    print(f"Creating admin user '{username}'...")
+    print(f"Creating admin user '{name}'...")
     print()
 
     # Create admin user
-    success = create_admin_user(database_url, username, email, password)
+    success = create_admin_user(database_url, name, email, password)
 
     return 0 if success else 1
 

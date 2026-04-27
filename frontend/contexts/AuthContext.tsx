@@ -6,7 +6,7 @@ import { apiClient, User } from '@/lib/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -33,8 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser();
   }, []);
 
-  const login = async (username: string, password: string) => {
-    await apiClient.login(username, password);
+  const login = async (email: string, password: string) => {
+    await apiClient.login(email, password);
     const currentUser = await apiClient.getCurrentUser();
     setUser(currentUser);
   };
