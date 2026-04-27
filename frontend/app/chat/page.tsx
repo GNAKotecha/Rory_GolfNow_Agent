@@ -74,6 +74,16 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
 
+    // Optimistically add user message
+    const optimisticUserMessage: Message = {
+      id: Date.now(), // Temporary ID
+      session_id: currentSession?.id || 0,
+      role: 'user',
+      content: userMessage,
+      created_at: new Date().toISOString(),
+    };
+    setMessages([...messages, optimisticUserMessage]);
+
     try {
       const response = await apiClient.sendMessage({
         session_id: currentSession?.id,
@@ -90,10 +100,17 @@ export default function ChatPage() {
         }
       }
 
-      // Add both user and assistant messages
-      setMessages([...messages, response.message, response.response]);
+      // Replace optimistic message with real messages from server
+      setMessages(prev => {
+        // Remove the optimistic message
+        const withoutOptimistic = prev.filter(m => m.id !== optimisticUserMessage.id);
+        // Add real messages (user + assistant)
+        return [...withoutOptimistic, response.message, response.response].filter(Boolean);
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticUserMessage.id));
       alert('Failed to send message. Please try again.');
     } finally {
       setLoading(false);

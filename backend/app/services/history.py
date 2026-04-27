@@ -271,6 +271,21 @@ def build_conversation_context(
     Returns:
         Context messages for API call
     """
+    # System prompt
+    system_prompt = {
+        "role": "system",
+        "content": """You are Rory, a helpful AI assistant designed for internal company use.
+
+Your role is to:
+- Help users with their work tasks and questions
+- Provide clear, accurate, and helpful responses
+- Ask clarifying questions when needed
+- Be professional but friendly
+- Admit when you don't know something rather than guessing
+
+Keep responses concise and focused. When writing code, follow best practices and include explanations."""
+    }
+
     # Limit context window
     if len(messages) > max_context_messages:
         messages = messages[-max_context_messages:]
@@ -279,4 +294,5 @@ def build_conversation_context(
     messages = filter_system_messages(messages)
     messages = normalize_message_roles(messages)
 
-    return messages
+    # Prepend system prompt
+    return [system_prompt] + messages
