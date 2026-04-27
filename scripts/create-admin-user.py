@@ -17,19 +17,16 @@ import argparse
 from datetime import datetime
 from getpass import getpass
 
-# Add parent directory to path to import app modules
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
-
-from passlib.context import CryptContext
 from sqlalchemy import create_engine, text
-
-# Password hashing (same as in backend)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def hash_password(password: str) -> str:
     """Hash password using bcrypt."""
-    return pwd_context.hash(password)
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def create_admin_user(database_url: str, name: str, email: str, password: str):
