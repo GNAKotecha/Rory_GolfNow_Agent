@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+# Create non-root user
+RUN groupadd -r worker && useradd -r -g worker worker
+
+WORKDIR /workspace
+
+# Install minimal dependencies
+COPY requirements-worker.txt .
+RUN pip install --no-cache-dir -r requirements-worker.txt
+
+# Copy only worker code
+COPY app/workers /app/workers
+COPY app/config /app/config
+COPY app/__init__.py /app/__init__.py
+
+# Set ownership
+RUN chown -R worker:worker /workspace /app
+
+# Switch to non-root user
+USER worker
+
+# Expose worker API port
+EXPOSE 8080
+
+CMD ["uvicorn", "app.workers.api:app", "--host", "0.0.0.0", "--port", "8080"]

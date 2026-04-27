@@ -1,0 +1,100 @@
+services:
+  backend:
+    build: ../backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - OLLAMA_URL=${OLLAMA_URL}
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    volumes:
+      - ../backend:/app
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=agent_mvp
+      - POSTGRES_USER=agent_user
+      - POSTGRES_PASSWORD=agent_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://backend:8000/ollama
+      - WEBUI_AUTH=false
+    volumes:
+      - openwebui_data:/app/backend/data
+    depends_on:
+      - backend
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8080:8080"
+    environment:
+      - WORKER_ID=worker-1
+      - LOG_LEVEL=INFO
+    depends_on:
+      - backend
+    networks:
+      - default
+      - worker_net
+    volumes:
+      - worker_workspace:/workspace:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  worker_net:
+    driver: bridge
+    internal: false
+
+volumes:
+  postgres_data:
+  ollama_data:
+  openwebui_data:
+  worker_workspace:
