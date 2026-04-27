@@ -24,7 +24,7 @@ echo ""
 # Pull Ollama model
 echo "📦 Pulling Ollama model (this may take several minutes)..."
 echo "   Starting Ollama service..."
-docker-compose -f docker-compose.runpod.yml up -d ollama
+docker compose -f docker-compose.runpod.yml up -d ollama
 
 echo "   Waiting for Ollama to be ready..."
 sleep 10
@@ -38,7 +38,7 @@ echo ""
 
 # Start backend
 echo "🔧 Starting backend..."
-docker-compose -f docker-compose.runpod.yml up -d backend
+docker compose -f docker-compose.runpod.yml up -d backend
 
 echo ""
 echo "⏳ Waiting for backend to be ready..."
@@ -57,8 +57,8 @@ echo "Test health:"
 echo "  curl http://localhost:8000/health"
 echo ""
 echo "View logs:"
-echo "  docker-compose -f docker-compose.runpod.yml logs -f"
+echo "  docker compose -f docker-compose.runpod.yml logs -f"
 echo ""
 echo "Stop services:"
-echo "  docker-compose -f docker-compose.runpod.yml down"
+echo "  docker compose -f docker-compose.runpod.yml down"
 echo ""

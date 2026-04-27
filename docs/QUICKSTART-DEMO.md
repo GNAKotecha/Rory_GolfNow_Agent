@@ -86,7 +86,7 @@ cd your-repo/backend
 export DATABASE_URL="postgresql://postgres.xxxx:[PASSWORD]@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
 export SECRET_KEY="your-generated-secret-key-from-step-1"
 
-# Start everything
+# Start everything (run from backend directory)
 ./start-runpod.sh
 ```
 
