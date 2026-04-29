@@ -70,7 +70,7 @@ class User(Base):
     approved_at = Column(DateTime, nullable=True)
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # Tool approval policy (fail-safe: defaults to requiring approval)
+    # Tool approval policy (defaults to not requiring approval unless explicitly enabled)
     require_tool_approval = Column(Integer, default=False, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
