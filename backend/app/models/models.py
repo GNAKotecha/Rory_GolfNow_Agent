@@ -1,6 +1,6 @@
 """Database models for conversation persistence and workflow analytics."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 import enum
 
@@ -71,7 +71,7 @@ class User(Base):
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Tool approval policy (defaults to not requiring approval unless explicitly enabled)
-    require_tool_approval = Column(Integer, default=False, nullable=False)
+    require_tool_approval = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
