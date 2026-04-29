@@ -1,7 +1,11 @@
 """Ollama client service for LLM completions."""
 import httpx
+import json
+import logging
 from typing import List, Dict, Optional, Any
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaError(Exception):
@@ -158,6 +162,18 @@ class OllamaClient:
                 response.raise_for_status()
                 data = response.json()
 
+                # Debug logging to see raw Ollama response
+                logger.info(
+                    f"Ollama raw response",
+                    extra={
+                        "model": model_name,
+                        "response_keys": list(data.keys()),
+                        "message_keys": list(data.get("message", {}).keys()),
+                        "message_content_preview": str(data.get("message", {}).get("content", ""))[:200],
+                        "has_tool_calls": "tool_calls" in data.get("message", {}),
+                    }
+                )
+
                 # Extract the assistant's message
                 message = data.get("message", {})
 
@@ -172,6 +188,43 @@ class OllamaClient:
                     content = message.get("content", "")
                     if not content:
                         raise OllamaError("Empty response from Ollama")
+
+                    # Try to detect and parse JSON tool calls from content
+                    # Some models (like qwen2.5-coder) may return tool calls as JSON text
+                    content_stripped = content.strip()
+                    if content_stripped.startswith("{") and "name" in content_stripped and "arguments" in content_stripped:
+                        try:
+                            tool_call_data = json.loads(content_stripped)
+                            if "name" in tool_call_data and "arguments" in tool_call_data:
+                                logger.info(
+                                    "Detected JSON tool call in text content, converting to tool_calls format",
+                                    extra={"tool_name": tool_call_data.get("name")}
+                                )
+
+                                # Ensure arguments is a dict (might be string or dict)
+                                arguments = tool_call_data["arguments"]
+                                if isinstance(arguments, str):
+                                    try:
+                                        arguments = json.loads(arguments)
+                                    except json.JSONDecodeError:
+                                        # Keep as string if not valid JSON
+                                        pass
+
+                                # Convert to OpenAI-compatible format
+                                return {
+                                    "type": "tool_calls",
+                                    "tool_calls": [{
+                                        "id": f"call_{id(tool_call_data)}",  # Generate unique ID
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool_call_data["name"],
+                                            "arguments": arguments
+                                        }
+                                    }]
+                                }
+                        except json.JSONDecodeError:
+                            # Not valid JSON, treat as regular text
+                            pass
 
                     return {
                         "type": "text",
