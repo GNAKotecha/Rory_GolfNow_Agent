@@ -18,6 +18,7 @@ from app.services.error_handler import (
 )
 from app.services.agent_planner import AgentPlanner, TaskPlan
 from app.services.bash_tool import BashTool
+from app.services.simple_tools import SimpleTool
 from app.models.models import User
 
 if TYPE_CHECKING:
@@ -91,6 +92,7 @@ class AgenticService:
         self.run_id = run_id
         self.error_handler = AgentErrorHandler(max_retries=3)
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
+        self.simple_tools = SimpleTool()  # Initialize simple built-in tools
 
     async def execute(
         self,
@@ -468,13 +470,24 @@ When you receive tool results, use them to formulate your final response to the 
                         if self.rate_limiter:
                             await self.rate_limiter.record_tool_call(user.id)
 
-                        # Handle bash escape hatch separately
-                        if tool_name == "execute_bash":
+                        # Handle simple built-in tools first
+                        simple_tool_names = ["store_memory", "retrieve_memory", "list_memory_keys", "calculate"]
+                        if tool_name in simple_tool_names:
+                            from app.services.mcp_client import MCPToolResult
+                            simple_result = await self.simple_tools.execute_tool(tool_name, tool_args)
+                            result = MCPToolResult(
+                                success=simple_result["success"],
+                                result=simple_result.get("result"),
+                                error=simple_result.get("error"),
+                            )
+                        # Handle bash escape hatch
+                        elif tool_name == "execute_bash":
                             result = await self.bash_tool.execute_bash(
                                 script=tool_args.get("script", ""),
                                 description=tool_args.get("description", "No description"),
                                 timeout_seconds=30,
                             )
+                        # Handle MCP tools
                         else:
                             result = await self.mcp.execute_tool(
                                 tool_name=tool_name,
@@ -721,6 +734,10 @@ When you receive tool results, use them to formulate your final response to the 
             logger.info("Bash tool added to available tools")
         else:
             logger.warning("Bash tool unavailable - worker service not reachable")
+
+        # Add simple built-in tools (always available)
+        tool_definitions.extend(SimpleTool.get_tool_definitions())
+        logger.info(f"Added {len(SimpleTool.get_tool_definitions())} simple built-in tools")
 
         return tool_definitions
 
