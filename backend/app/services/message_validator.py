@@ -455,6 +455,12 @@ class OllamaMessageValidator:
                 self.db.add(db_entry)
                 self.db.commit()
             except Exception as e:
+                try:
+                    self.db.rollback()
+                except Exception as rollback_error:
+                    logger.warning(
+                        f"Failed to rollback DB session after failed run persistence error: {rollback_error}"
+                    )
                 logger.warning(f"Failed to persist failed run to DB: {e}")
                 # Don't fail - in-memory logging still worked
         
