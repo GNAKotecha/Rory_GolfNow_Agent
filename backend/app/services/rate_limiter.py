@@ -138,8 +138,6 @@ class UserRateLimitState:
     active_runs: int = 0
     tool_calls: List[datetime] = field(default_factory=list)
     model_requests: List[datetime] = field(default_factory=list)
-    tool_calls: list = field(default_factory=list)  # List of timestamps
-    model_requests: list = field(default_factory=list)  # List of timestamps
 
 
 class RateLimiter:
