@@ -387,10 +387,10 @@ class ApprovalService:
     async def get_pending_approvals(
         self,
         session_id: Optional[int] = None,
-        user_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Get pending approval requests (async-safe, thread-safe).
+        Get pending approval requests, optionally filtered by session ID
+        (async-safe, thread-safe).
         
         Creates a new DB session inside the thread pool to avoid
         thread-safety issues with SQLAlchemy sessions.
