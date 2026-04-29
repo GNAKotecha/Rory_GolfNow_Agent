@@ -227,7 +227,9 @@ async def chat_websocket(websocket: WebSocket):
             preferences = memory.get_user_preferences(authenticated_user.id)
 
             if preferences and ollama_messages:
-                system_content = f"User preferences: {preferences}\n\n"
+                # Sanitize preferences to prevent injection
+                safe_prefs = {k: str(v)[:200] for k, v in preferences.items()}
+                system_content = f"User preferences: {safe_prefs}\n\n"
                 if ollama_messages[0].get("role") == "system":
                     ollama_messages[0]["content"] = system_content + ollama_messages[0]["content"]
                 else:
@@ -307,6 +309,12 @@ async def chat_websocket(websocket: WebSocket):
                 })
 
             except Exception as e:
+                # Rollback any partial state to prevent broken transaction
+                try:
+                    db.rollback()
+                except Exception as rollback_error:
+                    logger.error(f"Failed to rollback transaction: {rollback_error}")
+
                 logger.error(f"Agentic workflow error: {e}", exc_info=True)
                 await websocket.send_json({
                     "type": "error",

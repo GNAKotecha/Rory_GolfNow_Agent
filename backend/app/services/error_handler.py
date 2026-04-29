@@ -174,14 +174,16 @@ class AgentErrorHandler:
             Confidence score 0.0-1.0
         """
         # Look for confidence indicators
+        # Order matters: check longer/more specific keywords first to avoid substring matches
+        # e.g., "uncertain" should be checked before "certain"
         confidence_keywords = {
-            "certain": 0.9,
-            "confident": 0.8,
-            "likely": 0.7,
-            "probably": 0.6,
-            "maybe": 0.5,
-            "unsure": 0.4,
             "uncertain": 0.3,
+            "confident": 0.8,
+            "certain": 0.9,
+            "probably": 0.6,
+            "likely": 0.7,
+            "unsure": 0.4,
+            "maybe": 0.5,
             "guess": 0.2,
         }
 

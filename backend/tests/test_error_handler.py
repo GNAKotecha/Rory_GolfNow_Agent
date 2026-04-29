@@ -333,14 +333,13 @@ def test_parse_confidence_uncertain():
     """Test parsing uncertain keyword."""
     handler = AgentErrorHandler()
 
-    # Note: "uncertain" contains "certain" as substring
-    # Due to dictionary iteration order, "certain" may match first
-    # Use response that clearly has uncertain but not certain alone
+    # "uncertain" contains "certain" as substring
+    # After fix: keywords are ordered to check "uncertain" before "certain"
     response = "I'm uncertain, not certain, about this."
     confidence = handler.parse_confidence(response)
 
-    # Will match "certain" substring first (dict iteration order dependent)
-    assert confidence in [0.3, 0.9]  # Either uncertain or certain
+    # Should now consistently match "uncertain" (0.3)
+    assert confidence == 0.3
 
 
 def test_parse_confidence_guess():
