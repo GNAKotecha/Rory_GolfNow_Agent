@@ -158,6 +158,22 @@ class AgenticService:
         # Get available tools for user's role
         available_tools = await self._get_tool_definitions(user)
 
+        # Add system prompt for tool usage (required for qwen2.5-coder and similar models)
+        if available_tools and not any(msg.get("role") == "system" for msg in current_messages):
+            tool_names = [tool["function"]["name"] for tool in available_tools]
+            system_prompt = f"""You are a helpful AI assistant with access to tools. When the user's request requires external actions, data retrieval, or computation, you MUST use the available tools by making function calls.
+
+Available tools: {', '.join(tool_names)}
+
+To use a tool, respond with a function call in the format expected by the API. Do NOT describe what you would do - actually call the tool.
+
+When you receive tool results, use them to formulate your final response to the user."""
+
+            current_messages.insert(0, {
+                "role": "system",
+                "content": system_prompt
+            })
+
         logger.info(
             "Starting agentic workflow",
             extra={
