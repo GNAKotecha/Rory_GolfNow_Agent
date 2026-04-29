@@ -715,8 +715,12 @@ When you receive tool results, use them to formulate your final response to the 
                 }
             })
 
-        # Add bash escape hatch tool (always available)
-        tool_definitions.append(BashTool.get_tool_definition())
+        # Add bash escape hatch tool (only if worker available)
+        if await self.bash_tool.is_available():
+            tool_definitions.append(BashTool.get_tool_definition())
+            logger.info("Bash tool added to available tools")
+        else:
+            logger.warning("Bash tool unavailable - worker service not reachable")
 
         return tool_definitions
 

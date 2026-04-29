@@ -189,6 +189,40 @@ class BashTool:
         config = WorkerConfig(url=worker_url, timeout_seconds=120)
         self.worker = WorkerClient(config)
         self.run_id = run_id
+        self._is_available = None  # Cache availability status
+
+    async def is_available(self) -> bool:
+        """
+        Check if worker service is available.
+
+        Returns:
+            True if worker can be reached, False otherwise
+        """
+        if self._is_available is not None:
+            return self._is_available
+
+        try:
+            # Try a simple health check by submitting a minimal job
+            import asyncio
+            result = await asyncio.wait_for(
+                self.worker.submit_job(
+                    script_name="bash_runner",
+                    arguments={
+                        "script": "echo 'test'",
+                        "description": "Health check",
+                        "workspace_path": "/workspace",
+                    },
+                    timeout_seconds=5,
+                ),
+                timeout=5.0
+            )
+            self._is_available = True
+            logger.info("Worker service is available")
+            return True
+        except Exception as e:
+            self._is_available = False
+            logger.warning(f"Worker service unavailable: {e}")
+            return False
 
     async def execute_bash(
         self,
