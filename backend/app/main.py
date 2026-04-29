@@ -6,6 +6,7 @@ from app.api.admin import router as admin_router
 from app.api.admin_analytics import router as admin_analytics_router
 from app.api.sessions import router as sessions_router
 from app.api.chat import router as chat_router
+from app.api.chat_ws import router as chat_ws_router
 from app.api.ollama_compat import router as ollama_compat_router
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(admin_analytics_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
+app.include_router(chat_ws_router, prefix="/api")  # WebSocket endpoint
 app.include_router(ollama_compat_router)  # Ollama-compatible endpoints for Open WebUI
 
 

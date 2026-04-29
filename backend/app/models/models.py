@@ -1,6 +1,6 @@
 """Database models for conversation persistence and workflow analytics."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 import enum
 
@@ -69,6 +69,10 @@ class User(Base):
     approval_status = Column(SQLEnum(ApprovalStatus), default=ApprovalStatus.PENDING, nullable=False)
     approved_at = Column(DateTime, nullable=True)
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Tool approval policy (defaults to not requiring approval unless explicitly enabled)
+    require_tool_approval = Column(Integer, default=False, nullable=False)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -175,3 +179,56 @@ class WorkflowClassification(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
+
+
+class UserPreference(Base):
+    """User preferences for cross-session personalization."""
+    __tablename__ = "user_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    key = Column(String(255), nullable=False)
+    value = Column(JSON, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'key', name='uq_user_preferences_user_key'),
+    )
+
+
+class WorkflowMemory(Base):
+    """Past workflow outcomes for learning patterns."""
+    __tablename__ = "workflow_memory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    workflow_type = Column(String(100), nullable=False, index=True)
+    outcome = Column(String(50), nullable=False)
+    context = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class DomainKnowledge(Base):
+    """Domain-specific knowledge discovered during execution."""
+    __tablename__ = "domain_knowledge"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    domain = Column(String(100), nullable=False, index=True)
+    knowledge = Column(Text, nullable=False)
+    source = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class FailedRun(Base):
+    """Failed run logs for debugging and analytics."""
+    __tablename__ = "failed_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=True, index=True)
+    run_id = Column(String(255), nullable=True, index=True)
+    error_type = Column(String(100), nullable=False, index=True)
+    error_message = Column(Text, nullable=False)
+    original_message_count = Column(Integer, nullable=False)
+    context = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

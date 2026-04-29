@@ -1,6 +1,6 @@
 """Ollama client service for LLM completions."""
 import httpx
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from app.core.config import settings
 
 
@@ -93,6 +93,90 @@ class OllamaClient:
                     raise OllamaError("Empty response from Ollama")
 
                 return assistant_message
+
+        except httpx.TimeoutException:
+            raise OllamaError("Ollama request timed out")
+        except httpx.ConnectError:
+            raise OllamaError("Cannot connect to Ollama service")
+        except httpx.HTTPStatusError as e:
+            raise OllamaError(f"Ollama HTTP error: {e.response.status_code}")
+        except Exception as e:
+            if isinstance(e, OllamaError):
+                raise
+            raise OllamaError(f"Ollama request failed: {str(e)}")
+
+    async def generate_chat_completion_with_tools(
+        self,
+        messages: List[Dict[str, str]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        model: Optional[str] = None,
+        keep_alive: str = "5m",
+    ) -> Dict[str, Any]:
+        """
+        Generate a chat completion with optional tool calling support.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            tools: Optional tool definitions in OpenAI/Ollama format
+            model: Model name (defaults to self.default_model)
+            keep_alive: How long to keep model loaded
+
+        Returns:
+            Dict containing either:
+            - {"type": "text", "content": "response text"}
+            - {"type": "tool_calls", "tool_calls": [...]}
+
+        Raises:
+            OllamaError: If the request fails
+        """
+        model_name = model or self.default_model
+
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": False,
+            "keep_alive": keep_alive,
+        }
+
+        # Add tools to payload if provided
+        if tools:
+            payload["tools"] = tools
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/chat",
+                    json=payload
+                )
+
+                if response.status_code == 404:
+                    raise OllamaError(
+                        f"Model '{model_name}' not found. "
+                        f"Pull it with: docker exec infrastructure-ollama-1 ollama pull {model_name}"
+                    )
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Extract the assistant's message
+                message = data.get("message", {})
+
+                # Check if response contains tool calls
+                if "tool_calls" in message and message["tool_calls"]:
+                    return {
+                        "type": "tool_calls",
+                        "tool_calls": message["tool_calls"]
+                    }
+                else:
+                    # Regular text response
+                    content = message.get("content", "")
+                    if not content:
+                        raise OllamaError("Empty response from Ollama")
+
+                    return {
+                        "type": "text",
+                        "content": content
+                    }
 
         except httpx.TimeoutException:
             raise OllamaError("Ollama request timed out")

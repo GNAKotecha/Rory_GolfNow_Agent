@@ -8,6 +8,9 @@ from app.models.models import (
     ToolCall,
     Approval,
     WorkflowClassification,
+    UserPreference,
+    WorkflowMemory,
+    DomainKnowledge,
 )
 
 
