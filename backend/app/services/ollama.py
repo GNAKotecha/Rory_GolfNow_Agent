@@ -191,40 +191,52 @@ class OllamaClient:
 
                     # Try to detect and parse JSON tool calls from content
                     # Some models (like qwen2.5-coder) may return tool calls as JSON text
-                    content_stripped = content.strip()
-                    if content_stripped.startswith("{") and "name" in content_stripped and "arguments" in content_stripped:
-                        try:
-                            tool_call_data = json.loads(content_stripped)
-                            if "name" in tool_call_data and "arguments" in tool_call_data:
-                                logger.info(
-                                    "Detected JSON tool call in text content, converting to tool_calls format",
-                                    extra={"tool_name": tool_call_data.get("name")}
-                                )
-
-                                # Ensure arguments is a dict (might be string or dict)
-                                arguments = tool_call_data["arguments"]
-                                if isinstance(arguments, str):
+                    # Look for JSON anywhere in the content, not just at the start
+                    if "name" in content and "arguments" in content:
+                        # Try to find and extract JSON object
+                        # Find the first { and try to parse from there
+                        json_start = content.find("{")
+                        if json_start != -1:
+                            # Try to extract complete JSON object
+                            for json_end in range(len(content), json_start, -1):
+                                json_candidate = content[json_start:json_end].strip()
+                                if json_candidate.endswith("}"):
                                     try:
-                                        arguments = json.loads(arguments)
-                                    except json.JSONDecodeError:
-                                        # Keep as string if not valid JSON
-                                        pass
+                                        tool_call_data = json.loads(json_candidate)
+                                        if "name" in tool_call_data and "arguments" in tool_call_data:
+                                            logger.info(
+                                                "Detected JSON tool call in text content, converting to tool_calls format",
+                                                extra={
+                                                    "tool_name": tool_call_data.get("name"),
+                                                    "json_start_pos": json_start,
+                                                    "had_prefix_text": json_start > 0
+                                                }
+                                            )
 
-                                # Convert to OpenAI-compatible format
-                                return {
-                                    "type": "tool_calls",
-                                    "tool_calls": [{
-                                        "id": f"call_{id(tool_call_data)}",  # Generate unique ID
-                                        "type": "function",
-                                        "function": {
-                                            "name": tool_call_data["name"],
-                                            "arguments": arguments
-                                        }
-                                    }]
-                                }
-                        except json.JSONDecodeError:
-                            # Not valid JSON, treat as regular text
-                            pass
+                                            # Ensure arguments is a dict (might be string or dict)
+                                            arguments = tool_call_data["arguments"]
+                                            if isinstance(arguments, str):
+                                                try:
+                                                    arguments = json.loads(arguments)
+                                                except json.JSONDecodeError:
+                                                    # Keep as string if not valid JSON
+                                                    pass
+
+                                            # Convert to OpenAI-compatible format
+                                            return {
+                                                "type": "tool_calls",
+                                                "tool_calls": [{
+                                                    "id": f"call_{id(tool_call_data)}",  # Generate unique ID
+                                                    "type": "function",
+                                                    "function": {
+                                                        "name": tool_call_data["name"],
+                                                        "arguments": arguments
+                                                    }
+                                                }]
+                                            }
+                                    except json.JSONDecodeError:
+                                        # Try next position
+                                        continue
 
                     return {
                         "type": "text",
