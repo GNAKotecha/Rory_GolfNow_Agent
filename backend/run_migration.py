@@ -2,7 +2,7 @@
 """Run database migration to add require_tool_approval column."""
 import sys
 from sqlalchemy import create_engine, text
-from app.config.settings import settings
+from app.core.config import settings
 
 def run_migration():
     """Apply the migration SQL."""
