@@ -1,6 +1,8 @@
+"""Workflow-related Pydantic schemas for API requests and responses."""
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
+from app.models.models import WorkflowCategory
 
 
 class WorkflowTemplateCreate(BaseModel):
@@ -8,7 +10,7 @@ class WorkflowTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     version: str = Field(..., pattern=r'^\d+\.\d+\.\d+$')
-    workflow_category: str = Field(..., pattern=r'^(WORKFLOW|QUESTION|BUG_FIX|FEATURE|ANALYSIS|CREATIVE|ADMIN|UNKNOWN)$')
+    workflow_category: WorkflowCategory
     definition: Dict[str, Any] = Field(..., description="Workflow definition as JSON")
 
 
@@ -18,7 +20,7 @@ class WorkflowTemplateResponse(BaseModel):
     name: str
     description: Optional[str]
     version: str
-    workflow_category: str
+    workflow_category: WorkflowCategory
     definition: Dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -40,7 +42,7 @@ class WorkflowRunResponse(BaseModel):
     template_id: int
     session_id: int
     status: str
-    workflow_category: str
+    workflow_category: WorkflowCategory
     input_data: Dict[str, Any]
     state: Dict[str, Any]
     output_data: Optional[Dict[str, Any]]
