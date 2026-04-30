@@ -1,5 +1,6 @@
 """Workflow orchestration service using LangGraph."""
 import os
+from datetime import datetime
 from typing import Dict, Any, Optional, Callable, TypedDict, Annotated
 from sqlalchemy.orm import Session
 from langgraph.graph import StateGraph, END
@@ -165,18 +166,76 @@ class WorkflowOrchestrator:
 
         The node function executes the step and updates state.
         """
-        def node_func(state: WorkflowState) -> Dict[str, Any]:
-            """Execute workflow step."""
-            # For Phase 1, just mark step as completed
-            # Real tool execution will be added in Phase 2
+        async def node_func(state: WorkflowState) -> Dict[str, Any]:
+            """Execute workflow step with metrics collection."""
+            workflow_run_id = state.get("workflow_run_id")
 
-            # Return updates to step_results field - these will be merged
-            return {
-                "step_results": {
-                    f"{step['id']}_status": "completed",
-                    f"{step['id']}_output": {"mock": "result"}
+            # Create step execution record
+            step_exec = WorkflowStepExecution(
+                workflow_run_id=workflow_run_id,
+                step_id=step["id"],
+                step_name=step["name"],
+                step_type=step["type"],
+                status=StepStatus.RUNNING,
+                input_data=step.get("config", {})
+            )
+            self.db.add(step_exec)
+            self.db.commit()
+            self.db.refresh(step_exec)
+
+            # Start metrics collection
+            metrics = self.metrics.record_step_start(
+                workflow_run_id=workflow_run_id,
+                step_execution_id=step_exec.id
+            )
+
+            try:
+                # Execute step (mock for Phase 1)
+                # Real tool execution will be added in Phase 2
+                result = {"mock": "result"}
+
+                # Update step execution
+                step_exec.status = StepStatus.COMPLETED
+                step_exec.output_data = result
+                step_exec.completed_at = datetime.utcnow()
+                self.db.commit()
+
+                # Record metrics
+                self.metrics.record_step_completion(
+                    metrics_id=metrics.id,
+                    success=True,
+                    output_data=result
+                )
+
+                # Return updates to step_results field - these will be merged
+                return {
+                    "step_results": {
+                        f"{step['id']}_status": "completed",
+                        f"{step['id']}_output": result
+                    }
                 }
-            }
+
+            except Exception as e:
+                # Update step execution
+                step_exec.status = StepStatus.FAILED
+                step_exec.error_message = str(e)
+                self.db.commit()
+
+                # Record metrics
+                self.metrics.record_step_completion(
+                    metrics_id=metrics.id,
+                    success=False,
+                    error_type=type(e).__name__,
+                    error_message=str(e)
+                )
+
+                # Return error state
+                return {
+                    "step_results": {
+                        f"{step['id']}_status": "failed",
+                        f"{step['id']}_error": str(e)
+                    }
+                }
 
         return node_func
 
@@ -185,8 +244,55 @@ class WorkflowOrchestrator:
         workflow_run_id: int
     ) -> WorkflowState:
         """
-        Execute a workflow run.
+        Execute a workflow run with full metrics collection.
 
-        TODO: Implement in next task.
+        Returns final workflow state.
         """
-        pass
+        # Load workflow run
+        workflow_run = self.db.query(WorkflowRun).get(workflow_run_id)
+        if not workflow_run:
+            raise ValueError(f"Workflow run not found: {workflow_run_id}")
+
+        # Update status
+        workflow_run.status = WorkflowRunStatus.RUNNING
+        self.db.commit()
+
+        # Build graph from template
+        graph = self.build_graph_from_template(workflow_run.template)
+
+        # Prepare initial state
+        # Handle case where current_state might be None or not have input_data
+        current_state = workflow_run.current_state or {}
+        input_data = current_state.get("input_data", {})
+
+        initial_state = WorkflowState(
+            workflow_run_id=workflow_run_id,
+            step_results=input_data
+        )
+
+        try:
+            # Execute graph
+            result = await graph.ainvoke(
+                initial_state,
+                config={
+                    "configurable": {
+                        "thread_id": str(workflow_run_id)
+                    }
+                }
+            )
+
+            # Update workflow run
+            workflow_run.status = WorkflowRunStatus.COMPLETED
+            workflow_run.current_state = {"results": dict(result)}
+            workflow_run.completed_at = datetime.utcnow()
+            self.db.commit()
+
+            return result
+
+        except Exception as e:
+            # Update workflow run
+            workflow_run.status = WorkflowRunStatus.FAILED
+            workflow_run.current_state = {"error": str(e)}
+            self.db.commit()
+
+            raise

@@ -3,6 +3,7 @@ import sys
 import os
 from pathlib import Path
 import pytest
+import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -21,6 +22,14 @@ from app.db.session import Base
 pytest_plugins = [
     "tests.fixtures.workflow_fixtures",
 ]
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create event loop for async tests."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="function")

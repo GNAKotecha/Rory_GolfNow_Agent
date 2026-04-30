@@ -1,6 +1,7 @@
 import pytest
+import asyncio
 from app.services.workflow_orchestrator import WorkflowOrchestrator
-from app.models.workflow import WorkflowTemplate, WorkflowRun, WorkflowRunStatus
+from app.models.workflow import WorkflowTemplate, WorkflowRun, WorkflowRunStatus, WorkflowStepExecution, StepStatus
 from app.models.models import WorkflowCategory
 
 
@@ -134,7 +135,8 @@ def test_build_graph_with_dependencies(db_session):
     assert graph is not None
 
 
-def test_execute_simple_graph(db_session):
+@pytest.mark.asyncio
+async def test_execute_simple_graph(db_session):
     """Test executing a simple workflow graph."""
     from app.services.workflow_orchestrator import WorkflowState
 
@@ -161,9 +163,9 @@ def test_execute_simple_graph(db_session):
     orchestrator = WorkflowOrchestrator(db_session)
     graph = orchestrator.build_graph_from_template(template)
 
-    # Execute graph with new state structure
+    # Execute graph with new state structure - now async
     initial_state = {"step_results": {}, "workflow_run_id": 1}
-    result = graph.invoke(initial_state)
+    result = await graph.ainvoke(initial_state)
 
     # Verify execution - results are in the step_results field
     assert result["step_results"]["step1_status"] == "completed"
@@ -250,3 +252,50 @@ def test_build_graph_validates_invalid_entry_point(db_session):
 
     with pytest.raises(ValueError, match="Entry point .* is not a valid step ID"):
         orchestrator.build_graph_from_template(template)
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_with_metrics(db_session, workflow_run_fixture):
+    """Test executing workflow and collecting metrics."""
+    # Update fixture template with valid definition
+    template = workflow_run_fixture.template
+    template.definition = {
+        "entry_point": "step1",
+        "steps": [
+            {
+                "id": "step1",
+                "name": "Test Step",
+                "type": "tool_call",
+                "config": {"tool": "mock_tool"},
+                "next": []
+            }
+        ]
+    }
+    db_session.commit()
+
+    orchestrator = WorkflowOrchestrator(db_session)
+
+    # Execute workflow
+    result = await orchestrator.execute_workflow(workflow_run_fixture.id)
+
+    # Verify workflow run updated
+    db_session.refresh(workflow_run_fixture)
+    assert workflow_run_fixture.status == WorkflowRunStatus.COMPLETED
+
+    # Verify step execution created
+    steps = db_session.query(WorkflowStepExecution).filter_by(
+        workflow_run_id=workflow_run_fixture.id
+    ).all()
+    assert len(steps) == 1
+    assert steps[0].step_id == "step1"
+    assert steps[0].status == StepStatus.COMPLETED
+
+    # Verify metrics collected
+    from app.models.metrics import StepMetrics
+    metrics = db_session.query(StepMetrics).filter_by(
+        workflow_run_id=workflow_run_fixture.id
+    ).all()
+    assert len(metrics) == 1
+    assert metrics[0].status == StepStatus.COMPLETED
+    assert metrics[0].started_at is not None
+    assert metrics[0].completed_at is not None
