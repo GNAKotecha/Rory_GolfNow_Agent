@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from app.models.models import WorkflowCategory
+from app.models.workflow import WorkflowRunStatus, StepStatus
 
 
 class WorkflowTemplateCreate(BaseModel):
@@ -41,7 +42,7 @@ class WorkflowRunResponse(BaseModel):
     id: int
     template_id: int
     session_id: int
-    status: str
+    status: WorkflowRunStatus
     workflow_category: WorkflowCategory
     input_data: Dict[str, Any]
     state: Dict[str, Any]
@@ -60,7 +61,7 @@ class WorkflowStepExecutionResponse(BaseModel):
     step_id: str
     step_name: str
     step_type: str
-    status: str
+    status: StepStatus
     inputs: Optional[Dict[str, Any]]
     outputs: Optional[Dict[str, Any]]
     error: Optional[str]
