@@ -10,6 +10,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 
@@ -23,6 +24,12 @@ class StepMetrics(Base):
     workflow_run_id = Column(
         Integer,
         ForeignKey("workflow_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    step_execution_id = Column(
+        Integer,
+        ForeignKey("workflow_step_executions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -53,6 +60,16 @@ class StepMetrics(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    workflow_run = relationship("WorkflowRun", back_populates="step_metrics")
+    step_execution = relationship("WorkflowStepExecution", back_populates="metrics")
 
 
 class LLMDecisionMetrics(Base):
@@ -67,10 +84,24 @@ class LLMDecisionMetrics(Base):
         nullable=False,
         index=True,
     )
+    step_execution_id = Column(
+        Integer,
+        ForeignKey("workflow_step_executions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     step_name = Column(String(255), nullable=False, index=True)
 
     # Decision tracking
-    decision_type = Column(String(100), nullable=False, index=True)
+    decision_point = Column(String(255), nullable=False, index=True)
+    prompt_template_id = Column(String(100), nullable=True, index=True)
+    prompt_hash = Column(String(64), nullable=True, index=True)
+    model_used = Column(String(100), nullable=False)
+    response_raw = Column(Text, nullable=True)
+    decision_parsed = Column(Text, nullable=True)
+    tokens_used = Column(Integer, nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    temperature = Column(Float, nullable=True)
     llm_reasoning = Column(Text, nullable=True)
 
     # Outcome tracking
@@ -87,3 +118,13 @@ class LLMDecisionMetrics(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    workflow_run = relationship("WorkflowRun", back_populates="llm_decision_metrics")
+    step_execution = relationship("WorkflowStepExecution", back_populates="llm_decisions")

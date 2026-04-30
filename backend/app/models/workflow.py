@@ -74,6 +74,8 @@ class WorkflowRun(Base):
     template = relationship("WorkflowTemplate", back_populates="workflow_runs")
     session = relationship("Session")
     step_executions = relationship("WorkflowStepExecution", back_populates="workflow_run", cascade="all, delete-orphan")
+    step_metrics = relationship("StepMetrics", back_populates="workflow_run", cascade="all, delete-orphan")
+    llm_decision_metrics = relationship("LLMDecisionMetrics", back_populates="workflow_run", cascade="all, delete-orphan")
 
 
 class WorkflowStepExecution(Base):
@@ -102,3 +104,5 @@ class WorkflowStepExecution(Base):
 
     # Relationships
     workflow_run = relationship("WorkflowRun", back_populates="step_executions")
+    metrics = relationship("StepMetrics", back_populates="step_execution", cascade="all, delete-orphan")
+    llm_decisions = relationship("LLMDecisionMetrics", back_populates="step_execution", cascade="all, delete-orphan")

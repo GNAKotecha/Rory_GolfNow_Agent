@@ -14,6 +14,7 @@ def test_step_metrics_creation(db_session):
 
     metrics = StepMetrics(
         workflow_run_id=1,
+        step_execution_id=1,
         step_name="research_step",
         started_at=started_at,
         completed_at=completed_at,
@@ -29,6 +30,7 @@ def test_step_metrics_creation(db_session):
 
     assert metrics.id is not None
     assert metrics.workflow_run_id == 1
+    assert metrics.step_execution_id == 1
     assert metrics.step_name == "research_step"
     assert metrics.status == "completed"
     assert metrics.tokens_used == 1500
@@ -44,6 +46,7 @@ def test_step_metrics_calculate_duration(db_session):
 
     metrics = StepMetrics(
         workflow_run_id=1,
+        step_execution_id=1,
         step_name="analysis_step",
         started_at=started_at,
         completed_at=completed_at,
@@ -62,8 +65,10 @@ def test_llm_decision_metrics_creation(db_session):
     """Test creating an LLMDecisionMetrics record."""
     metrics = LLMDecisionMetrics(
         workflow_run_id=1,
+        step_execution_id=1,
         step_name="decision_step",
-        decision_type="route_selection",
+        decision_point="route_selection",
+        model_used="qwen2.5:14b",
         llm_reasoning="Selected path A based on data quality",
         human_feedback="correct",
         outcome_quality=0.95,
@@ -74,8 +79,10 @@ def test_llm_decision_metrics_creation(db_session):
 
     assert metrics.id is not None
     assert metrics.workflow_run_id == 1
+    assert metrics.step_execution_id == 1
     assert metrics.step_name == "decision_step"
-    assert metrics.decision_type == "route_selection"
+    assert metrics.decision_point == "route_selection"
+    assert metrics.model_used == "qwen2.5:14b"
     assert metrics.llm_reasoning == "Selected path A based on data quality"
     assert metrics.human_feedback == "correct"
     assert metrics.outcome_quality == 0.95
