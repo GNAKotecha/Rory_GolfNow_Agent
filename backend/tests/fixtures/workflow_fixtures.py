@@ -11,7 +11,7 @@ from app.models.workflow import WorkflowTemplate, WorkflowRun, WorkflowRunStatus
 def workflow_template_fixture(db_session):
     """Create a test workflow template."""
     template = WorkflowTemplate(
-        name="test_workflow",
+        name="test_template",
         description="Test workflow for fixtures",
         definition={
             "steps": [
@@ -20,7 +20,7 @@ def workflow_template_fixture(db_session):
             ]
         },
         version="1.0.0",
-        workflow_category=WorkflowCategory.ANALYSIS,
+        workflow_category=WorkflowCategory.WORKFLOW,
         is_active=True,
     )
     db_session.add(template)
