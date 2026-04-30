@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 from app.models.workflow import (
     WorkflowTemplate,
     WorkflowRun,
@@ -58,5 +59,5 @@ def test_workflow_template_unique_name(db_session):
     )
     db_session.add(template2)
 
-    with pytest.raises(Exception):  # IntegrityError
+    with pytest.raises(IntegrityError):
         db_session.commit()

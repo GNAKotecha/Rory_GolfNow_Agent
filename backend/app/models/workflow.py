@@ -1,6 +1,6 @@
 """Workflow execution tracking models for LangGraph integration."""
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 import enum
 
@@ -31,15 +31,15 @@ class WorkflowTemplate(Base):
     __tablename__ = "workflow_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     version = Column(String(50), nullable=False)
     workflow_category = Column(SQLEnum(WorkflowCategory), nullable=False)
     definition = Column(JSON, nullable=False)  # LangGraph workflow definition
-    is_active = Column(Integer, default=1, nullable=False)  # 1=active, 0=inactive
+    is_active = Column(Boolean, default=True, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     workflow_runs = relationship("WorkflowRun", back_populates="template", cascade="all, delete-orphan")
@@ -67,8 +67,8 @@ class WorkflowRun(Base):
     current_state = Column(JSON, nullable=True)  # LangGraph state snapshot
     error_message = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     template = relationship("WorkflowTemplate", back_populates="workflow_runs")
@@ -97,8 +97,8 @@ class WorkflowStepExecution(Base):
     completed_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     workflow_run = relationship("WorkflowRun", back_populates="step_executions")
