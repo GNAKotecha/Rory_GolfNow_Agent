@@ -34,6 +34,9 @@ class MetricsCollector:
 
         Returns:
             Created StepMetrics instance
+
+        Raises:
+            Exception: If database commit fails
         """
         metrics = StepMetrics(
             workflow_run_id=workflow_run_id,
@@ -42,10 +45,14 @@ class MetricsCollector:
             started_at=datetime.now(timezone.utc),
             status=StepStatus.RUNNING
         )
-        self.db.add(metrics)
-        self.db.commit()
-        self.db.refresh(metrics)
-        return metrics
+        try:
+            self.db.add(metrics)
+            self.db.commit()
+            self.db.refresh(metrics)
+            return metrics
+        except Exception:
+            self.db.rollback()
+            raise
 
     def record_step_completion(
         self,
@@ -70,6 +77,14 @@ class MetricsCollector:
 
         Returns:
             Updated StepMetrics instance
+
+        Raises:
+            ValueError: If metrics_id does not exist
+            Exception: If database commit fails
+
+        Note:
+            Duration between started_at and completed_at can be computed by
+            consumers as (completed_at - started_at).total_seconds() * 1000
         """
         metrics = self.db.query(StepMetrics).filter(StepMetrics.id == metrics_id).first()
         if not metrics:
@@ -84,9 +99,13 @@ class MetricsCollector:
         metrics.tokens_used = tokens_used
         metrics.tool_latency_ms = tool_latency_ms
 
-        self.db.commit()
-        self.db.refresh(metrics)
-        return metrics
+        try:
+            self.db.commit()
+            self.db.refresh(metrics)
+            return metrics
+        except Exception:
+            self.db.rollback()
+            raise
 
     def record_llm_decision(
         self,
@@ -119,6 +138,9 @@ class MetricsCollector:
 
         Returns:
             Created LLMDecisionMetrics instance
+
+        Raises:
+            Exception: If database commit fails
         """
         decision = LLMDecisionMetrics(
             workflow_run_id=workflow_run_id,
@@ -134,10 +156,14 @@ class MetricsCollector:
             temperature=temperature,
             created_at=datetime.now(timezone.utc)
         )
-        self.db.add(decision)
-        self.db.commit()
-        self.db.refresh(decision)
-        return decision
+        try:
+            self.db.add(decision)
+            self.db.commit()
+            self.db.refresh(decision)
+            return decision
+        except Exception:
+            self.db.rollback()
+            raise
 
     # Phase 3: Analytics methods (stubs for now)
     def get_workflow_success_rate(self, workflow_template_id: int) -> float:

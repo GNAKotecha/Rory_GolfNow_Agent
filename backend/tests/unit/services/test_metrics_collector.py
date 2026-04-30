@@ -119,3 +119,42 @@ def test_record_llm_decision(db_session, workflow_run_fixture):
     assert decision.latency_ms == 250
     assert decision.temperature == 0.7
     assert decision.created_at is not None
+
+
+def test_record_step_completion_invalid_id(db_session):
+    """Test recording step completion with invalid metrics_id raises ValueError."""
+    collector = MetricsCollector(db_session)
+
+    with pytest.raises(ValueError) as exc_info:
+        collector.record_step_completion(
+            metrics_id=99999,
+            success=True,
+            output_data={"result": "success"}
+        )
+
+    assert "StepMetrics with id 99999 not found" in str(exc_info.value)
+
+
+def test_record_step_start_rollback_on_commit_failure(db_session, workflow_run_fixture, monkeypatch):
+    """Test that record_step_start rolls back transaction on commit failure."""
+    collector = MetricsCollector(db_session)
+
+    # Mock db.commit to raise an exception
+    def mock_commit():
+        raise Exception("Database commit failed")
+
+    monkeypatch.setattr(db_session, "commit", mock_commit)
+
+    # Verify rollback is called on failure
+    with pytest.raises(Exception) as exc_info:
+        collector.record_step_start(
+            workflow_run_id=workflow_run_fixture.id,
+            step_execution_id=1,
+            attempt_number=1
+        )
+
+    assert "Database commit failed" in str(exc_info.value)
+
+    # Verify no StepMetrics were persisted
+    metrics_count = db_session.query(StepMetrics).count()
+    assert metrics_count == 0
