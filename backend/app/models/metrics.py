@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
 )
@@ -35,7 +36,7 @@ class StepMetrics(Base):
         nullable=False,
         index=True,
     )
-    step_name = Column(String(255), nullable=False, index=True)
+    attempt_number = Column(Integer, nullable=False, default=1)
 
     # Timing
     started_at = Column(DateTime(timezone=True), nullable=False)
@@ -51,12 +52,14 @@ class StepMetrics(Base):
 
     # Resource usage
     tokens_used = Column(Integer, nullable=True)
-    cost_usd = Column(Float, nullable=True)
-    input_tokens = Column(Integer, nullable=True)
-    output_tokens = Column(Integer, nullable=True)
+    tool_latency_ms = Column(Integer, nullable=True)
+
+    # Output and errors
+    output_data = Column(JSON, nullable=True)
+    error_type = Column(String(100), nullable=True, index=True)
+    error_message = Column(Text, nullable=True)
 
     # Metadata
-    error_message = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
@@ -92,19 +95,17 @@ class LLMDecisionMetrics(Base):
         nullable=False,
         index=True,
     )
-    step_name = Column(String(255), nullable=False, index=True)
 
     # Decision tracking
     decision_point = Column(String(255), nullable=False, index=True)
     prompt_template_id = Column(String(100), nullable=True, index=True)
-    prompt_hash = Column(String(64), nullable=True, index=True)
+    prompt_text = Column(Text, nullable=False)
     model_used = Column(String(100), nullable=False)
-    response_raw = Column(Text, nullable=True)
+    response = Column(Text, nullable=True)
     decision_parsed = Column(Text, nullable=True)
     tokens_used = Column(Integer, nullable=True)
     latency_ms = Column(Integer, nullable=True)
     temperature = Column(Float, nullable=True)
-    llm_reasoning = Column(Text, nullable=True)
 
     # Outcome tracking
     human_feedback = Column(

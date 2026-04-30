@@ -15,13 +15,13 @@ def test_record_step_start(db_session, workflow_run_fixture):
     metrics = collector.record_step_start(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=1,
-        step_name="research"
+        attempt_number=1
     )
 
     assert metrics.id is not None
     assert metrics.workflow_run_id == workflow_run_fixture.id
     assert metrics.step_execution_id == 1
-    assert metrics.step_name == "research"
+    assert metrics.attempt_number == 1
     assert metrics.started_at is not None
     assert metrics.status == StepStatus.RUNNING
     assert metrics.completed_at is None
@@ -35,25 +35,26 @@ def test_record_step_completion_success(db_session, workflow_run_fixture):
     metrics = collector.record_step_start(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=1,
-        step_name="research"
+        attempt_number=1
     )
 
     # Complete step
     updated_metrics = collector.record_step_completion(
         metrics_id=metrics.id,
         success=True,
+        error_type=None,
         error_message=None,
-        input_tokens=100,
-        output_tokens=50,
-        cost_usd=0.002
+        output_data={"result": "success"},
+        tokens_used=150,
+        tool_latency_ms=250
     )
 
     assert updated_metrics.status == StepStatus.COMPLETED
     assert updated_metrics.completed_at is not None
-    assert updated_metrics.input_tokens == 100
-    assert updated_metrics.output_tokens == 50
     assert updated_metrics.tokens_used == 150
-    assert updated_metrics.cost_usd == 0.002
+    assert updated_metrics.tool_latency_ms == 250
+    assert updated_metrics.output_data == {"result": "success"}
+    assert updated_metrics.error_type is None
     assert updated_metrics.error_message is None
 
 
@@ -65,25 +66,26 @@ def test_record_step_completion_failure(db_session, workflow_run_fixture):
     metrics = collector.record_step_start(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=1,
-        step_name="research"
+        attempt_number=1
     )
 
     # Fail step
     updated_metrics = collector.record_step_completion(
         metrics_id=metrics.id,
         success=False,
+        error_type="validation_error",
         error_message="Invalid input",
-        input_tokens=30,
-        output_tokens=20,
-        cost_usd=0.001
+        output_data=None,
+        tokens_used=50,
+        tool_latency_ms=100
     )
 
     assert updated_metrics.status == StepStatus.FAILED
     assert updated_metrics.completed_at is not None
+    assert updated_metrics.error_type == "validation_error"
     assert updated_metrics.error_message == "Invalid input"
-    assert updated_metrics.input_tokens == 30
-    assert updated_metrics.output_tokens == 20
     assert updated_metrics.tokens_used == 50
+    assert updated_metrics.tool_latency_ms == 100
 
 
 def test_record_llm_decision(db_session, workflow_run_fixture):
@@ -93,27 +95,27 @@ def test_record_llm_decision(db_session, workflow_run_fixture):
     decision = collector.record_llm_decision(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=1,
-        step_name="research",
         decision_point="tool_selection",
+        prompt_template_id="template_001",
+        prompt_text="Select the appropriate tool for: test query",
+        model_used="qwen2.5:32b",
+        response='{"tool": "search", "query": "test"}',
+        decision_parsed='{"tool": "search"}',
         tokens_used=150,
         latency_ms=250,
-        model_used="qwen2.5:32b",
-        temperature=0.7,
-        response_raw='{"tool": "search", "query": "test"}',
-        decision_parsed='{"tool": "search"}',
-        llm_reasoning="User requested search"
+        temperature=0.7
     )
 
     assert decision.id is not None
     assert decision.workflow_run_id == workflow_run_fixture.id
     assert decision.step_execution_id == 1
-    assert decision.step_name == "research"
     assert decision.decision_point == "tool_selection"
+    assert decision.prompt_template_id == "template_001"
+    assert decision.prompt_text == "Select the appropriate tool for: test query"
+    assert decision.model_used == "qwen2.5:32b"
+    assert decision.response == '{"tool": "search", "query": "test"}'
+    assert decision.decision_parsed == '{"tool": "search"}'
     assert decision.tokens_used == 150
     assert decision.latency_ms == 250
-    assert decision.model_used == "qwen2.5:32b"
     assert decision.temperature == 0.7
-    assert decision.response_raw == '{"tool": "search", "query": "test"}'
-    assert decision.decision_parsed == '{"tool": "search"}'
-    assert decision.llm_reasoning == "User requested search"
     assert decision.created_at is not None
