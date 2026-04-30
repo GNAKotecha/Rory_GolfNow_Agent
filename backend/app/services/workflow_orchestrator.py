@@ -2,7 +2,7 @@
 import os
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph
 from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.models.workflow import (
@@ -70,9 +70,13 @@ class WorkflowOrchestrator:
             current_state={"input_data": input_data}
         )
 
-        self.db.add(workflow_run)
-        self.db.commit()
-        self.db.refresh(workflow_run)
+        try:
+            self.db.add(workflow_run)
+            self.db.commit()
+            self.db.refresh(workflow_run)
+        except Exception as e:
+            self.db.rollback()
+            raise
 
         return workflow_run
 
