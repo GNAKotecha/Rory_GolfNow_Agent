@@ -17,6 +17,11 @@ sys.path.insert(0, str(backend_dir))
 
 from app.db.session import Base
 
+# Load workflow fixtures
+pytest_plugins = [
+    "tests.fixtures.workflow_fixtures",
+]
+
 
 @pytest.fixture(scope="function")
 def db_session():

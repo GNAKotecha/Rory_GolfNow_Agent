@@ -9,10 +9,18 @@ from app.models.workflow import (
     StepStatus
 )
 
+# Import metrics models
+from app.models.metrics import (
+    StepMetrics,
+    LLMDecisionMetrics
+)
+
 __all__ = [
     "WorkflowTemplate",
     "WorkflowRun",
     "WorkflowStepExecution",
     "WorkflowRunStatus",
-    "StepStatus"
+    "StepStatus",
+    "StepMetrics",
+    "LLMDecisionMetrics"
 ]
