@@ -12,3 +12,7 @@ python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.9
+
+# Workflow orchestration
+langgraph==0.2.16
+langgraph-checkpoint-postgres==1.0.9
