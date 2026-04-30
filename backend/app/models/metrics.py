@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     DateTime,
+    Enum as SQLEnum,
     Float,
     ForeignKey,
     Integer,
@@ -13,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+from app.models.workflow import StepStatus
 
 
 class StepMetrics(Base):
@@ -41,9 +43,9 @@ class StepMetrics(Base):
 
     # Status
     status = Column(
-        String(50),
+        SQLEnum(StepStatus),
         nullable=False,
-        default="running",
+        default=StepStatus.RUNNING,
         index=True,
     )
 

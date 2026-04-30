@@ -5,20 +5,33 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models.metrics import LLMDecisionMetrics, StepMetrics
+from app.models.workflow import WorkflowStepExecution, StepStatus
 
 
-def test_step_metrics_creation(db_session):
+def test_step_metrics_creation(db_session, workflow_run_fixture):
     """Test creating a StepMetrics record."""
+    # Create parent WorkflowStepExecution
+    step_execution = WorkflowStepExecution(
+        workflow_run_id=workflow_run_fixture.id,
+        step_id="research_step_1",
+        step_name="research_step",
+        step_type="tool_call",
+        status=StepStatus.COMPLETED,
+    )
+    db_session.add(step_execution)
+    db_session.commit()
+    db_session.refresh(step_execution)
+
     started_at = datetime.now(timezone.utc)
     completed_at = started_at + timedelta(seconds=5)
 
     metrics = StepMetrics(
-        workflow_run_id=1,
-        step_execution_id=1,
+        workflow_run_id=workflow_run_fixture.id,
+        step_execution_id=step_execution.id,
         step_name="research_step",
         started_at=started_at,
         completed_at=completed_at,
-        status="completed",
+        status=StepStatus.COMPLETED,
         tokens_used=1500,
         cost_usd=0.015,
         input_tokens=1000,
@@ -29,28 +42,40 @@ def test_step_metrics_creation(db_session):
     db_session.commit()
 
     assert metrics.id is not None
-    assert metrics.workflow_run_id == 1
-    assert metrics.step_execution_id == 1
+    assert metrics.workflow_run_id == workflow_run_fixture.id
+    assert metrics.step_execution_id == step_execution.id
     assert metrics.step_name == "research_step"
-    assert metrics.status == "completed"
+    assert metrics.status == StepStatus.COMPLETED
     assert metrics.tokens_used == 1500
     assert metrics.cost_usd == 0.015
     assert metrics.input_tokens == 1000
     assert metrics.output_tokens == 500
 
 
-def test_step_metrics_calculate_duration(db_session):
+def test_step_metrics_calculate_duration(db_session, workflow_run_fixture):
     """Test duration calculation for StepMetrics."""
+    # Create parent WorkflowStepExecution
+    step_execution = WorkflowStepExecution(
+        workflow_run_id=workflow_run_fixture.id,
+        step_id="analysis_step_1",
+        step_name="analysis_step",
+        step_type="llm_call",
+        status=StepStatus.COMPLETED,
+    )
+    db_session.add(step_execution)
+    db_session.commit()
+    db_session.refresh(step_execution)
+
     started_at = datetime.now(timezone.utc)
     completed_at = started_at + timedelta(seconds=10)
 
     metrics = StepMetrics(
-        workflow_run_id=1,
-        step_execution_id=1,
+        workflow_run_id=workflow_run_fixture.id,
+        step_execution_id=step_execution.id,
         step_name="analysis_step",
         started_at=started_at,
         completed_at=completed_at,
-        status="completed",
+        status=StepStatus.COMPLETED,
     )
 
     db_session.add(metrics)
@@ -61,11 +86,23 @@ def test_step_metrics_calculate_duration(db_session):
     assert duration == 10.0
 
 
-def test_llm_decision_metrics_creation(db_session):
+def test_llm_decision_metrics_creation(db_session, workflow_run_fixture):
     """Test creating an LLMDecisionMetrics record."""
+    # Create parent WorkflowStepExecution
+    step_execution = WorkflowStepExecution(
+        workflow_run_id=workflow_run_fixture.id,
+        step_id="decision_step_1",
+        step_name="decision_step",
+        step_type="decision",
+        status=StepStatus.COMPLETED,
+    )
+    db_session.add(step_execution)
+    db_session.commit()
+    db_session.refresh(step_execution)
+
     metrics = LLMDecisionMetrics(
-        workflow_run_id=1,
-        step_execution_id=1,
+        workflow_run_id=workflow_run_fixture.id,
+        step_execution_id=step_execution.id,
         step_name="decision_step",
         decision_point="route_selection",
         model_used="qwen2.5:14b",
@@ -78,8 +115,8 @@ def test_llm_decision_metrics_creation(db_session):
     db_session.commit()
 
     assert metrics.id is not None
-    assert metrics.workflow_run_id == 1
-    assert metrics.step_execution_id == 1
+    assert metrics.workflow_run_id == workflow_run_fixture.id
+    assert metrics.step_execution_id == step_execution.id
     assert metrics.step_name == "decision_step"
     assert metrics.decision_point == "route_selection"
     assert metrics.model_used == "qwen2.5:14b"
@@ -94,10 +131,48 @@ def test_step_metrics_required_fields(db_session):
     metrics = StepMetrics(
         step_name="test_step",
         started_at=datetime.now(timezone.utc),
+        status=StepStatus.RUNNING,
     )
 
     db_session.add(metrics)
 
-    # Should fail because workflow_run_id is required
+    # Should fail because workflow_run_id and step_execution_id are required
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+
+def test_step_metrics_cascade_delete(db_session, workflow_run_fixture):
+    """Test that StepMetrics are deleted when parent WorkflowStepExecution is deleted."""
+    # Create parent WorkflowStepExecution
+    step_execution = WorkflowStepExecution(
+        workflow_run_id=workflow_run_fixture.id,
+        step_id="cascade_test_step",
+        step_name="cascade_step",
+        step_type="tool_call",
+        status=StepStatus.COMPLETED,
+    )
+    db_session.add(step_execution)
+    db_session.commit()
+    db_session.refresh(step_execution)
+
+    # Create StepMetrics
+    metrics = StepMetrics(
+        workflow_run_id=workflow_run_fixture.id,
+        step_execution_id=step_execution.id,
+        step_name="cascade_step",
+        started_at=datetime.now(timezone.utc),
+        status=StepStatus.COMPLETED,
+    )
+    db_session.add(metrics)
+    db_session.commit()
+    db_session.refresh(metrics)
+
+    metrics_id = metrics.id
+
+    # Delete parent
+    db_session.delete(step_execution)
+    db_session.commit()
+
+    # Verify metrics are deleted
+    deleted_metrics = db_session.query(StepMetrics).filter_by(id=metrics_id).first()
+    assert deleted_metrics is None

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.models.models import User, Session, UserRole
+from app.models.models import User, Session, UserRole, WorkflowCategory
 from app.models.workflow import WorkflowTemplate, WorkflowRun, WorkflowRunStatus
 
 
@@ -20,6 +20,7 @@ def workflow_template_fixture(db_session):
             ]
         },
         version="1.0.0",
+        workflow_category=WorkflowCategory.ANALYSIS,
         is_active=True,
     )
     db_session.add(template)
@@ -33,9 +34,9 @@ def workflow_run_fixture(db_session, workflow_template_fixture):
     """Create a test workflow run with user and session."""
     # Create user
     user = User(
-        username="test_user",
+        name="Test User",
         email="test@example.com",
-        hashed_password="hashed_password_123",
+        password_hash="hashed_password_123",
         role=UserRole.USER,
     )
     db_session.add(user)
@@ -55,10 +56,9 @@ def workflow_run_fixture(db_session, workflow_template_fixture):
 
     # Create workflow run
     workflow_run = WorkflowRun(
-        workflow_template_id=workflow_template_fixture.id,
+        template_id=workflow_template_fixture.id,
         session_id=session.id,
         status=WorkflowRunStatus.RUNNING,
-        input_data={"query": "test query"},
         started_at=datetime.now(timezone.utc),
     )
     db_session.add(workflow_run)
