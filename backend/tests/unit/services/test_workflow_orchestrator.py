@@ -278,6 +278,9 @@ async def test_execute_workflow_with_metrics(db_session, workflow_run_fixture):
     # Execute workflow
     result = await orchestrator.execute_workflow(workflow_run_fixture.id)
 
+    # Verify result state contains workflow_run_id
+    assert result.get("workflow_run_id") == workflow_run_fixture.id
+
     # Verify workflow run updated
     db_session.refresh(workflow_run_fixture)
     assert workflow_run_fixture.status == WorkflowRunStatus.COMPLETED
