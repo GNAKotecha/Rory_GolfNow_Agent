@@ -5,7 +5,7 @@ from langfuse import Langfuse
 
 
 class LangfuseConfig:
-    """Singleton for Langfuse client and callback configuration.
+    """Configuration utility for Langfuse callback handlers.
 
     Usage:
         handler = LangfuseConfig.get_callback_handler(
@@ -17,27 +17,6 @@ class LangfuseConfig:
         # Use in LangGraph
         config = RunnableConfig(callbacks=[handler] if handler else [])
     """
-
-    _instance: Optional[Langfuse] = None
-
-    @classmethod
-    def get_instance(cls) -> Optional[Langfuse]:
-        """Get or create Langfuse client singleton.
-
-        Returns:
-            Langfuse client if enabled, None otherwise
-        """
-        if not cls._is_enabled():
-            return None
-
-        if cls._instance is None:
-            cls._instance = Langfuse(
-                public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
-                secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
-                host=os.getenv("LANGFUSE_HOST", "http://localhost:3000")
-            )
-
-        return cls._instance
 
     @classmethod
     def get_callback_handler(

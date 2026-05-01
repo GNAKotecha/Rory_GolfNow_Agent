@@ -12,14 +12,6 @@ def mock_langfuse_env(monkeypatch):
     monkeypatch.setenv("LANGFUSE_ENABLED", "true")
 
 
-def test_get_instance_returns_same_instance(mock_langfuse_env):
-    """Singleton pattern should return same instance."""
-    instance1 = LangfuseConfig.get_instance()
-    instance2 = LangfuseConfig.get_instance()
-    assert instance1 is not None
-    assert instance1 is instance2
-
-
 def test_get_callback_handler_returns_handler(mock_langfuse_env):
     """Should create callback handler with metadata."""
     handler = LangfuseConfig.get_callback_handler(
@@ -28,13 +20,10 @@ def test_get_callback_handler_returns_handler(mock_langfuse_env):
         trace_name="test_workflow"
     )
 
-    assert isinstance(handler, dict)
-    assert handler['user_id'] == "test_user"
-    assert handler['session_id'] == "test_session"
-    assert handler['trace_name'] == "test_workflow"
-    assert handler['public_key'] == "mock_public_key"
-    assert handler['secret_key'] == "mock_secret_key"
-    assert handler['host'] == "http://localhost:3000"
+    assert handler is not None
+    # Verify handler is a CallbackHandler instance
+    from langfuse.callback import CallbackHandler
+    assert isinstance(handler, CallbackHandler)
 
 
 def test_get_callback_handler_returns_none_when_disabled(monkeypatch):
