@@ -17,3 +17,4 @@ pytest-asyncio==0.23.5
 # Workflow orchestration
 langgraph==0.2.16
 langgraph-checkpoint-postgres==1.0.9
+langfuse==2.60.10
