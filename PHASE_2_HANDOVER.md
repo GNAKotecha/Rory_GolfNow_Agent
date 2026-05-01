@@ -1,8 +1,8 @@
 # Phase 2 BRS Observability - Session Handover
 
 **Date**: 2026-05-01
-**Session Status**: 3 of 9 (33%)
-**Phase 2**: TASK 3 COMPLETE ✅
+**Session Status**: 4 of 9 (44%)
+**Phase 2**: TASK 4 COMPLETE ✅
 
 ---
 
@@ -190,6 +190,91 @@ None identified. Integration test skipped (requires Ollama running), but smoke t
 - kwargs mutation can cause subtle bugs - always create new dict when merging
 - Error handling critical for network-dependent LLM calls
 - Integration tests should be clearly separated from unit tests (skip when dependencies unavailable)
+
+---
+
+## Task 4: BRS Tool Registry (Definitions + Schemas) ✅
+
+**Commit**: `a0251f2`
+**Status**: Complete - Tests passing (4/4), TDD workflow complete
+
+### What Was Built
+- **BRS Tool Registry** (`backend/app/services/brs_tools/registry.py`)
+  - ToolParameter dataclass: defines tool input parameters (name, type, description, required, default)
+  - ToolDefinition dataclass: complete tool spec (name, description, parameters, cli_template, output_schema, timeout_seconds)
+  - BRSToolRegistry class: central registry for all BRS tools
+  - 3 initial tools registered:
+    1. brs_teesheet_init: Initialize teesheet database (params: club_name, club_id)
+    2. brs_create_superuser: Create admin account (params: club_name, email, name)
+    3. brs_config_validate: Validate club configuration (param: club_id)
+  - CLI templates use {param_name} placeholders for parameter substitution
+  - Methods: get_tool(name), get_all_tools(), list_tool_names()
+
+- **Pydantic Output Schemas** (`backend/app/services/brs_tools/schemas.py`)
+  - TeesheetInitOutput: success, database_name, stdout, error
+  - SuperuserCreateOutput: success, user_id, email, stdout, error
+  - ConfigValidateOutput: success, errors (list), warnings (list), stdout
+  - All schemas include success flag, stdout for debugging, and optional error field
+
+- **Module Structure** (`backend/app/services/brs_tools/__init__.py`)
+  - Docstring documents this is NOT an MCP server
+  - Internal service layer for direct subprocess execution
+  - Clear separation: Tool Registry → Execution Layer → Mock Mode
+
+- **Test Coverage**: 4 tests (all passing ✓)
+  - test_registry_get_all_tools: Verifies registry returns all registered tools
+  - test_registry_get_tool_by_name: Retrieves specific tool by name
+  - test_registry_get_nonexistent_tool_returns_none: Handles unknown tools gracefully
+  - test_tool_definition_cli_template_has_placeholders: Validates CLI template format
+
+### Files Created
+- `backend/app/services/brs_tools/__init__.py` (7 lines)
+- `backend/app/services/brs_tools/schemas.py` (29 lines)
+- `backend/app/services/brs_tools/registry.py` (156 lines)
+- `backend/tests/unit/services/brs_tools/test_registry.py` (38 lines)
+
+### TDD Workflow Executed
+1. ✓ Wrote tests first (test_registry.py)
+2. ✓ Verified tests fail (ModuleNotFoundError - expected)
+3. ✓ Created schemas (3 Pydantic models)
+4. ✓ Created registry (ToolParameter, ToolDefinition, BRSToolRegistry)
+5. ✓ Verified tests pass (4/4 PASS)
+6. ✓ Committed with descriptive message
+
+### How It Works
+```python
+registry = BRSToolRegistry()
+
+# Get tool definition
+tool = registry.get_tool("brs_teesheet_init")
+print(tool.description)  # "Initialize a new teesheet database for a golf club"
+print(tool.cli_template)  # "./bin/teesheet init {club_name} {club_id}"
+print(tool.output_schema)  # <class 'TeesheetInitOutput'>
+print(tool.parameters)  # [ToolParameter(name='club_name', ...), ToolParameter(name='club_id', ...)]
+
+# List all tools
+all_tools = registry.get_all_tools()  # List[ToolDefinition]
+tool_names = registry.list_tool_names()  # ['brs_teesheet_init', 'brs_create_superuser', 'brs_config_validate']
+```
+
+### Will Be Used For
+- Task 5: BRS Tool Execution Layer (command builder reads CLI templates)
+- Task 6: BRS Tool Output Parser (uses output_schema for Instructor parsing)
+- Task 7: Mock Mode (uses tool definitions to generate fake responses)
+
+### Next Task
+Task 5: BRS Tool Execution Layer (Command Builder + Subprocess)
+
+### Blockers/Risks
+None. Clean TDD implementation with full test coverage.
+
+### Lessons Learned
+- Tool registry pattern provides single source of truth for all tool metadata
+- Dataclasses work well for structured tool definitions (simple, readable, type-safe)
+- CLI templates with {param_name} placeholders enable flexible command building
+- Pydantic schemas with Field descriptions improve LLM parsing accuracy
+- TDD workflow (test → fail → implement → pass → commit) prevents scope creep
+- Returning None for unknown tools (vs raising exception) keeps registry API simple
 
 ---
 
