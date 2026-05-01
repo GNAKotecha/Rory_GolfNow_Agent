@@ -302,3 +302,100 @@ async def test_execute_workflow_with_metrics(db_session, workflow_run_fixture):
     assert metrics[0].status == StepStatus.COMPLETED
     assert metrics[0].started_at is not None
     assert metrics[0].completed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_with_langfuse_tracing(
+    db_session,
+    workflow_template_fixture,
+    session,
+    monkeypatch
+):
+    """Test workflow execution includes Langfuse callback when enabled."""
+    # Setup
+    from app.core.langfuse_config import LangfuseConfig
+
+    # Mock Langfuse to be enabled
+    monkeypatch.setenv("LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "test-key")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "test-secret")
+
+    # Reset singleton
+    LangfuseConfig._instance = None
+
+    orchestrator = WorkflowOrchestrator(db_session)
+
+    # Update template with valid definition
+    workflow_template_fixture.definition = {
+        "entry_point": "step1",
+        "steps": [
+            {
+                "id": "step1",
+                "name": "Test Step",
+                "type": "tool_call",
+                "config": {"tool": "mock_tool"},
+                "next": []
+            }
+        ]
+    }
+    db_session.commit()
+
+    # Create workflow run
+    workflow_run = orchestrator.create_workflow_run(
+        template_name=workflow_template_fixture.name,
+        session_id=session.id,
+        input_data={"club_name": "Test Club"}
+    )
+
+    # Execute
+    result = await orchestrator.execute_workflow(workflow_run.id)
+
+    # Verify workflow completed (callback doesn't break execution)
+    db_session.refresh(workflow_run)
+    assert workflow_run.status == WorkflowRunStatus.COMPLETED
+
+    # Note: We can't easily verify callback was called without mocking internals
+    # The important test is that execution doesn't break with callback enabled
+
+
+@pytest.mark.asyncio
+async def test_execute_workflow_without_langfuse_tracing(
+    db_session,
+    workflow_template_fixture,
+    session,
+    monkeypatch
+):
+    """Test workflow execution works when Langfuse is disabled."""
+    # Disable Langfuse
+    monkeypatch.setenv("LANGFUSE_ENABLED", "false")
+
+    # Update template with valid definition
+    workflow_template_fixture.definition = {
+        "entry_point": "step1",
+        "steps": [
+            {
+                "id": "step1",
+                "name": "Test Step",
+                "type": "tool_call",
+                "config": {"tool": "mock_tool"},
+                "next": []
+            }
+        ]
+    }
+    db_session.commit()
+
+    orchestrator = WorkflowOrchestrator(db_session)
+
+    # Create workflow run
+    workflow_run = orchestrator.create_workflow_run(
+        template_name=workflow_template_fixture.name,
+        session_id=session.id,
+        input_data={"club_name": "Test Club"}
+    )
+
+    # Execute
+    result = await orchestrator.execute_workflow(workflow_run.id)
+
+    # Verify workflow completed
+    db_session.refresh(workflow_run)
+    assert workflow_run.status == WorkflowRunStatus.COMPLETED

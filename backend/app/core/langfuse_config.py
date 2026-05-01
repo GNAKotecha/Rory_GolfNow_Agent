@@ -44,8 +44,8 @@ class LangfuseConfig:
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         trace_name: Optional[str] = None
-    ) -> Optional[dict]:
-        """Create callback configuration for tracing.
+    ):
+        """Create callback handler for tracing.
 
         Args:
             user_id: User ID for trace grouping
@@ -53,24 +53,26 @@ class LangfuseConfig:
             trace_name: Human-readable trace name
 
         Returns:
-            Dictionary with trace metadata if Langfuse is enabled, None otherwise
+            CallbackHandler if Langfuse is enabled, None otherwise
         """
         if not cls._is_enabled():
             return None
 
-        instance = cls.get_instance()
-        if instance is None:
-            return None
+        try:
+            from langfuse.callback import CallbackHandler
 
-        # Return a configuration dictionary for trace tracking
-        return {
-            "user_id": user_id,
-            "session_id": session_id,
-            "trace_name": trace_name,
-            "public_key": os.getenv("LANGFUSE_PUBLIC_KEY", ""),
-            "secret_key": os.getenv("LANGFUSE_SECRET_KEY", ""),
-            "host": os.getenv("LANGFUSE_HOST", "http://localhost:3000")
-        }
+            return CallbackHandler(
+                public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
+                secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
+                host=os.getenv("LANGFUSE_HOST", "http://localhost:3000"),
+                user_id=user_id,
+                session_id=session_id,
+                trace_name=trace_name
+            )
+        except Exception:
+            # If CallbackHandler fails to initialize, return None
+            # This allows execution to proceed without tracing
+            return None
 
     @staticmethod
     def _is_enabled() -> bool:
