@@ -18,8 +18,8 @@
 
 ## Task 2: Langfuse Integration with WorkflowOrchestrator ✅
 
-**Commit**: `7e9d800`
-**Status**: Complete - Tests passing (13/13), all workflow tests still green
+**Commits**: `7e9d800` (initial), `ab97f30` (fixes), `ff942b2` (refactor)
+**Status**: Complete - Tests passing (13/13), code quality approved after 2-iteration review
 
 ### What Was Built
 - **WorkflowOrchestrator.execute_workflow()** now includes Langfuse tracing
@@ -77,6 +77,18 @@ Each workflow execution trace includes:
 - **user_id**: From session.user_id
 - **session_id**: From workflow_run.session_id  
 - **trace_name**: `{template_name}_run_{run_id}` (e.g., "onboarding_run_123")
+
+### Code Quality Improvements (2 review iterations)
+**Iteration 1** (`ab97f30`):
+- Added logging to exception handler (no more silent failures)
+- Added return type annotation `-> Optional[Any]` to get_callback_handler()
+- Fixed null safety for workflow_run.session.user_id (handles None case)
+
+**Iteration 2** (`ff942b2`):
+- Removed unused singleton pattern (get_instance() method deleted)
+- Eliminated environment variable duplication
+- Updated tests to remove singleton validation
+- Cleaner architecture: single entry point for callback creation
 
 ### Next Task
 Task 3: Instructor Setup (Structured LLM Outputs)
