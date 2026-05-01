@@ -1,8 +1,8 @@
 # Phase 1 Workflow Engine - Session Handover
 
 **Date**: 2026-04-30
-**Session Status**: Tasks 1-6 Complete (6 of 11)
-**Next Task**: Task 7 - Implement LangGraph Integration
+**Session Status**: Task 9 Complete (9 of 11)
+**Next Task**: Task 10 - Integration Test - End-to-End Workflow
 
 ---
 
@@ -74,6 +74,86 @@
 - Created `backend/tests/unit/services/test_workflow_orchestrator.py` (3 tests, all passing)
 - **Code quality fixes**: Added try/except with rollback to database writes, removed unused imports
 
+### ✅ Task 7: Implement LangGraph Integration
+**Commit**: `773b4cb`
+- Implemented `build_graph_from_template()` - converts JSON workflow definitions to executable LangGraph StateGraphs
+- Implemented `_create_step_node()` - creates node functions for step execution
+- Implemented `merge_dicts()` custom reducer for state accumulation
+- Added comprehensive input validation:
+  - Validates steps exist and non-empty
+  - Validates step IDs are unique
+  - Validates `next` step references point to valid step IDs
+  - Validates entry point exists in steps list
+- Designed WorkflowState as TypedDict with `step_results: Annotated[Dict[str, Any], merge_dicts]` for proper state accumulation
+- PostgreSQL checkpointer conditionally initialized (skips SQLite in tests to avoid compatibility issues)
+- Phase 1 mock execution: node functions return `{"mock": "result"}`
+- Updated `backend/tests/unit/services/test_workflow_orchestrator.py` (10 tests, all passing):
+  - 3 original tests (load template, create run)
+  - 3 graph building/execution tests (simple, branching, execution)
+  - 4 validation tests (missing steps, duplicate IDs, invalid next ref, invalid entry point)
+- **Review process**: 
+  - Spec compliance: Approved
+  - Code quality: Fixed after 1 iteration (state pattern, validation, unused code removal)
+- **Critical learnings**:
+  - LangGraph StateGraph requires TypedDict or explicit schema (plain dict fails)
+  - Annotated reducers apply to top-level keys, not nested values
+  - State accumulation pattern: return `{"step_results": {...}}` to merge into existing state
+  - Input validation prevents invalid graph construction
+
+### ✅ Task 8: Add Workflow Execution with Metrics
+**Commits**: `c7658b8`, `4405d5e`
+- Implemented `execute_workflow()` method - full async workflow execution with state management:
+  - Loads workflow run by ID, updates status PENDING → RUNNING → COMPLETED/FAILED
+  - Builds LangGraph graph from template
+  - Executes with `graph.ainvoke()` using thread_id for checkpointing
+  - Handles exceptions and updates workflow run status accordingly
+- Updated `_create_step_node()` to async with full metrics instrumentation:
+  - Creates `WorkflowStepExecution` records with RUNNING status
+  - Calls `metrics.record_step_start()` before execution
+  - Phase 1: Mock execution returns `{"mock": "result"}`
+  - Updates step to COMPLETED with outputs and `completed_at` timestamp
+  - Calls `metrics.record_step_completion()` with success=True
+  - Exception path: marks step as FAILED, records metrics with success=False
+  - Updates state with `state[f"{step['id']}_status"]` pattern
+- Added `self.metrics = MetricsCollector(db)` to `WorkflowOrchestrator.__init__`
+- Added asyncio support to `conftest.py` (event_loop fixture)
+- Added `pytest-asyncio==0.23.5` to requirements.txt
+- Created `test_execute_workflow_with_metrics` - comprehensive async test
+- Updated existing `test_execute_simple_graph` to async pattern
+- All 11 tests passing in `test_workflow_orchestrator.py`
+- **Review process**:
+  - Spec compliance: Approved
+  - Code quality: Fixed after 1 iteration (aiohttp version typo 0.9.3→3.9.3, test assertion added)
+- **Critical fix**: Changed `aiohttp==0.9.3` to `aiohttp==3.9.3` (typo from initial implementation)
+
+### ✅ Task 9: Add API Schemas
+**Commits**: `39da129`, `19ebb0b`, `28fdf4d`
+- Created `backend/app/schemas/workflow.py` with 5 Pydantic schemas:
+  - `WorkflowTemplateCreate` - Input schema for creating workflow templates with validation (name, version regex, category enum, definition JSON)
+  - `WorkflowTemplateResponse` - Output schema for workflow templates with `from_attributes = True` for ORM mapping
+  - `WorkflowRunCreate` - Input schema for starting workflow runs (template_name, session_id, input_data)
+  - `WorkflowRunResponse` - Output schema for workflow runs with status, timing, and state
+  - `WorkflowStepExecutionResponse` - Output schema for individual step executions with inputs/outputs/timing
+- Created `backend/tests/unit/schemas/test_workflow_schemas.py` (10 tests, all passing):
+  - 2 positive-path tests (template create, run create)
+  - 5 negative-path validation tests (invalid version, category, empty name, name >255 chars, session_id ≤0)
+  - 3 response schema tests (from_attributes conversion for all response schemas)
+- Created `backend/app/schemas/__init__.py` package marker
+- **TDD process**: RED (test fails) → GREEN (implementation passes) → Commit
+- **Review process**:
+  - Spec compliance: Approved
+  - Code quality: Fixed after 1 iteration (enum types, test coverage, unused imports)
+- **Type safety improvements**:
+  - Uses actual `WorkflowCategory` enum from models (not hardcoded regex)
+  - `WorkflowRunResponse.status` uses `WorkflowRunStatus` enum
+  - `WorkflowStepExecutionResponse.status` uses `StepStatus` enum
+  - Prevents type drift between schemas and database models
+- **Validation rules**:
+  - Version must match semver pattern: `^\d+\.\d+\.\d+$`
+  - Category validated via enum type
+  - Session ID must be positive integer
+  - All schemas use Pydantic BaseModel with proper Field validators
+
 ---
 
 ## Critical Learnings (MUST FOLLOW)
@@ -136,17 +216,12 @@ except Exception as e:
 
 ---
 
-## Remaining Tasks (5 of 11)
-
-### Task 7: Implement LangGraph Integration
-**Status**: Not started
-**Plan lines**: 1339-1582
-**Description**: Build LangGraph StateGraph, integrate PostgresSaver checkpointer, implement state persistence
+## Remaining Tasks (4 of 11)
 
 ### Task 8: Add Workflow Execution with Metrics
-**Status**: Not started
+**Status**: NEXT
 **Plan lines**: 1584-1824
-**Description**: Wire up MetricsCollector to track all workflow executions, add metrics endpoints
+**Description**: Wire up MetricsCollector to track all workflow executions, add async execution with error handling
 
 ### Task 9: Add API Schemas
 **Status**: Not started
@@ -176,7 +251,7 @@ using subagent-driven development.
 
 Working directory: /Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/backend
 
-Tasks 1-6 are COMPLETE. Start with Task 7: Implement LangGraph Integration.
+Tasks 1-7 are COMPLETE. Start with Task 8: Add Workflow Execution with Metrics.
 
 Read HANDOVER.md for critical context (use context-mode tools).
 
@@ -185,6 +260,7 @@ CRITICAL:
 - Import from app.* not backend.app.*
 - Use SQLEnum for status fields
 - Add try/except with rollback to all database writes
+- WorkflowState uses TypedDict with top-level keys and Annotated reducers
 ```
 
 ### Review Process Limits
@@ -199,11 +275,11 @@ This prevents perfectionism paralysis and forces better initial implementations.
 
 ## Test Status
 
-**All tests passing**: 21 tests across 4 test files
+**All tests passing**: 28 tests across 4 test files
 - `tests/unit/models/test_workflow_models.py`: 2 tests
 - `tests/unit/models/test_metrics_models.py`: 5 tests  
 - `tests/unit/services/test_metrics_collector.py`: 6 tests
-- `tests/unit/services/test_workflow_orchestrator.py`: 3 tests
+- `tests/unit/services/test_workflow_orchestrator.py`: 10 tests (7 new in Task 7)
 
 ---
 
@@ -211,6 +287,7 @@ This prevents perfectionism paralysis and forces better initial implementations.
 
 **Recent commits** (most recent first):
 ```
+773b4cb feat: implement LangGraph integration in WorkflowOrchestrator
 3139559 fix: add error handling to WorkflowOrchestrator.create_workflow_run
 5ad48dc feat: add WorkflowOrchestrator service skeleton with template loading
 5e95801 fix: add error handling and test coverage to MetricsCollector
@@ -263,7 +340,7 @@ e9f072f fix: address code quality issues in workflow models
 ## Next Steps
 
 1. **Read this handover document** using context-mode: `ctx_index` or `ctx_execute_file`
-2. **Start Task 7**: Implement LangGraph Integration
+2. **Start Task 8**: Add Workflow Execution with Metrics
 3. **Follow TDD pattern**: Write test → Verify fail → Implement → Verify pass → Commit
-4. **Apply critical learnings**: timezone-aware datetime, proper imports, enum usage, error handling
+4. **Apply critical learnings**: timezone-aware datetime, proper imports, enum usage, error handling, TypedDict state management
 5. **Enforce review limits**: Max 2 iterations per review stage
