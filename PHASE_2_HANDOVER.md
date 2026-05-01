@@ -1,8 +1,8 @@
 # Phase 2 BRS Observability - Session Handover
 
 **Date**: 2026-05-01
-**Session Status**: 2 of 9 (22%)
-**Phase 2**: TASK 2 COMPLETE ✅
+**Session Status**: 3 of 9 (33%)
+**Phase 2**: TASK 3 COMPLETE ✅
 
 ---
 
@@ -105,7 +105,93 @@ None identified. Langfuse integration working as expected.
 
 ---
 
-## Task 1: Langfuse Setup (Docker Compose + Configuration) ✅
+## Task 3: Instructor Integration (OllamaClient Wrapper) ✅
+
+**Commit**: `bf46ced`
+**Status**: Complete - Smoke test passing (1/1), code quality approved after 2 iterations
+
+### What Was Built
+- **InstructorOllamaClient wrapper** (`backend/app/core/instructor_client.py`)
+  - Wraps Ollama using Instructor library for structured LLM outputs
+  - Uses LiteLLM as adapter (Instructor doesn't support Ollama directly)
+  - Validates outputs against Pydantic schemas with automatic retries
+  - Both async and sync methods: `generate_structured()` and `generate_structured_sync()`
+  - Configurable: model (default llama3.2), base_url, max_retries (default 3)
+  - Base URL from OLLAMA_BASE_URL env var or defaults to http://localhost:11434
+
+- **Dependencies**: 
+  - instructor==1.7.0 (structured output library)
+  - litellm==1.55.0 (OpenAI-compatible Ollama adapter)
+
+- **Test coverage**: 2 tests
+  - test_instructor_client_can_be_instantiated (smoke test) ✓ PASSING
+  - test_instructor_client_generates_structured_output (integration test) - SKIPPED (requires Ollama)
+
+### Files Created
+- `backend/app/core/instructor_client.py` (89 lines)
+- `backend/tests/unit/core/test_instructor_client.py` (29 lines)
+
+### Files Modified
+- `backend/requirements.txt` - Added instructor==1.7.0 and litellm==1.55.0
+
+### Code Quality Improvements (2 review iterations)
+**Test iteration 1**:
+- Fixed pytest.skip placement - moved from inline to `@pytest.mark.skip` decorator
+- Removed unreachable code after skip statement
+- Improved test structure clarity
+
+**Implementation iteration 1**:
+- Fixed kwargs mutation issue - now uses `{**default_params, **kwargs}` instead of in-place update
+- Added comprehensive error handling with try/except blocks
+- Added `Optional[str]` type hint to base_url parameter
+- Clarified comment about dummy API key requirement for LiteLLM
+
+### How It Works
+1. Client initialized with model name, base URL, and retry config
+2. Uses instructor.from_litellm() with mode=instructor.Mode.JSON
+3. LiteLLM provides OpenAI-compatible interface to Ollama
+4. Instructor validates LLM outputs against Pydantic response_model
+5. Automatically retries on validation failure (up to max_retries)
+6. Returns strongly-typed Pydantic model instance
+
+### Usage Example
+```python
+from app.core.instructor_client import InstructorOllamaClient
+from pydantic import BaseModel, Field
+
+class ClubInfo(BaseModel):
+    club_name: str = Field(description="Name of the golf club")
+    club_id: str = Field(description="Unique club identifier")
+
+client = InstructorOllamaClient()
+result = await client.generate_structured(
+    prompt="Extract: Club Name: Pebble Beach Golf Links, ID: PBGL001",
+    response_model=ClubInfo,
+    temperature=0.0
+)
+# result.club_name == "Pebble Beach Golf Links"
+# result.club_id == "PBGL001"
+```
+
+### Will Be Used For
+- Parsing BRS tool outputs into structured formats
+- Validating workflow step results against schemas
+- Extracting structured data from activation forms
+
+### Next Task
+Task 4: BRS Tool Registry (Definitions + Schemas)
+
+### Blockers/Risks
+None identified. Integration test skipped (requires Ollama running), but smoke test confirms correct instantiation.
+
+### Lessons Learned
+- LiteLLM is necessary adapter layer between Instructor and Ollama
+- pytest.skip() creates unreachable code - use @pytest.mark.skip decorator instead
+- kwargs mutation can cause subtle bugs - always create new dict when merging
+- Error handling critical for network-dependent LLM calls
+- Integration tests should be clearly separated from unit tests (skip when dependencies unavailable)
+
+---
 
 **Commit**: `9943966`
 **Status**: Complete - Tests passing (3/3), code quality approved
