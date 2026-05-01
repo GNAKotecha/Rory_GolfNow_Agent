@@ -12,11 +12,11 @@
 
 ## Task Completion Status
 
-**Progress**: 1 of 9 tasks complete (11%)
+**Progress**: 2 of 9 tasks complete (22%)
 
 - [x] **Task 1**: Langfuse Setup (Docker Compose + Configuration)
-- [ ] **Task 2**: Langfuse Integration with WorkflowOrchestrator **NEXT**
-- [ ] **Task 3**: Instructor Integration (OllamaClient Wrapper)
+- [x] **Task 2**: Langfuse Integration with WorkflowOrchestrator
+- [ ] **Task 3**: Instructor Integration (OllamaClient Wrapper) **NEXT**
 - [ ] **Task 4**: BRS Tool Registry (Definitions + Schemas)
 - [ ] **Task 5**: BRS Tool Execution Layer (Command Builder + Subprocess)
 - [ ] **Task 6**: BRS Tool Output Parser (Instructor Integration)
