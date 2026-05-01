@@ -28,14 +28,11 @@ def test_step_metrics_creation(db_session, workflow_run_fixture):
     metrics = StepMetrics(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=step_execution.id,
-        step_name="research_step",
         started_at=started_at,
         completed_at=completed_at,
         status=StepStatus.COMPLETED,
         tokens_used=1500,
-        cost_usd=0.015,
-        input_tokens=1000,
-        output_tokens=500,
+        output_data={"result": "research complete"},
     )
 
     db_session.add(metrics)
@@ -44,12 +41,9 @@ def test_step_metrics_creation(db_session, workflow_run_fixture):
     assert metrics.id is not None
     assert metrics.workflow_run_id == workflow_run_fixture.id
     assert metrics.step_execution_id == step_execution.id
-    assert metrics.step_name == "research_step"
     assert metrics.status == StepStatus.COMPLETED
     assert metrics.tokens_used == 1500
-    assert metrics.cost_usd == 0.015
-    assert metrics.input_tokens == 1000
-    assert metrics.output_tokens == 500
+    assert metrics.output_data == {"result": "research complete"}
 
 
 def test_step_metrics_calculate_duration(db_session, workflow_run_fixture):
@@ -72,7 +66,6 @@ def test_step_metrics_calculate_duration(db_session, workflow_run_fixture):
     metrics = StepMetrics(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=step_execution.id,
-        step_name="analysis_step",
         started_at=started_at,
         completed_at=completed_at,
         status=StepStatus.COMPLETED,
@@ -103,10 +96,11 @@ def test_llm_decision_metrics_creation(db_session, workflow_run_fixture):
     metrics = LLMDecisionMetrics(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=step_execution.id,
-        step_name="decision_step",
         decision_point="route_selection",
+        prompt_text="Which route should we take based on the data?",
         model_used="qwen2.5:14b",
-        llm_reasoning="Selected path A based on data quality",
+        response="I recommend path A based on data quality analysis",
+        decision_parsed="path_a",
         human_feedback="correct",
         outcome_quality=0.95,
     )
@@ -117,10 +111,11 @@ def test_llm_decision_metrics_creation(db_session, workflow_run_fixture):
     assert metrics.id is not None
     assert metrics.workflow_run_id == workflow_run_fixture.id
     assert metrics.step_execution_id == step_execution.id
-    assert metrics.step_name == "decision_step"
     assert metrics.decision_point == "route_selection"
     assert metrics.model_used == "qwen2.5:14b"
-    assert metrics.llm_reasoning == "Selected path A based on data quality"
+    assert metrics.prompt_text == "Which route should we take based on the data?"
+    assert metrics.response == "I recommend path A based on data quality analysis"
+    assert metrics.decision_parsed == "path_a"
     assert metrics.human_feedback == "correct"
     assert metrics.outcome_quality == 0.95
     assert metrics.created_at is not None
@@ -129,7 +124,6 @@ def test_llm_decision_metrics_creation(db_session, workflow_run_fixture):
 def test_step_metrics_required_fields(db_session):
     """Test that required fields are enforced."""
     metrics = StepMetrics(
-        step_name="test_step",
         started_at=datetime.now(timezone.utc),
         status=StepStatus.RUNNING,
     )
@@ -159,7 +153,6 @@ def test_step_metrics_cascade_delete(db_session, workflow_run_fixture):
     metrics = StepMetrics(
         workflow_run_id=workflow_run_fixture.id,
         step_execution_id=step_execution.id,
-        step_name="cascade_step",
         started_at=datetime.now(timezone.utc),
         status=StepStatus.COMPLETED,
     )
