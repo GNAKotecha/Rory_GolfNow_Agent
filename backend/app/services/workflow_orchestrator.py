@@ -264,7 +264,7 @@ class WorkflowOrchestrator:
 
         # Get Langfuse callback handler
         langfuse_callback = LangfuseConfig.get_callback_handler(
-            user_id=str(workflow_run.session.user_id) if workflow_run.session else None,
+            user_id=str(workflow_run.session.user_id) if (workflow_run.session and workflow_run.session.user_id) else None,
             session_id=str(workflow_run.session_id),
             trace_name=f"{workflow_run.template.name}_run_{workflow_run.id}"
         )

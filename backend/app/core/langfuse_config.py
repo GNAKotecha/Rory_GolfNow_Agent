@@ -1,5 +1,6 @@
 import os
-from typing import Optional
+import logging
+from typing import Optional, Any
 from langfuse import Langfuse
 
 
@@ -44,7 +45,7 @@ class LangfuseConfig:
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         trace_name: Optional[str] = None
-    ):
+    ) -> Optional[Any]:
         """Create callback handler for tracing.
 
         Args:
@@ -69,9 +70,10 @@ class LangfuseConfig:
                 session_id=session_id,
                 trace_name=trace_name
             )
-        except Exception:
+        except Exception as e:
             # If CallbackHandler fails to initialize, return None
             # This allows execution to proceed without tracing
+            logging.warning(f"Failed to initialize Langfuse CallbackHandler: {e}")
             return None
 
     @staticmethod
