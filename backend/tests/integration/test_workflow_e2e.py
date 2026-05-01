@@ -1,6 +1,5 @@
 import pytest
-import asyncio
-from datetime import datetime, timezone
+from datetime import timezone
 from app.models.workflow import (
     WorkflowTemplate,
     WorkflowRun,
@@ -97,15 +96,23 @@ async def test_complete_workflow_execution(db_session):
     ).all()
 
     assert len(metrics) == 2
+
+    # Verify metrics are for the correct steps
+    metric_step_ids = {metrics[0].step_execution_id, metrics[1].step_execution_id}
+    step_ids = {steps[0].id, steps[1].id}
+    assert metric_step_ids == step_ids
+
+    # Verify each metric has valid data
     for metric in metrics:
         assert metric.status == StepStatus.COMPLETED
         assert metric.started_at is not None
         assert metric.completed_at is not None
+        assert metric.completed_at > metric.started_at
         # Calculate duration from timestamps
         duration_ms = (metric.completed_at - metric.started_at).total_seconds() * 1000
         assert duration_ms > 0
 
-    # 9. Verify final state
+    # 9. Verify final state structure and step statuses
     assert "step_results" in result
     step_results = result["step_results"]
     assert "init_status" in step_results
