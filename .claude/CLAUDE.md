@@ -1,51 +1,91 @@
 Build a lightweight MVP for a hosted internal agent using this architecture:
 
-- **Frontend:** Open WebUI as the chat shell
-- **Backend:** custom service that owns product logic
-- **Model runtime:** Ollama on a GPU VM
-- **Tools:** remote MCP servers + company docs
-- **Storage:** database for users, conversations, workflow analytics
-- **Goal:** ship a usable prototype quickly, build in small verified steps, and keep the architecture extensible
+- Frontend: Open WebUI as the chat shell
+- Backend: custom service that owns product logic
+- Model runtime: Ollama on a GPU VM
+- Tools: remote MCP servers + company docs
+- Storage: database for users, conversations, workflow analytics
 
-## Product intent
+## Execution rule
 
-This is not a full platform yet.
+Each task must be handled in this order:
 
-It is an MVP that proves:
-1. a hosted agent can support a real workflow,
-2. the backend can enforce tool/rule/prompt layers,
-3. conversations and workflow data can be stored and analyzed,
-4. the system can be extended later with more roles, skills, and tools.
+1. Read `HANDOVER.md` using `ctx_index` or `ctx_execute_file`
+   - Understand current project state
+   - Check completed work
+   - Check blockers, assumptions, and previous decisions
 
-## Build rules
+2. Read the Plan File using `ctx_index` or `ctx_execute_file`
+   - Identify the next unchecked task
+   - Confirm the task scope and acceptance criteria
+   - Do not start unrelated future tasks
 
-- Work in small tickets only
-- After each ticket:
-  - implement
-  - test
-  - verify acceptance criteria
-  - summarize what changed
-  - stop before moving to the next ticket
-- Keep the implementation minimal and clean
-- Prefer simple architecture over abstraction-heavy architecture
-- Do not build speculative features early
-- Keep one clear path working end-to-end before expanding
+3. Execute using `/subagent-driven-development`
+   - Follow the implement → review → fix → re-review flow
+   - Apply the maximum 2-iteration review policy
+   - Stop and escalate if a review fails twice
 
-## Initial MVP scope
+4. Verify the task
+   - Run relevant tests/checks
+   - Confirm acceptance criteria are met
+   - Keep implementation minimal and clean
 
-For v1, support:
-- authenticated access
-- one hosted chat flow
-- stored conversations
-- backend-owned orchestration
-- Ollama integration
-- remote MCP integration
-- workflow classification / repeated workflow tracking
-- one simple admin view for usage
+5. Update project tracking
+   - Add a clear entry to `.claude/worktrees/phase-1-workflow-engine/HANDOVER.md` explaining:
+     - what was changed
+     - files touched
+     - tests run
+     - remaining risks/blockers
+     - suggested next task
+     - Anything important learned
+   - Update the checklist in the Plan File: 
+   - Mark only the completed task as done
 
-Do not overbuild:
-- advanced memory systems
-- complex role editing UIs
-- multi-role feature completeness
-- broad skill marketplaces
-- many workflows at once
+6. Stop
+   - Do not automatically continue to the next task
+   - Wait for the user to approve the next task
+
+## Looping policy
+
+Maximum 2 iterations per review stage:
+
+- Spec review: Implement → Review → Fix → Re-Review  
+  STOP if still failing and escalate to user.
+
+- Code quality review: Review → Fix → Re-Review  
+  STOP if still failing and escalate to user.
+
+If a review fails twice:
+
+1. Document what is blocking
+2. Present the issue to the user with options:
+   - Accept implementation as-is
+   - Provide clarification and retry
+   - Skip this quality check for now
+3. Do not continue review loops without user decision
+
+## MVP intent
+
+This is not a full platform yet. The MVP should prove:
+
+1. A hosted agent can support a real workflow
+2. The backend can enforce tool/rule/prompt layers
+3. Conversations and workflow data can be stored and analyzed
+4. The system can be extended later with more roles, skills, and tools
+
+## Paths
+
+Worktree Location:
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/`
+
+Working Directory:
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/backend`
+
+Plan File:
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-04-30-phase-1-workflow-engine.md`
+
+Handover File:
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/HANDOVER.md`
+
+Branch:
+`phase-1-workflow-engine`
