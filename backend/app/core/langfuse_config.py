@@ -43,7 +43,7 @@ class LangfuseConfig:
             return CallbackHandler(
                 public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
                 secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
-                host=os.getenv("LANGFUSE_HOST", "http://localhost:3000"),
+                host=os.getenv("LANGFUSE_HOST", "http://localhost:3001"),
                 user_id=user_id,
                 session_id=session_id,
                 trace_name=trace_name
