@@ -83,35 +83,38 @@ Output Parser (Instructor integration)
 ```
 
 **Components**:
-- `app/services/brs_tools/tool_registry.py` - Tool definitions + schemas
-- `app/services/brs_tools/tool_executor.py` - Subprocess execution
-- `app/services/brs_tools/tool_parser.py` - LLM-based output parsing
-- `app/services/brs_tools/mock_executor.py` - Mock mode for testing
-- `app/services/brs_tools/gateway.py` - High-level facade
+- `app/services/brs_tools/registry.py` - Tool definitions + schemas
+- `app/services/brs_tools/executor.py` - Subprocess execution
+- `app/services/brs_tools/parser.py` - LLM-based output parsing
+- `app/services/brs_tools/mock.py` - Mock mode for testing/development
 
 **Registered Tools**:
 
 | Tool Name | Command | Purpose |
 |-----------|---------|---------|
-| `teesheet_init` | `teesheet init` | Initialize a course |
-| `teesheet_superuser_create` | `teesheet superuser create` | Create admin user |
-| `teesheet_validate` | `teesheet validate` | Validate configuration |
+| `brs_teesheet_init` | `teesheet init` | Initialize a course |
+| `brs_teesheet_superuser_create` | `teesheet superuser create` | Create admin user |
+| `brs_teesheet_validate` | `teesheet validate` | Validate configuration |
 
 **Usage**:
 ```python
-from app.services.brs_tools.gateway import BRSToolGateway
+from app.services.brs_tools.executor import BRSToolExecutor
+from app.services.brs_tools.mock import MockBRSToolExecutor
 
-gateway = BRSToolGateway()
+executor = BRSToolExecutor()
 
-# Execute real tool
-result = await gateway.execute_tool(
-    tool_name="teesheet_init",
+# Execute a real tool
+result = await executor.execute_tool(
+    tool_name="brs_teesheet_init",
     parameters={"course_name": "Pebble Beach"}
 )
 
-# Enable mock mode for testing
-gateway = BRSToolGateway(mock_mode=True)
-result = await gateway.execute_tool(...)  # Returns fake data
+# Use the mock executor for testing/development
+mock_executor = MockBRSToolExecutor()
+mock_result = await mock_executor.execute_tool(
+    tool_name="brs_teesheet_init",
+    parameters={"course_name": "Pebble Beach"}
+)
 ```
 
 **Output Parsing**:
