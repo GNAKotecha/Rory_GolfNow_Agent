@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-02
 **Session Status**: 5 of 9 (56%)
-**Phase 2**: TASK 5 COMPLETE ✅
+**Phase 2**: TASK 5 COMPLETE ✅ (Code quality approved after 1-iteration review)
 
 ---
 
@@ -281,14 +281,14 @@ None. Clean TDD implementation with full test coverage.
 ## Task 5: BRS Tool Execution Layer (Command Builder + Subprocess) ✅
 
 **Commit**: `67d65ab`
-**Status**: Complete - Tests passing (4/4, 1 skipped integration test)
+**Status**: Complete - Tests passing (4/4, 1 skipped integration test), code quality approved after 1-iteration review
 
 ### What Was Built
 - **BRSToolExecutor** (`backend/app/services/brs_tools/executor.py`)
-  - `execute_tool()` async method: Executes BRS CLI tools via subprocess
+  - `execute_tool()` async method: Executes BRS CLI tools via subprocess, returns ToolExecutionResult
   - `_validate_parameters()`: Validates required parameters against tool definition
   - `_build_command()`: Builds CLI command from template with proper argument quoting (using shlex)
-  - `_get_working_directory()`: Determines repo path based on tool type (teesheet vs config)
+  - `_get_working_directory()`: Determines repo path based on tool type (teesheet vs config) with explicit error handling
   - Configuration: brs_teesheet_path, brs_config_path, timeout_multiplier
   - Features:
     - Template-based command building with {param_name} placeholder substitution
@@ -296,6 +296,7 @@ None. Clean TDD implementation with full test coverage.
     - Timeout protection with configurable multiplier for slower systems
     - Async subprocess execution with stdout/stderr capture
     - Custom exceptions: CommandBuildError, ExecutionError
+    - **ToolExecutionResult dataclass**: Clean return type with returncode, stdout_bytes, stderr_bytes, stdout_text, stderr_text
 
 - **Environment Configuration** (`.env.example`)
   - Added BRS_TEESHEET_PATH (path to brs-teesheet repository)
@@ -304,7 +305,7 @@ None. Clean TDD implementation with full test coverage.
 
 - **Test Coverage** (`backend/tests/unit/services/brs_tools/test_executor.py`)
   - test_build_command_from_template: Verifies command building with spaces in parameters ✓
-  - test_build_command_missing_required_param_raises_error: Validates error on missing params ✓
+  - test_build_command_with_unreplaced_placeholders_raises_error: Validates error on unreplaced placeholders ✓
   - test_validate_parameters_success: Confirms successful validation ✓
   - test_validate_parameters_missing_required: Validates error on missing required params ✓
   - test_execute_tool_integration_skipped: Integration test (skipped, requires real BRS CLI)
@@ -325,6 +326,12 @@ None. Clean TDD implementation with full test coverage.
 6. ✓ Updated .env.example with BRS paths (Step 5)
 7. ✓ Committed with descriptive message (Step 6)
 
+### Code Quality Improvements (1 review iteration)
+**Issues Fixed**:
+- **Working directory determination**: Replaced silent fallback with explicit CommandBuildError when tool name doesn't match "teesheet" or "config" patterns. Clear error message indicates which tool needs which path.
+- **Return type**: Created ToolExecutionResult dataclass instead of monkey-patching attributes onto subprocess.Process object. Provides clean, type-safe API with all output fields (returncode, stdout_bytes, stderr_bytes, stdout_text, stderr_text).
+- **Test accuracy**: Renamed test from `test_build_command_missing_required_param_raises_error` to `test_build_command_with_unreplaced_placeholders_raises_error` to accurately reflect what the test validates.
+
 ### How It Works
 ```python
 from app.services.brs_tools.registry import BRSToolRegistry
@@ -337,13 +344,13 @@ executor = BRSToolExecutor(
     timeout_multiplier=1.0
 )
 
-# Execute tool
+# Execute tool - returns ToolExecutionResult dataclass
 result = await executor.execute_tool(
     tool_name="brs_teesheet_init",
     parameters={"club_name": "Pebble Beach", "club_id": "PB001"}
 )
 
-# Access results
+# Access results via dataclass fields
 print(result.returncode)  # 0 for success
 print(result.stdout_text)  # Command output
 print(result.stderr_text)  # Error output (if any)
@@ -376,10 +383,12 @@ None. Clean TDD implementation with full test coverage. Integration test properl
 ### Lessons Learned
 - **shlex module critical for CLI argument handling**: Simple .split() breaks on spaces in parameters
 - **shlex.quote() + shlex.split()**: Proper pattern for preserving argument boundaries
+- **Explicit error handling over silent fallbacks**: Working directory logic now raises clear errors instead of silently using wrong path
+- **Dataclasses for return types**: ToolExecutionResult dataclass provides clean, type-safe API instead of monkey-patching Process objects
+- **Test names must match behavior**: Renamed test to accurately reflect what it validates (unreplaced placeholders, not parameter validation)
 - Parameter validation before command building prevents cryptic subprocess errors
 - Timeout multiplier allows adapting to different system speeds without changing tool definitions
 - Async subprocess execution (asyncio.create_subprocess_exec) keeps server responsive
-- Storing decoded stdout/stderr on process object improves API ergonomics
 - Working directory determination (based on tool name) keeps executor simple
 - Integration tests should be clearly marked with pytest.skip() and explanatory message
 
