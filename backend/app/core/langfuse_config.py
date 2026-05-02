@@ -1,7 +1,6 @@
 import os
 import logging
 from typing import Optional, Any
-from langfuse import Langfuse
 
 
 class LangfuseConfig:
