@@ -7,13 +7,14 @@ Build a lightweight MVP for a hosted internal agent using this architecture:
 - Storage: database for users, conversations, workflow analytics
 
 ## Prior Context (Reference Only)
-- Phase 1 completed: See `PHASE_1_HANDOVER.md` for workflow engine foundation
+- Phase 1 completed: See `backend/PHASE_1_HANDOVER.md` for workflow engine foundation
+- Phase 2 completed: See `backend/PHASE_2_HANDOVER.md` for BRS tools + observability
 
 ## Execution rule
 
 Each task must be handled in this order:
 
-1. Read `PHASE_2_HANDOVER.md` using `ctx_index` or `ctx_execute_file`
+1. Read `backend/PHASE_3_HANDOVER.md` using `ctx_index` or `ctx_execute_file`
    - Understand current project state
    - Check completed work
    - Check blockers, assumptions, and previous decisions
@@ -34,7 +35,7 @@ Each task must be handled in this order:
    - Keep implementation minimal and clean
 
 5. Update project tracking
-   - Add a clear entry to `PHASE_2_HANDOVER.md` explaining:
+   - Add a clear entry to `backend/PHASE_3_HANDOVER.md` explaining:
      - what was changed
      - files touched
      - tests run
@@ -82,10 +83,10 @@ Working Directory:
 `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend`
 
 Plan File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-05-01-phase-2-brs-tools-observability.md`
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-05-01-phase-3-onboarding-testing-analytics.md`
 
 Handover File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/PHASE_2_HANDOVER.md`
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend/PHASE_3_HANDOVER.md`
 
 Branch:
-`phase-2-brs-observability`
+`phase-3-onboarding-testing-analytics`
