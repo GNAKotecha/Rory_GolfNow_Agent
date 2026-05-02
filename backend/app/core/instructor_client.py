@@ -22,9 +22,20 @@ class InstructorOllamaClient:
 
         Uses a dummy 'api_key' as LiteLLM requires an API key,
         even though Ollama doesn't use one.
+
+        Base URL precedence:
+        1. Explicit `base_url` argument
+        2. `OLLAMA_URL`
+        3. `OLLAMA_BASE_URL` (legacy fallback)
+        4. localhost default
         """
-        # Use env var or default localhost
-        self.base_url = base_url or os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+        # Prefer the backend-standard env var, while supporting the legacy name.
+        self.base_url = (
+            base_url
+            or os.getenv('OLLAMA_URL')
+            or os.getenv('OLLAMA_BASE_URL')
+            or 'http://localhost:11434'
+        )
         self.model = model
         self.max_retries = max_retries
 
