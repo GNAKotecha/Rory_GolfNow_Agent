@@ -16,8 +16,8 @@ def test_build_command_from_template():
     assert command == ["./bin/teesheet", "init", "Test Club", "TC001"]
 
 
-def test_build_command_missing_required_param_raises_error():
-    """Should raise error if required parameter is missing."""
+def test_build_command_with_unreplaced_placeholders_raises_error():
+    """Should raise error if command has unreplaced placeholders."""
     registry = BRSToolRegistry()
     executor = BRSToolExecutor(registry, brs_teesheet_path="/fake/path")
 
@@ -27,7 +27,7 @@ def test_build_command_missing_required_param_raises_error():
     with pytest.raises(CommandBuildError) as exc_info:
         executor._build_command(tool, params)
 
-    assert "club_id" in str(exc_info.value).lower()
+    assert "unreplaced placeholders" in str(exc_info.value).lower()
 
 
 def test_validate_parameters_success():

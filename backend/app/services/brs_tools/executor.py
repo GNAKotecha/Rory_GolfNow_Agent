@@ -2,6 +2,7 @@ import os
 import asyncio
 import shlex
 from typing import Dict, Any, List
+from dataclasses import dataclass
 from app.services.brs_tools.registry import BRSToolRegistry, ToolDefinition
 
 
@@ -13,6 +14,24 @@ class CommandBuildError(Exception):
 class ExecutionError(Exception):
     """Raised when tool execution fails."""
     pass
+
+
+@dataclass
+class ToolExecutionResult:
+    """Result of a tool execution.
+
+    Attributes:
+        returncode: Process exit code
+        stdout_bytes: Raw stdout bytes
+        stderr_bytes: Raw stderr bytes
+        stdout_text: Decoded stdout text
+        stderr_text: Decoded stderr text
+    """
+    returncode: int
+    stdout_bytes: bytes
+    stderr_bytes: bytes
+    stdout_text: str
+    stderr_text: str
 
 
 class BRSToolExecutor:
@@ -55,7 +74,7 @@ class BRSToolExecutor:
         self,
         tool_name: str,
         parameters: Dict[str, Any]
-    ) -> asyncio.subprocess.Process:
+    ) -> ToolExecutionResult:
         """Execute a BRS tool with given parameters.
 
         Args:
@@ -63,7 +82,7 @@ class BRSToolExecutor:
             parameters: Parameter dictionary matching tool definition
 
         Returns:
-            Completed subprocess result
+            ToolExecutionResult with process output
 
         Raises:
             CommandBuildError: If command cannot be built
@@ -100,13 +119,13 @@ class BRSToolExecutor:
                 timeout=timeout
             )
 
-            # Store results on process object for compatibility
-            process.stdout_bytes = stdout
-            process.stderr_bytes = stderr
-            process.stdout_text = stdout.decode('utf-8', errors='replace')
-            process.stderr_text = stderr.decode('utf-8', errors='replace')
-
-            return process
+            return ToolExecutionResult(
+                returncode=process.returncode,
+                stdout_bytes=stdout,
+                stderr_bytes=stderr,
+                stdout_text=stdout.decode('utf-8', errors='replace'),
+                stderr_text=stderr.decode('utf-8', errors='replace')
+            )
 
         except asyncio.TimeoutError:
             raise ExecutionError(
@@ -183,11 +202,25 @@ class BRSToolExecutor:
 
         Returns:
             Absolute path to working directory
+
+        Raises:
+            CommandBuildError: If working directory cannot be determined
         """
         # Determine repo based on tool name
         if "teesheet" in tool.name.lower():
+            if not self.brs_teesheet_path:
+                raise CommandBuildError(
+                    f"Tool '{tool.name}' requires brs_teesheet_path but it is not configured"
+                )
             return self.brs_teesheet_path
         elif "config" in tool.name.lower():
+            if not self.brs_config_path:
+                raise CommandBuildError(
+                    f"Tool '{tool.name}' requires brs_config_path but it is not configured"
+                )
             return self.brs_config_path
         else:
-            return self.brs_teesheet_path  # Default
+            raise CommandBuildError(
+                f"Cannot determine working directory for tool '{tool.name}' - "
+                f"tool name must contain 'teesheet' or 'config'"
+            )
