@@ -1,0 +1,193 @@
+import os
+import asyncio
+import shlex
+from typing import Dict, Any, List
+from app.services.brs_tools.registry import BRSToolRegistry, ToolDefinition
+
+
+class CommandBuildError(Exception):
+    """Raised when command cannot be built from template."""
+    pass
+
+
+class ExecutionError(Exception):
+    """Raised when tool execution fails."""
+    pass
+
+
+class BRSToolExecutor:
+    """Executes BRS tools via subprocess with timeout and error handling.
+
+    Usage:
+        registry = BRSToolRegistry()
+        executor = BRSToolExecutor(registry, brs_teesheet_path="/path/to/brs-teesheet")
+
+        result = await executor.execute_tool(
+            tool_name="brs_teesheet_init",
+            parameters={"club_name": "Test Club", "club_id": "TC001"}
+        )
+
+        print(result.returncode)
+        print(result.stdout)
+    """
+
+    def __init__(
+        self,
+        registry: BRSToolRegistry,
+        brs_teesheet_path: str,
+        brs_config_path: str = "",
+        timeout_multiplier: float = 1.0
+    ):
+        """Initialize executor with registry and paths.
+
+        Args:
+            registry: Tool registry for definitions
+            brs_teesheet_path: Path to brs-teesheet repository
+            brs_config_path: Path to brs-config-api repository
+            timeout_multiplier: Multiplier for tool timeouts (for slower systems)
+        """
+        self.registry = registry
+        self.brs_teesheet_path = brs_teesheet_path
+        self.brs_config_path = brs_config_path
+        self.timeout_multiplier = timeout_multiplier
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        parameters: Dict[str, Any]
+    ) -> asyncio.subprocess.Process:
+        """Execute a BRS tool with given parameters.
+
+        Args:
+            tool_name: Name of tool to execute
+            parameters: Parameter dictionary matching tool definition
+
+        Returns:
+            Completed subprocess result
+
+        Raises:
+            CommandBuildError: If command cannot be built
+            ExecutionError: If execution fails or times out
+        """
+        # Get tool definition
+        tool = self.registry.get_tool(tool_name)
+        if tool is None:
+            raise CommandBuildError(f"Tool not found: {tool_name}")
+
+        # Validate parameters
+        self._validate_parameters(tool, parameters)
+
+        # Build command
+        command = self._build_command(tool, parameters)
+
+        # Determine working directory
+        cwd = self._get_working_directory(tool)
+
+        # Calculate timeout
+        timeout = tool.timeout_seconds * self.timeout_multiplier
+
+        # Execute with timeout
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=cwd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout
+            )
+
+            # Store results on process object for compatibility
+            process.stdout_bytes = stdout
+            process.stderr_bytes = stderr
+            process.stdout_text = stdout.decode('utf-8', errors='replace')
+            process.stderr_text = stderr.decode('utf-8', errors='replace')
+
+            return process
+
+        except asyncio.TimeoutError:
+            raise ExecutionError(
+                f"Tool execution timed out after {timeout}s: {tool_name}"
+            )
+        except Exception as e:
+            raise ExecutionError(f"Tool execution failed: {tool_name}: {e}")
+
+    def _validate_parameters(
+        self,
+        tool: ToolDefinition,
+        parameters: Dict[str, Any]
+    ):
+        """Validate parameters against tool definition.
+
+        Args:
+            tool: Tool definition
+            parameters: Parameter dictionary
+
+        Raises:
+            CommandBuildError: If validation fails
+        """
+        # Check required parameters
+        for param in tool.parameters:
+            if param.required and param.name not in parameters:
+                raise CommandBuildError(
+                    f"Missing required parameter '{param.name}' for tool '{tool.name}'"
+                )
+
+    def _build_command(
+        self,
+        tool: ToolDefinition,
+        parameters: Dict[str, Any]
+    ) -> List[str]:
+        """Build CLI command from template and parameters.
+
+        Args:
+            tool: Tool definition with CLI template
+            parameters: Parameter dictionary
+
+        Returns:
+            Command as list of strings for subprocess
+
+        Raises:
+            CommandBuildError: If command cannot be built
+        """
+        try:
+            # Replace placeholders in template with quoted values
+            command_str = tool.cli_template
+            for param_name, param_value in parameters.items():
+                placeholder = f"{{{param_name}}}"
+                # Quote the value to preserve spaces
+                quoted_value = shlex.quote(str(param_value))
+                command_str = command_str.replace(placeholder, quoted_value)
+
+            # Check for unreplaced placeholders
+            if "{" in command_str and "}" in command_str:
+                raise CommandBuildError(
+                    f"Unreplaced placeholders in command: {command_str}"
+                )
+
+            # Split into list for subprocess (shlex handles quoted strings)
+            command_parts = shlex.split(command_str)
+            return command_parts
+
+        except Exception as e:
+            raise CommandBuildError(f"Failed to build command: {e}")
+
+    def _get_working_directory(self, tool: ToolDefinition) -> str:
+        """Get working directory for tool execution.
+
+        Args:
+            tool: Tool definition
+
+        Returns:
+            Absolute path to working directory
+        """
+        # Determine repo based on tool name
+        if "teesheet" in tool.name.lower():
+            return self.brs_teesheet_path
+        elif "config" in tool.name.lower():
+            return self.brs_config_path
+        else:
+            return self.brs_teesheet_path  # Default
