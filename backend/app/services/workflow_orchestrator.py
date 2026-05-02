@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, Callable, TypedDict, Annotated
 from sqlalchemy.orm import Session
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
+from langchain_core.runnables import RunnableConfig
 
 from app.models.workflow import (
     WorkflowTemplate,
@@ -14,6 +15,7 @@ from app.models.workflow import (
     StepStatus
 )
 from app.services.metrics_collector import MetricsCollector
+from app.core.langfuse_config import LangfuseConfig
 
 
 # Custom reducer that merges dicts
@@ -244,7 +246,7 @@ class WorkflowOrchestrator:
         workflow_run_id: int
     ) -> WorkflowState:
         """
-        Execute a workflow run with full metrics collection.
+        Execute a workflow run with full metrics collection and Langfuse tracing.
 
         Returns final workflow state.
         """
@@ -260,6 +262,19 @@ class WorkflowOrchestrator:
         # Build graph from template
         graph = self.build_graph_from_template(workflow_run.template)
 
+        # Get Langfuse callback handler
+        langfuse_callback = LangfuseConfig.get_callback_handler(
+            user_id=str(workflow_run.session.user_id) if (workflow_run.session and workflow_run.session.user_id) else None,
+            session_id=str(workflow_run.session_id),
+            trace_name=f"{workflow_run.template.name}_run_{workflow_run.id}"
+        )
+
+        # Create config with callbacks
+        config = RunnableConfig(
+            configurable={"thread_id": str(workflow_run_id)},
+            callbacks=[langfuse_callback] if langfuse_callback else []
+        )
+
         # Prepare initial state
         # Handle case where current_state might be None or not have input_data
         current_state = workflow_run.current_state or {}
@@ -274,11 +289,7 @@ class WorkflowOrchestrator:
             # Execute graph
             result = await graph.ainvoke(
                 initial_state,
-                config={
-                    "configurable": {
-                        "thread_id": str(workflow_run_id)
-                    }
-                }
+                config=config
             )
 
             # Update workflow run

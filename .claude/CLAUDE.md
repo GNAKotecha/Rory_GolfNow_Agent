@@ -6,11 +6,14 @@ Build a lightweight MVP for a hosted internal agent using this architecture:
 - Tools: remote MCP servers + company docs
 - Storage: database for users, conversations, workflow analytics
 
+## Prior Context (Reference Only)
+- Phase 1 completed: See `PHASE_1_HANDOVER.md` for workflow engine foundation
+
 ## Execution rule
 
 Each task must be handled in this order:
 
-1. Read `HANDOVER.md` using `ctx_index` or `ctx_execute_file`
+1. Read `PHASE_2_HANDOVER.md` using `ctx_index` or `ctx_execute_file`
    - Understand current project state
    - Check completed work
    - Check blockers, assumptions, and previous decisions
@@ -31,7 +34,7 @@ Each task must be handled in this order:
    - Keep implementation minimal and clean
 
 5. Update project tracking
-   - Add a clear entry to `.claude/worktrees/phase-1-workflow-engine/HANDOVER.md` explaining:
+   - Add a clear entry to `PHASE_2_HANDOVER.md` explaining:
      - what was changed
      - files touched
      - tests run
@@ -75,17 +78,14 @@ This is not a full platform yet. The MVP should prove:
 
 ## Paths
 
-Worktree Location:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/`
-
 Working Directory:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/backend`
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend`
 
 Plan File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-04-30-phase-1-workflow-engine.md`
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-05-01-phase-2-brs-tools-observability.md`
 
 Handover File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/.claude/worktrees/phase-1-workflow-engine/HANDOVER.md`
+`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/PHASE_2_HANDOVER.md`
 
 Branch:
-`phase-1-workflow-engine`
+`phase-2-brs-observability`

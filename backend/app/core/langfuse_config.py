@@ -1,0 +1,60 @@
+import os
+import logging
+from typing import Optional, Any
+
+
+class LangfuseConfig:
+    """Configuration utility for Langfuse callback handlers.
+
+    Usage:
+        handler = LangfuseConfig.get_callback_handler(
+            user_id="user_123",
+            session_id="session_456",
+            trace_name="onboarding_workflow"
+        )
+
+        # Use in LangGraph
+        config = RunnableConfig(callbacks=[handler] if handler else [])
+    """
+
+    @classmethod
+    def get_callback_handler(
+        cls,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        trace_name: Optional[str] = None
+    ) -> Optional[Any]:
+        """Create callback handler for tracing.
+
+        Args:
+            user_id: User ID for trace grouping
+            session_id: Session ID for trace grouping
+            trace_name: Human-readable trace name
+
+        Returns:
+            CallbackHandler if Langfuse is enabled, None otherwise
+        """
+        if not cls._is_enabled():
+            return None
+
+        try:
+            from langfuse.callback import CallbackHandler
+
+            return CallbackHandler(
+                public_key=os.getenv("LANGFUSE_PUBLIC_KEY", ""),
+                secret_key=os.getenv("LANGFUSE_SECRET_KEY", ""),
+                host=os.getenv("LANGFUSE_HOST", "http://localhost:3001"),
+                user_id=user_id,
+                session_id=session_id,
+                trace_name=trace_name
+            )
+        except Exception as e:
+            # If CallbackHandler fails to initialize, return None
+            # This allows execution to proceed without tracing
+            logging.warning(f"Failed to initialize Langfuse CallbackHandler: {e}")
+            return None
+
+    @staticmethod
+    def _is_enabled() -> bool:
+        """Check if Langfuse is enabled via environment variable."""
+        return os.getenv("LANGFUSE_ENABLED", "true").lower() == "true"

@@ -30,9 +30,8 @@ def workflow_template_fixture(db_session):
 
 
 @pytest.fixture
-def workflow_run_fixture(db_session, workflow_template_fixture):
-    """Create a test workflow run with user and session."""
-    # Create user
+def user(db_session):
+    """Create a test user."""
     user = User(
         name="Test User",
         email="test@example.com",
@@ -42,8 +41,12 @@ def workflow_run_fixture(db_session, workflow_template_fixture):
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+    return user
 
-    # Create session
+
+@pytest.fixture
+def session(db_session, user):
+    """Create a test session."""
     session = Session(
         user_id=user.id,
         title="Test Session",
@@ -53,7 +56,12 @@ def workflow_run_fixture(db_session, workflow_template_fixture):
     db_session.add(session)
     db_session.commit()
     db_session.refresh(session)
+    return session
 
+
+@pytest.fixture
+def workflow_run_fixture(db_session, workflow_template_fixture, session):
+    """Create a test workflow run with user and session."""
     # Create workflow run
     workflow_run = WorkflowRun(
         template_id=workflow_template_fixture.id,
