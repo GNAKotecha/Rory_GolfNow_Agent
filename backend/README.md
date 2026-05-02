@@ -102,7 +102,7 @@ pytest tests/ --cov=app --cov-report=html
 
 **Core**:
 - `DATABASE_URL` - PostgreSQL connection string
-- `OLLAMA_BASE_URL` - Ollama API endpoint
+- `OLLAMA_URL` - Ollama API endpoint
 - `OLLAMA_MODEL` - Default model name
 
 **Langfuse** (optional):
