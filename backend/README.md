@@ -112,8 +112,9 @@ pytest tests/ --cov=app --cov-report=html
 - `LANGFUSE_SECRET_KEY` - Project secret key
 
 **BRS Tools** (optional):
-- `TEESHEET_CLI_PATH` - Path to teesheet CLI binary
-- `TEESHEET_WORKING_DIR` - Working directory for CLI operations
+- `BRS_TEESHEET_PATH` - Path to the teesheet repository/resources used by the BRS executor
+- `BRS_CONFIG_PATH` - Path to the BRS configuration file or directory
+- `BRS_TOOL_TIMEOUT_MULTIPLIER` - Multiplier applied to BRS tool execution timeouts
 - `BRS_TOOLS_MOCK_MODE` - Enable mock mode globally (true/false)
 
 ## Next Phase
