@@ -8,9 +8,9 @@
 
 ## Working Context
 
-**Working Directory**: `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend`
+**Working Directory**: `$REPO_ROOT/backend`
 
-**Plan File**: `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-05-01-phase-2-brs-tools-observability.md`
+**Plan File**: `$REPO_ROOT/docs/superpowers/plans/2026-05-01-phase-2-brs-tools-observability.md`
 
 **Branch**: `phase-2-brs-observability` (worktree isolated from main)
 
