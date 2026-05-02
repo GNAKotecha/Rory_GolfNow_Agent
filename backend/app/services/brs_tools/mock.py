@@ -1,4 +1,5 @@
 from typing import Dict, Any, List
+import random
 from datetime import datetime, timezone
 from app.services.brs_tools.registry import BRSToolRegistry
 
@@ -84,7 +85,12 @@ class MockBRSToolExecutor:
             )
 
         # Simulate failure if configured
+        # simulate_failure=True always fails; otherwise use probabilistic failure_rate
         if self.simulate_failure:
+            return self._generate_failure_output(tool_name, parameters)
+        
+        # Probabilistic failure based on failure_rate (0.0-1.0)
+        if self.failure_rate > 0.0 and random.random() < self.failure_rate:
             return self._generate_failure_output(tool_name, parameters)
 
         # Generate success output

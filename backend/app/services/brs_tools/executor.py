@@ -128,6 +128,12 @@ class BRSToolExecutor:
             )
 
         except asyncio.TimeoutError:
+            # Kill the subprocess to prevent resource leaks
+            try:
+                process.kill()
+                await process.wait()
+            except ProcessLookupError:
+                pass  # Process already terminated
             raise ExecutionError(
                 f"Tool execution timed out after {timeout}s: {tool_name}"
             )

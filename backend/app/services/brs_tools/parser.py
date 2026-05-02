@@ -1,9 +1,20 @@
-from typing import Type, TypeVar, Optional
+from typing import Type, TypeVar, Optional, Protocol, runtime_checkable, Union
 import asyncio
 from pydantic import BaseModel, ValidationError
 from app.core.instructor_client import InstructorOllamaClient
 
 T = TypeVar('T', bound=BaseModel)
+
+
+@runtime_checkable
+class ProcessResult(Protocol):
+    """Protocol for process-like results with returncode and output text.
+    
+    Supports asyncio.subprocess.Process, ToolExecutionResult, and MockProcess.
+    """
+    returncode: int
+    stdout_text: str
+    stderr_text: str
 
 
 class BRSToolOutputParser:
@@ -34,14 +45,16 @@ class BRSToolOutputParser:
 
     async def parse_output(
         self,
-        process: asyncio.subprocess.Process,
+        process: ProcessResult,
         output_schema: Type[T],
         tool_name: str
     ) -> T:
-        """Parse subprocess output into structured schema.
+        """Parse process output into structured schema.
 
         Args:
-            process: Completed subprocess with stdout/stderr
+            process: Process result with returncode, stdout_text, stderr_text.
+                     Accepts ToolExecutionResult, MockProcess, or any object
+                     implementing the ProcessResult protocol.
             output_schema: Pydantic model for output structure
             tool_name: Name of tool (for prompt context)
 

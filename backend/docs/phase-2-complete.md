@@ -12,7 +12,7 @@ Phase 2 adds self-hosted Langfuse for workflow tracing, Instructor for structure
 
 **Components**:
 - `docker-compose.langfuse.yml` - Self-hosted Langfuse + PostgreSQL
-- `app/core/langfuse_config.py` - Singleton + callback factory
+- `app/core/langfuse_config.py` - Utility class with class methods for callback handlers
 - Integrated with `WorkflowOrchestrator.execute_workflow()`
 
 **Usage**:
@@ -48,14 +48,14 @@ LANGFUSE_SECRET_KEY=sk-lf-...
 
 **Usage**:
 ```python
-from app.core.instructor_client import InstructorClient
+from app.core.instructor_client import InstructorOllamaClient
 from pydantic import BaseModel
 
 class TeesheetConfig(BaseModel):
     course_name: str
     num_holes: int
 
-client = InstructorClient()
+client = InstructorOllamaClient()
 config = await client.generate_structured(
     prompt="Generate config for Pebble Beach",
     response_model=TeesheetConfig
