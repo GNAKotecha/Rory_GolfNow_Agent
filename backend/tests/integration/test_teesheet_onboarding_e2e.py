@@ -73,13 +73,12 @@ async def test_teesheet_onboarding_workflow_e2e(db_session, session):
     assert len(workflow_run.step_executions) >= 4
 
     # Verify step sequence
-    step_names = [step.step_name for step in sorted(step_executions, key=lambda x: x.started_at or datetime.min.replace(tzinfo=timezone.utc))]
-    assert "Initialize Database" in step_names[0]
-    assert "Create Superuser" in step_names[1]
-    assert "Configure Teesheet" in step_names[2]
+    step_ids = [step.step_id for step in sorted(step_executions, key=lambda x: x.started_at or datetime.min.replace(tzinfo=timezone.utc))]
+    assert any("init_database" in step_id for step_id in step_ids[:1])
+    assert any("create_superuser" in step_id for step_id in step_ids[1:2])
+    assert any("config_setup" in step_id for step_id in step_ids[2:3])
 
 
-def test_onboarding_input_validation_full_data():
     """Verify input validation passes with a complete dataset."""
     input_data = {
         "club_name": "Test Golf Club",
@@ -94,7 +93,6 @@ def test_onboarding_input_validation_full_data():
     assert validated_data == input_data
 
 
-def test_onboarding_input_validation_missing_fields():
     """Verify input validation raises error for missing required fields."""
     input_data = {
         "club_name": "Test Golf Club",
@@ -103,3 +101,17 @@ def test_onboarding_input_validation_missing_fields():
 
     with pytest.raises(ValueError, match="Input validation failed"):
         validate_onboarding_input(input_data)
+
+@pytest.mark.asyncio
+async def test_teesheet_onboarding_workflow_validates_input(db_session, session):
+    """Test workflow validates required input data."""
+    template = create_teesheet_onboarding_template(db_session)
+
+    # Missing required fields
+    with pytest.raises(ValueError, match="Input validation failed") as exc_info:
+        validate_onboarding_input({
+            "club_name": "Test"  # Missing club_id, contact_email
+        })
+
+    # Verify exception message contains "required"
+    assert "required" in str(exc_info.value).lower()
