@@ -74,3 +74,44 @@ def workflow_run_fixture(db_session, workflow_template_fixture, session):
     db_session.refresh(workflow_run)
 
     return workflow_run
+
+
+@pytest.fixture
+def workflow_run_factory(db_session, workflow_template_fixture, session):
+    """Factory for creating workflow runs with configurable status.
+
+    Usage:
+        run = workflow_run_factory(status=WorkflowRunStatus.RUNNING)
+    """
+    created_runs = []
+
+    def _create_workflow_run(
+        status: WorkflowRunStatus = WorkflowRunStatus.PENDING,
+        input_data: dict = None,
+        session_id: int = None,
+    ) -> WorkflowRun:
+        workflow_run = WorkflowRun(
+            template_id=workflow_template_fixture.id,
+            session_id=session_id or session.id,
+            status=status,
+            current_state=input_data or {"club_name": "Test Club"},
+            created_at=datetime.now(timezone.utc),
+        )
+        db_session.add(workflow_run)
+        db_session.commit()
+        db_session.refresh(workflow_run)
+        created_runs.append(workflow_run)
+        return workflow_run
+
+    yield _create_workflow_run
+
+    # Cleanup
+    for run in created_runs:
+        try:
+            db_session.delete(run)
+        except Exception:
+            pass
+    try:
+        db_session.commit()
+    except Exception:
+        db_session.rollback()

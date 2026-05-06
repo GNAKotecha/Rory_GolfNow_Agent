@@ -15,6 +15,7 @@ class WorkflowRunStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    WAITING_APPROVAL = "WAITING_APPROVAL"
 
 
 class StepStatus(str, enum.Enum):
@@ -66,6 +67,13 @@ class WorkflowRun(Base):
     # State management
     current_state = Column(JSON, nullable=True)  # LangGraph state snapshot
     error_message = Column(Text, nullable=True)
+
+    # Approval gate fields
+    approval_data = Column(JSON, nullable=True)
+    approval_prompt = Column(Text, nullable=True)
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    approval_notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
