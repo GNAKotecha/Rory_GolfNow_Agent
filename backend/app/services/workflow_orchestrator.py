@@ -76,8 +76,25 @@ class WorkflowOrchestrator:
         session_id: int,
         input_data: Dict[str, Any]
     ) -> WorkflowRun:
-        """Create a new workflow run instance."""
+        """Create a new workflow run instance.
+        
+        Validates input_data against the template's input_schema if defined.
+        
+        Args:
+            template_name: Name of the workflow template
+            session_id: Session ID for the workflow run
+            input_data: Input data for the workflow
+            
+        Returns:
+            Created WorkflowRun instance
+            
+        Raises:
+            ValueError: If input_data fails validation against template schema
+        """
         template = self.load_template(template_name)
+        
+        # Validate input against template's input_schema if defined
+        self._validate_input_data(template, input_data)
 
         workflow_run = WorkflowRun(
             template_id=template.id,
@@ -95,6 +112,31 @@ class WorkflowOrchestrator:
             raise
 
         return workflow_run
+
+    def _validate_input_data(self, template: WorkflowTemplate, input_data: Dict[str, Any]) -> None:
+        """Validate input data against template's input_schema.
+        
+        Args:
+            template: Workflow template with optional input_schema
+            input_data: Input data to validate
+            
+        Raises:
+            ValueError: If validation fails
+        """
+        definition = template.definition
+        input_schema = definition.get("input_schema")
+        
+        if not input_schema:
+            return  # No schema defined, skip validation
+        
+        # Check required fields
+        required_fields = input_schema.get("required", [])
+        missing_fields = [field for field in required_fields if field not in input_data or not input_data[field]]
+        
+        if missing_fields:
+            raise ValueError(
+                f"Input validation failed: required fields missing: {', '.join(missing_fields)}"
+            )
 
     def build_graph_from_template(self, template: WorkflowTemplate) -> StateGraph:
         """

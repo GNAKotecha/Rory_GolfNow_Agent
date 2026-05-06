@@ -104,14 +104,17 @@ async def test_teesheet_onboarding_workflow_e2e(db_session, session):
 
 @pytest.mark.asyncio
 async def test_teesheet_onboarding_workflow_validates_input(db_session, session):
-    """Test workflow validates required input data."""
+    """Test workflow validates required input data through orchestrator."""
     template = create_teesheet_onboarding_template(db_session)
+    orchestrator = WorkflowOrchestrator(db_session)
 
-    # Missing required fields
+    # Missing required fields - should fail validation in create_workflow_run
     with pytest.raises(ValueError, match="Input validation failed") as exc_info:
-        validate_onboarding_input({
-            "club_name": "Test"  # Missing club_id, contact_email
-        })
+        orchestrator.create_workflow_run(
+            template_name=template.name,
+            session_id=session.id,
+            input_data={"club_name": "Test"}  # Missing club_id, contact_email, contact_name
+        )
 
     # Verify exception message contains "required"
     assert "required" in str(exc_info.value).lower()
