@@ -4,7 +4,7 @@ Manages approval requests on WorkflowRun rows: pausing a run to WAITING_APPROVAL
 processing approve/reject decisions, and listing pending approvals or history.
 """
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -74,10 +74,17 @@ class ApprovalService:
         if workflow_run is None:
             raise ValueError(f"WorkflowRun {workflow_run_id} not found")
 
+        if workflow_run.status != WorkflowRunStatus.WAITING_APPROVAL:
+            raise ValueError(
+                f"Workflow run {workflow_run_id} is not waiting for approval "
+                f"(current status: {workflow_run.status})"
+            )
+
         if approved:
             workflow_run.status = WorkflowRunStatus.RUNNING
         else:
             workflow_run.status = WorkflowRunStatus.FAILED
+            workflow_run.error_message = f"Rejected by user {user_id}: {notes}"
 
         workflow_run.approved_by = user_id
         workflow_run.approved_at = datetime.now(timezone.utc)
@@ -101,16 +108,25 @@ class ApprovalService:
         query = self.db.query(WorkflowRun).filter(
             WorkflowRun.status == WorkflowRunStatus.WAITING_APPROVAL
         )
-        return query.all()
+        return query.order_by(WorkflowRun.created_at).all()
 
-    def get_approval_history(self, workflow_run_id: int) -> Optional[WorkflowRun]:
-        """Return the workflow run with its approval metadata.
-
-        The WorkflowRun itself carries approved_by / approved_at / approval_notes
-        so returning the row gives the caller full history for a single run.
-        """
-        return (
+    def get_approval_history(self, workflow_run_id: int) -> Dict[str, Any]:
+        """Return the approval metadata for a workflow run as a dict."""
+        workflow_run = (
             self.db.query(WorkflowRun)
             .filter(WorkflowRun.id == workflow_run_id)
             .first()
         )
+
+        if not workflow_run:
+            raise ValueError(f"Workflow run not found: {workflow_run_id}")
+
+        return {
+            "workflow_run_id": workflow_run.id,
+            "approval_data": workflow_run.approval_data,
+            "approval_prompt": workflow_run.approval_prompt,
+            "approved_by": workflow_run.approved_by,
+            "approved_at": workflow_run.approved_at.isoformat() if workflow_run.approved_at else None,
+            "approval_notes": workflow_run.approval_notes,
+            "status": workflow_run.status.name,
+        }

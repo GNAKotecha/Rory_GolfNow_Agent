@@ -78,3 +78,64 @@ def test_get_pending_approvals_returns_waiting_workflows(db_session, workflow_ru
     assert waiting2.id in pending_ids
     assert running.id not in pending_ids
     assert completed.id not in pending_ids
+
+
+def test_process_approval_rejects_wrong_status(db_session, workflow_run_factory):
+    """Should raise ValueError if workflow run is not WAITING_APPROVAL."""
+    workflow_run = workflow_run_factory(status=WorkflowRunStatus.RUNNING)
+    service = ApprovalService(db_session)
+
+    with pytest.raises(ValueError, match="not waiting for approval"):
+        service.process_approval(
+            workflow_run_id=workflow_run.id,
+            approved=True,
+            user_id=1,
+            notes="Should fail"
+        )
+
+
+def test_reject_sets_error_message(db_session, workflow_run_factory):
+    """Should set error_message on workflow run when rejected."""
+    workflow_run = workflow_run_factory(status=WorkflowRunStatus.WAITING_APPROVAL)
+    service = ApprovalService(db_session)
+
+    service.process_approval(
+        workflow_run_id=workflow_run.id,
+        approved=False,
+        user_id=7,
+        notes="Bad config"
+    )
+
+    db_session.refresh(workflow_run)
+    assert workflow_run.error_message is not None
+    assert "7" in workflow_run.error_message
+    assert "Bad config" in workflow_run.error_message
+
+
+def test_get_approval_history_returns_dict(db_session, workflow_run_factory):
+    """Should return a dict with the spec'd keys."""
+    workflow_run = workflow_run_factory(status=WorkflowRunStatus.WAITING_APPROVAL)
+    service = ApprovalService(db_session)
+
+    service.request_approval(
+        workflow_run_id=workflow_run.id,
+        approval_data={"foo": "bar"},
+        approval_prompt="review me"
+    )
+    service.process_approval(
+        workflow_run_id=workflow_run.id,
+        approved=True,
+        user_id=42,
+        notes="ok"
+    )
+
+    history = service.get_approval_history(workflow_run.id)
+    assert isinstance(history, dict)
+    assert set(history.keys()) == {
+        "workflow_run_id", "approval_data", "approval_prompt",
+        "approved_by", "approved_at", "approval_notes", "status"
+    }
+    assert history["workflow_run_id"] == workflow_run.id
+    assert history["approved_by"] == 42
+    assert isinstance(history["approved_at"], str)  # ISO format string
+    assert history["status"] == "RUNNING"
