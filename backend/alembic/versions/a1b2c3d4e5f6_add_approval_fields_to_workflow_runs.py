@@ -28,7 +28,7 @@ def upgrade() -> None:
         # ALTER TYPE ... ADD VALUE cannot run inside a transaction block in older
         # Postgres, but in PG 12+ it works. Wrap with autocommit for safety.
         with op.get_context().autocommit_block():
-            op.execute("ALTER TYPE workflowrunstatus ADD VALUE IF NOT EXISTS 'WAITING_APPROVAL'")
+            op.execute("ALTER TYPE workflowrunstatus ADD VALUE IF NOT EXISTS 'waiting_approval'")
 
     # Add approval-related columns
     op.add_column('workflow_runs', sa.Column('approval_data', sa.JSON(), nullable=True))
@@ -51,7 +51,7 @@ def downgrade() -> None:
     """Downgrade schema - remove approval fields from workflow_runs.
 
     NOTE: Postgres does not support DROP VALUE on an enum type.
-    The 'WAITING_APPROVAL' value will remain in the workflowrunstatus enum
+    The 'waiting_approval' value will remain in the workflowrunstatus enum
     after downgrade. Removing it would require recreating the enum type,
     which is intentionally not done here to avoid data loss risk.
     """
@@ -72,5 +72,5 @@ def downgrade() -> None:
     op.drop_column('workflow_runs', 'approval_prompt')
     op.drop_column('workflow_runs', 'approval_data')
 
-    # Enum value 'WAITING_APPROVAL' cannot be removed from Postgres enum type
+    # Enum value 'waiting_approval' cannot be removed from Postgres enum type
     # without recreating the type. See docstring above.

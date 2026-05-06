@@ -112,7 +112,7 @@ def test_reject_sets_error_message(db_session, workflow_run_factory):
     assert "Bad config" in workflow_run.error_message
 
 
-def test_get_approval_history_returns_dict(db_session, workflow_run_factory):
+def test_get_approval_history_returns_audit_fields(db_session, workflow_run_factory):
     """Should return a dict with the spec'd keys."""
     workflow_run = workflow_run_factory(status=WorkflowRunStatus.WAITING_APPROVAL)
     service = ApprovalService(db_session)
@@ -138,4 +138,4 @@ def test_get_approval_history_returns_dict(db_session, workflow_run_factory):
     assert history["workflow_run_id"] == workflow_run.id
     assert history["approved_by"] == 42
     assert isinstance(history["approved_at"], str)  # ISO format string
-    assert history["status"] == "RUNNING"
+    assert history["status"] == "running"

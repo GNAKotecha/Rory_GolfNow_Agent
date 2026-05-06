@@ -15,7 +15,7 @@ class WorkflowRunStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
-    WAITING_APPROVAL = "WAITING_APPROVAL"
+    WAITING_APPROVAL = "waiting_approval"
 
 
 class StepStatus(str, enum.Enum):

@@ -128,5 +128,5 @@ class ApprovalService:
             "approved_by": workflow_run.approved_by,
             "approved_at": workflow_run.approved_at.isoformat() if workflow_run.approved_at else None,
             "approval_notes": workflow_run.approval_notes,
-            "status": workflow_run.status.name,
+            "status": workflow_run.status.value,
         }
