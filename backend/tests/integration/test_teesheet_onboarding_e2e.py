@@ -1,9 +1,6 @@
 import pytest
 from datetime import datetime, timezone
-from app.workflows.teesheet_onboarding import (
-    create_teesheet_onboarding_template,
-    validate_onboarding_input
-)
+from app.workflows.teesheet_onboarding import create_teesheet_onboarding_template
 from app.services.workflow_orchestrator import WorkflowOrchestrator
 from app.models.workflow import (
     WorkflowRun,
@@ -78,29 +75,6 @@ async def test_teesheet_onboarding_workflow_e2e(db_session, session):
     assert any("create_superuser" in step_id for step_id in step_ids[1:2])
     assert any("config_setup" in step_id for step_id in step_ids[2:3])
 
-
-    """Verify input validation passes with a complete dataset."""
-    input_data = {
-        "club_name": "Test Golf Club",
-        "club_id": "TGC001",
-        "contact_email": "contact@testgolf.com",
-        "contact_name": "Jane Doe",
-        "facility_type": "golf_course",
-        "modules": ["member", "billing"]
-    }
-
-    validated_data = validate_onboarding_input(input_data)
-    assert validated_data == input_data
-
-
-    """Verify input validation raises error for missing required fields."""
-    input_data = {
-        "club_name": "Test Golf Club",
-        # Missing club_id, contact_email, contact_name
-    }
-
-    with pytest.raises(ValueError, match="Input validation failed"):
-        validate_onboarding_input(input_data)
 
 @pytest.mark.asyncio
 async def test_teesheet_onboarding_workflow_validates_input(db_session, session):

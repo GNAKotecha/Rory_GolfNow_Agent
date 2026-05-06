@@ -114,7 +114,13 @@ class WorkflowOrchestrator:
         return workflow_run
 
     def _validate_input_data(self, template: WorkflowTemplate, input_data: Dict[str, Any]) -> None:
-        """Validate input data against template's input_schema.
+        """Validate input data against template's input_schema using jsonschema.
+        
+        Performs full validation including:
+        - Required field presence
+        - Type checking
+        - Format validation (e.g., email)
+        - Enum constraints
         
         Args:
             template: Workflow template with optional input_schema
@@ -123,20 +129,18 @@ class WorkflowOrchestrator:
         Raises:
             ValueError: If validation fails
         """
+        from jsonschema import validate, ValidationError
+        
         definition = template.definition
         input_schema = definition.get("input_schema")
         
         if not input_schema:
             return  # No schema defined, skip validation
         
-        # Check required fields
-        required_fields = input_schema.get("required", [])
-        missing_fields = [field for field in required_fields if field not in input_data or not input_data[field]]
-        
-        if missing_fields:
-            raise ValueError(
-                f"Input validation failed: required fields missing: {', '.join(missing_fields)}"
-            )
+        try:
+            validate(instance=input_data, schema=input_schema)
+        except ValidationError as e:
+            raise ValueError(f"Input validation failed: {e.message}")
 
     def build_graph_from_template(self, template: WorkflowTemplate) -> StateGraph:
         """
