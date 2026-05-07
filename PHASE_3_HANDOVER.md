@@ -249,19 +249,81 @@
 
 ---
 
+### Task 6: Analytics Dashboard Backend API ✅
+
+**What was implemented:**
+- Created `backend/app/services/analytics_service.py` (~165 lines) — `AnalyticsService` class with 5 methods:
+  - `get_workflow_success_rate(template_id, start_date?, end_date?)` → float (0.0 when no terminal runs)
+  - `get_average_workflow_duration(template_id, start_date?, end_date?)` → Optional[float] seconds
+  - `get_step_failure_analysis(template_id, start_date?, end_date?)` → `Dict[step_name, {total_executions, failed_executions, failure_rate}]`
+  - `get_prompt_version_comparison(template_id)` → `List[{version_number, usage_count, success_count, success_rate, avg_latency_ms, is_active, created_at}]`
+  - `get_dashboard_summary(template_id)` → aggregated summary
+- Created `backend/app/schemas/analytics.py` — 4 Pydantic response models (WorkflowAnalyticsResponse, StepFailureAnalysis, PromptVersionMetrics, DashboardSummaryResponse)
+- Created `backend/app/api/analytics.py` — 4 authenticated GET endpoints under `/api/analytics/*`:
+  - `GET /workflows/{template_id}/success-rate`
+  - `GET /workflows/{template_id}/step-failures`
+  - `GET /prompts/{template_id}/version-comparison`
+  - `GET /dashboard/{template_id}`
+- Registered `analytics_router` in `backend/app/main.py` at `/api` prefix.
+- Created `backend/tests/unit/services/test_analytics_service.py` — 4 unit tests, all passing.
+- Extended `backend/tests/fixtures/workflow_fixtures.py` — added `workflow_step_execution_factory` fixture + imports for `StepStatus`, `WorkflowStepExecution`.
+
+**Files touched:**
+- Created: `backend/app/services/analytics_service.py`
+- Created: `backend/app/schemas/analytics.py`
+- Created: `backend/app/api/analytics.py`
+- Created: `backend/tests/unit/services/test_analytics_service.py`
+- Modified: `backend/tests/fixtures/workflow_fixtures.py` (added factory + imports)
+- Modified: `backend/app/main.py` (registered router)
+
+**Deviations from plan (approved before implementation):**
+1. Used `StepStatus.FAILED` enum comparison; plan used string `"FAILED"` which would not match lowercase enum values.
+2. Test uses `StepStatus.COMPLETED` / `StepStatus.FAILED` enums; plan passed raw strings.
+3. Added `from app.models.workflow import WorkflowRun` in `api/analytics.py`; plan referenced `WorkflowRun` without importing it.
+4. Added `app.include_router(analytics_router, prefix="/api")` in `main.py`; plan had no step for this.
+5. Added `workflow_step_execution_factory` fixture; plan's test referenced it but it did not exist in the codebase.
+
+**Auth hardening (code review fix):**
+- All 4 endpoints now require `Depends(get_approved_user)` to match sibling router convention (`admin_analytics`, `sessions`, `chat`). Added by code reviewer request — prior iteration had no auth.
+
+**Tests:**
+- `pytest tests/unit/services/test_analytics_service.py -v` → 4/4 pass.
+- Full suite: 76 passed, 2 skipped, 0 failures, no regressions.
+- FastAPI route registration verified: all 4 analytics paths present on `app.routes`.
+
+**Review Flow:**
+- Spec review: ✅ Plan deviations documented and accepted (4 plan bugs fixed inline per user approval).
+- Code quality review iteration 1: ⚠️ REQUEST_CHANGES (1 Critical: no auth on endpoints). Fixed by adding `get_approved_user` dep to all 4 endpoints.
+- Code quality review iteration 2: ✅ APPROVE.
+
+**Deferred (non-blocking) from reviewer:**
+- `backend/tests/unit/api/test_analytics.py` — plan's Step 1 file list included an API-layer test file; actual plan steps only specify service tests. Defer to Task 7/8 or follow-up.
+- `get_dashboard_summary` does not accept `start_date`/`end_date` while sibling methods do — inconsistent but matches plan signature exactly.
+- `get_step_failure_analysis` aggregates in Python rather than SQL `GROUP BY` — fine for MVP scale.
+- `get_average_workflow_duration` computes duration client-side — SQL `func.avg(func.extract('epoch', ...))` would be cheaper.
+- Endpoints silently return zeroed metrics for unknown `template_id` — consider 404 in follow-up.
+- `PromptVersionMetrics.created_at: str` — plan-spec type; prefer `datetime` with serialization.
+- `get_workflow_success_rate` returns `0.0` for "no data" — conflates "no data" with 0% success; consider `Optional[float]` parity with `avg_duration`.
+
+**Watch-items for future tasks:**
+- Task 7 (analytics frontend) will need to handle the `0.0` vs "no data" ambiguity in UI.
+- Endpoints are auth-gated but not admin-gated — any approved user can view analytics. If analytics should be admin-only, use `get_admin_user` dep instead (follow-up).
+- Migration for `prompt_templates` tables from Task 5 is still not applied locally; integration testing of `/prompts/{id}/version-comparison` against Postgres requires `alembic upgrade head` in a reachable DB.
+
+---
+
 ## In Progress
 
-None — Task 5 complete, awaiting approval to start Task 6
+None — Task 6 complete, awaiting approval to start Task 7
 
 ---
 
 ## Next Tasks
 
-- **Task 6:** Analytics Dashboard Backend API (analytics service, REST endpoints)
 - **Task 7:** Analytics Dashboard Frontend (React components, dashboard page)
 - **Task 8:** Documentation (phase-3-complete.md, README updates)
 
-**Follow-up tickets (from Tasks 2 + 4 + 5):**
+**Follow-up tickets (from Tasks 2 + 4 + 5 + 6):**
 - Wire `approval_gate` step type in `workflow_orchestrator` to call `ApprovalService.request_approval` (enables real E2E pause behavior and activates Task 4's bias test)
 - Row-level locking in `ApprovalService.process_approval` for concurrent approvers
 - Document `error_message` format in `process_approval` docstring
@@ -271,6 +333,11 @@ None — Task 5 complete, awaiting approval to start Task 6
 - Apply Task 5 migration to the dev Postgres DB (`alembic upgrade head` once `db` hostname is reachable) and verify `prompt_templates` + `prompt_template_versions` tables and `fk_prompt_templates_current_version` constraint
 - Consider adding `updated_at` + `onupdate` to `PromptTemplate` for parity with `WorkflowTemplate` (deferred Minor)
 - Consider `server_default` on `is_active`, `usage_count`, `success_count` if raw-SQL inserts become part of the workflow (deferred Minor)
+- Add `backend/tests/unit/api/test_analytics.py` (API-layer coverage for 4 analytics endpoints)
+- Decide if analytics endpoints should be admin-only (switch to `get_admin_user` dep) or stay at approved-user level
+- Add 404 responses on unknown `template_id` in analytics endpoints
+- Push date-range + `failure_rate` aggregation into SQL (`GROUP BY`, `func.avg(func.extract(...))`) once data scales
+- Make `get_workflow_success_rate` return `Optional[float]` to distinguish "no data" from "0% success"
 
 ---
 

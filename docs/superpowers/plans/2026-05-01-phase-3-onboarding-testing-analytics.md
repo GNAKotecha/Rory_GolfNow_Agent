@@ -1699,7 +1699,7 @@ Enables:
 - Create: `backend/tests/unit/services/test_analytics_service.py`
 - Create: `backend/tests/unit/api/test_analytics.py`
 
-- [ ] **Step 1: Write test for analytics service**
+- [x] **Step 1: Write test for analytics service**
 
 Create `backend/tests/unit/services/test_analytics_service.py`:
 
@@ -1839,7 +1839,7 @@ def test_get_prompt_version_comparison(db_session):
     assert comparison[1]["success_rate"] == 0.85
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 ```bash
@@ -1849,7 +1849,7 @@ pytest tests/unit/services/test_analytics_service.py -v
 
 Expected: FAIL with "No module named 'app.services.analytics_service'"
 
-- [ ] **Step 3: Create analytics service**
+- [x] **Step 3: Create analytics service**
 
 Create `backend/app/services/analytics_service.py`:
 
@@ -2073,7 +2073,7 @@ class AnalyticsService:
         }
 ```
 
-- [ ] **Step 4: Create API schemas**
+- [x] **Step 4: Create API schemas**
 
 Create `backend/app/schemas/analytics.py`:
 
@@ -2116,7 +2116,7 @@ class DashboardSummaryResponse(BaseModel):
     total_runs: int
 ```
 
-- [ ] **Step 5: Create analytics API endpoints**
+- [x] **Step 5: Create analytics API endpoints**
 
 Create `backend/app/api/analytics.py`:
 
@@ -2189,7 +2189,7 @@ async def get_dashboard_summary(
     return service.get_dashboard_summary(template_id)
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run:
 ```bash
@@ -2199,7 +2199,7 @@ pytest tests/unit/services/test_analytics_service.py -v
 
 Expected: 4 tests PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/services/analytics_service.py backend/app/api/analytics.py backend/app/schemas/analytics.py backend/tests/unit/services/test_analytics_service.py
