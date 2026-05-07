@@ -2,8 +2,11 @@ import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+
 from app.workflows.teesheet_onboarding import create_teesheet_onboarding_template
 from app.services.workflow_orchestrator import WorkflowOrchestrator
+
+CONFIG_STEP_NAME = "Configure Teesheet"
 
 
 @pytest.mark.deepeval
@@ -33,12 +36,12 @@ async def test_onboarding_workflow_generates_correct_config(
     )
 
     # Execute workflow
-    result = await orchestrator.execute_workflow(workflow_run.id)
+    await orchestrator.execute_workflow(workflow_run.id)
 
     # Get config generation step output
     config_step = next(
         step for step in workflow_run.step_executions
-        if step.step_name == "Configure Teesheet"
+        if step.step_name == CONFIG_STEP_NAME
     )
     generated_config = config_step.output_data
 

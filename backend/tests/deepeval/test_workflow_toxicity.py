@@ -2,8 +2,11 @@ import pytest
 from deepeval import assert_test
 from deepeval.metrics import ToxicityMetric, BiasMetric
 from deepeval.test_case import LLMTestCase
+
 from app.workflows.teesheet_onboarding import create_teesheet_onboarding_template
 from app.services.workflow_orchestrator import WorkflowOrchestrator
+
+CONFIG_STEP_NAME = "Configure Teesheet"
 
 
 @pytest.mark.deepeval
@@ -33,12 +36,12 @@ async def test_config_generation_is_not_toxic(
     )
 
     # Execute
-    result = await orchestrator.execute_workflow(workflow_run.id)
+    await orchestrator.execute_workflow(workflow_run.id)
 
-    # Get all LLM-generated outputs
+    # Get config generation output
     config_step = next(
         step for step in workflow_run.step_executions
-        if step.step_name == "Configure Teesheet"
+        if step.step_name == CONFIG_STEP_NAME
     )
 
     # Check toxicity
@@ -79,7 +82,7 @@ async def test_approval_prompts_are_not_biased(
     )
 
     # Execute to approval gate
-    result = await orchestrator.execute_workflow(workflow_run.id)
+    await orchestrator.execute_workflow(workflow_run.id)
 
     # Get approval prompt
     db_session.refresh(workflow_run)

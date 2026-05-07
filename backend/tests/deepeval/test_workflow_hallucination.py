@@ -2,8 +2,12 @@ import pytest
 from deepeval import assert_test
 from deepeval.metrics import HallucinationMetric
 from deepeval.test_case import LLMTestCase
+
 from app.workflows.teesheet_onboarding import create_teesheet_onboarding_template
 from app.services.workflow_orchestrator import WorkflowOrchestrator
+
+CONFIG_STEP_NAME = "Configure Teesheet"
+SUPERUSER_STEP_NAME = "Create Superuser"
 
 
 @pytest.mark.deepeval
@@ -33,12 +37,12 @@ async def test_config_generation_does_not_hallucinate(
     )
 
     # Execute workflow
-    result = await orchestrator.execute_workflow(workflow_run.id)
+    await orchestrator.execute_workflow(workflow_run.id)
 
     # Get config generation output
     config_step = next(
         step for step in workflow_run.step_executions
-        if step.step_name == "Configure Teesheet"
+        if step.step_name == CONFIG_STEP_NAME
     )
     generated_config = config_step.output_data
 
@@ -91,12 +95,12 @@ async def test_superuser_creation_uses_provided_email(
     )
 
     # Execute
-    result = await orchestrator.execute_workflow(workflow_run.id)
+    await orchestrator.execute_workflow(workflow_run.id)
 
     # Get superuser creation step
     superuser_step = next(
         step for step in workflow_run.step_executions
-        if step.step_name == "Create Superuser"
+        if step.step_name == SUPERUSER_STEP_NAME
     )
 
     # Verify no email hallucination
