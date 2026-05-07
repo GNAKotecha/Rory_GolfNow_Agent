@@ -1,8 +1,8 @@
 # Phase 3 Handover: Onboarding Workflow + Testing + Analytics
 
-**Last Updated:** 2026-05-06  
+**Last Updated:** 2026-05-07  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Task 2 complete — ready for Task 3
+**Status:** Task 3 complete — ready for Task 4
 
 ---
 
@@ -116,15 +116,50 @@
 
 ---
 
+### Task 3: DeepEval Integration ✅
+
+**What was implemented:**
+- Added `deepeval==3.9.9` to `backend/requirements.txt` (approved bump from the plan's `1.5.0` pin — see Deviations below)
+- Added `DEEPEVAL_API_KEY=your_api_key_here` to `backend/.env.example`
+- Created `backend/tests/deepeval/conftest.py` with:
+  - `deepeval_enabled` session-scoped fixture (checks `DEEPEVAL_API_KEY`)
+  - `skip_if_no_deepeval_key` fixture (pytest.skip if key missing)
+  - `test_deepeval_import` smoke test (constructs `LLMTestCase`, imports `AnswerRelevancyMetric`, guards against shadow regression via `"site-packages" in deepeval.__file__` assertion)
+- Intentionally **did not** create `backend/tests/deepeval/__init__.py` — see Deviations
+
+**Files changed:**
+- `backend/requirements.txt` (+3 lines)
+- `backend/.env.example` (+4 lines)
+- `backend/tests/deepeval/conftest.py` (new, ~53 lines)
+
+**Tests:**
+- ✅ `test_deepeval_import` — smoke test passes (1/1)
+- Task 1 + Task 2 regression: 9/9 still passing
+
+**Commits:**
+- `7a72afd` - feat: add DeepEval integration for workflow testing
+
+**Deviations from plan (approved by user during implementation):**
+1. **Version bumped 1.5.0 → 3.9.9.** deepeval 1.x and 2.x hard-pin `grpcio~=1.63.0`, which has no prebuilt Python 3.13 arm64 wheel and fails to compile from source (clang++ error on macOS). deepeval 3.0.0+ relaxes to `grpcio>=1.67.1` which resolves to `grpcio-1.80.0` with prebuilt py3.13 wheels. Core APIs used in Task 4 (`GEval`, `LLMTestCase`, `LLMTestCaseParams`) are unchanged across major versions.
+2. **`tests/deepeval/__init__.py` omitted.** Plan Step 3 required it, but the filename collides with the PyPI `deepeval` package: because `tests/__init__.py` does not exist, pytest's walk-up made `tests/deepeval/` importable as a top-level package named `deepeval`, shadowing the real library (error was `ModuleNotFoundError: No module named 'deepeval.conftest'`). Solution: drop the `__init__.py`; conftest.py is imported by path; same namespace-package pattern as the existing `tests/fixtures/` dir. The spec's docstring content ("DeepEval-based workflow tests for correctness, hallucination, and toxicity") was relocated into `conftest.py`'s module docstring.
+
+**Review Flow:**
+- Code quality review iteration 1: ✅ Ship it (0 Critical, 2 Important) — AnswerRelevancyMetric module-scope import moved inside smoke test to defer cost; shadow-regression guard added via `site-packages` assertion.
+- No iteration 2 needed.
+
+**Known transitive-dep warnings (not blocking, not regressions):**
+- deepeval 3.9.9 install pulled `packaging==26.2` and `tenacity==9.1.4`, which breach `langchain-core==0.2.43` / `langchain==0.2.16` / `langfuse==2.60.10` upper-bound pins. pip printed dependency-resolver warnings but allowed install. All 9 existing Task 1 + Task 2 tests still pass, so treat as warnings-only. Revisit before Task 4 adds deepeval-dependent workflow tests if any retry/backoff or packaging logic misbehaves.
+
+---
+
 ## In Progress
 
-None — Task 2 complete, awaiting approval to start Task 3
+None — Task 3 complete, awaiting approval to start Task 4
 
 ---
 
 ## Next Tasks
 
-- **Task 3:** DeepEval Integration (add dependency, config, smoke test)
 - **Task 4:** Workflow Test Suite with DeepEval (correctness, hallucination, toxicity tests)
 - **Task 5:** Prompt Template Versioning (database models, migration, metrics)
 - **Task 6:** Analytics Dashboard Backend API (analytics service, REST endpoints)
@@ -161,6 +196,8 @@ None
 4. **Match existing enum casing:** When adding a new enum value, follow the existing convention (lowercase values here) to avoid mixed-case status strings leaking into DB/APIs/logs. The first-pass `WAITING_APPROVAL = "WAITING_APPROVAL"` had to be normalized to `"waiting_approval"`.
 5. **Spec review caught 4 real deviations that passing tests missed:** The initial 4 unit tests asserted happy-path behavior but didn't exercise status guards, error_message on reject, dict-shape return values, or ordering. Regression tests added post-review now cover all of these. Lesson: write tests against the spec's *stated behavior*, not only the happy path.
 6. **Postgres enum ALTER requires autocommit:** `ALTER TYPE ... ADD VALUE` cannot run inside a transaction block; use Alembic's `op.get_context().autocommit_block()` and gate on `dialect.name == 'postgresql'`.
+7. **Test directory names can shadow PyPI libraries:** `tests/deepeval/__init__.py` made `deepeval` a top-level package in the pytest import namespace (walk-up stopped at `tests/` which has no `__init__.py`), shadowing the installed `deepeval` library. Fix: skip the `__init__.py` and let conftest.py be imported by path (same pattern as `tests/fixtures/`). Keep this in mind before naming any future test subdir after a third-party library.
+8. **Version pins in plans are optimistic:** The plan pinned `deepeval==1.5.0` without considering the runtime Python version. deepeval 1.x/2.x all pin `grpcio~=1.63` which has no Python 3.13 wheels. Before accepting a version pin from the plan, spot-check that its transitive deps have wheels for the actual target runtime — cheap up-front, painful when `pip install` fails halfway through a task.
 
 ---
 
@@ -177,6 +214,9 @@ pytest tests/integration/test_teesheet_onboarding_e2e.py -v
 # Task 2: approval service tests
 pytest tests/unit/services/test_approval_service.py -v
 
+# Task 3: deepeval smoke test
+pytest tests/deepeval/conftest.py::test_deepeval_import -v
+
 # Run all integration tests
 pytest tests/integration/ -v
 ```
@@ -186,11 +226,13 @@ pytest tests/integration/ -v
 - Workflow creates 5 step executions
 - Input validation catches missing required fields AND invalid types/formats (jsonschema)
 - Approval service: 7 tests covering request/approve/reject/pending/status-guard/error_message/history-dict
+- DeepEval smoke: verifies library import + `LLMTestCase` construction + guards against test-dir shadowing
 
 ---
 
 ## Next Steps
 
-1. Start Task 3 (DeepEval Integration) after user approval
+1. Start Task 4 (Workflow Test Suite with DeepEval) after user approval
 2. File follow-up tickets for the 3 deferred Task 2 items (orchestrator wiring, row-level locking, docstring)
-3. Follow TDD: Test → Fail → Implement → Pass → Review → Fix → Re-review (max 2 iterations per review stage)
+3. Before Task 4: decide whether to resolve the `packaging` / `tenacity` version conflicts (see Task 3 known-warnings) or accept them
+4. Follow TDD: Test → Fail → Implement → Pass → Review → Fix → Re-review (max 2 iterations per review stage)
