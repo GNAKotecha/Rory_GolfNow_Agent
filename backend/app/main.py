@@ -4,6 +4,7 @@ from app.api.health import router as health_router
 from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
 from app.api.admin_analytics import router as admin_analytics_router
+from app.api.analytics import router as analytics_router
 from app.api.sessions import router as sessions_router
 from app.api.chat import router as chat_router
 from app.api.chat_ws import router as chat_ws_router
@@ -34,6 +35,7 @@ app.include_router(health_router)
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(admin_analytics_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 app.include_router(sessions_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router, prefix="/api")  # WebSocket endpoint
