@@ -23,3 +23,6 @@ langfuse==2.60.10
 # Structured output and LLM adapter
 instructor==1.7.0
 litellm==1.55.0
+
+# Workflow testing / evaluation
+deepeval==3.9.9
