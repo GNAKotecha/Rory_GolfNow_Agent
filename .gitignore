@@ -47,3 +47,7 @@ docker-compose.override.yml
 *.log
 logs/
 .mcp.json
+
+# DeepEval local cache
+.deepeval/
+.deepeval-cache/
