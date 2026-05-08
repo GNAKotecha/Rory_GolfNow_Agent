@@ -367,17 +367,55 @@
 
 ---
 
+### Task 8: Documentation + Pre-merge Cleanup ✅
+
+**What was implemented:**
+- Created `backend/docs/phase-3-complete.md` — complete Phase 3 completion doc covering onboarding workflow, approval gates, DeepEval suite, prompt versioning, analytics dashboard, DB schema, env vars, verification steps, critical learnings.
+- Updated `backend/README.md` with new Phase 3 section matching Phase 1/2 heading style; completion date `2026-05-08`.
+- Fixed pre-existing `frontend/lib/api.ts:78` TS7053 error with one-line cast `(headers as Record<string, string>)['Authorization'] = ...`; `npx tsc --noEmit` now passes clean on the frontend.
+- Resolved `frontend/lib/websocket.ts` watch-item: grep confirmed it is imported by `frontend/app/chat/page.tsx:7` (`ChatWebSocket`, `StreamEvent`), so file was committed (not deleted).
+
+**Files changed:**
+- Created: `backend/docs/phase-3-complete.md` (+278)
+- Modified: `backend/README.md` (+14)
+- Modified: `frontend/lib/api.ts` (1 line, TS7053 fix)
+- Tracked: `frontend/lib/websocket.ts` (previously untracked, +154 now in git)
+
+**Controller-approved deviations from the plan (applied before implementation):**
+1. **Real frontend paths.** Plan template listed `frontend/src/components/analytics/*`, `frontend/src/pages/analytics/dashboard.tsx`, `frontend/src/lib/api/analytics.ts` — none exist. Doc uses actual App Router paths: `frontend/components/analytics/{WorkflowSuccessRate,StepFailureAnalysis,PromptVersionComparison}.tsx`, `frontend/app/analytics/dashboard/page.tsx`, `frontend/lib/analytics.ts`. Zero `frontend/src` occurrences in final doc.
+2. **Verified test count.** Plan hardcoded "17 tests passing." Real count via `pytest --collect-only`: Unit=16 (approval=7, analytics=4, prompt_template=5), Integration=2 (teesheet_onboarding_e2e), DeepEval=6 (correctness/hallucination/toxicity × 2 each) — **Total=24**.
+3. **Completion date 2026-05-08** (today), not plan's `2026-05-01` (plan creation date).
+4. **Scope expansion.** Added the `api.ts:78` TS7053 fix and the `websocket.ts` commit/delete decision to Task 8 — originally tracked as Task-8 watch-items in this handover. Both addressed in the same commit.
+
+**Benign extras flagged during spec review (accepted, non-blocking):**
+- "Known limitation" callout: `approval_gate` orchestrator wiring deferred to Phase 4.
+- "Alembic migration not yet applied" note in DB Schema section (still a real follow-up — dev `db` hostname unreachable).
+
+**Review flow:**
+- Spec review iteration 1: ✅ APPROVED. 0 gaps. 3 benign extras noted and accepted.
+- Code quality review iteration 1: ✅ APPROVED. 0 Critical, 0 Important, 3 Minors (alternative api.ts declaration style; websocket.ts reconnect `setTimeout` not tracked on disconnect; loose `[key: string]: any` on `StreamEvent`). All explicitly out of Task 8 scope per controller rules; recorded as follow-ups below. Build typecheck: clean (`npx tsc --noEmit` exit 0).
+
+**Commit:**
+- `3c8a3c4` — docs: add Phase 3 completion documentation + pre-merge cleanup
+
+**New follow-ups surfaced in Task 8 review (deferred, not blocking):**
+- `frontend/lib/websocket.ts:~90` — reconnect `setTimeout` handle not cancelled on `disconnect()`; harmless (handle fires once, GC'd) but can trigger a stale reconnect after intentional disconnect.
+- `frontend/lib/websocket.ts` — `[key: string]: any` on `StreamEvent` weakens consumer typing.
+- `frontend/lib/api.ts` — cleaner idiom would be to declare `headers` as `Record<string, string>` at the top of the method rather than cast per-assignment. Not blocking.
+
+---
+
 ## In Progress
 
-None — Task 7 complete, awaiting approval to start Task 8 (Documentation)
+None — Phase 3 complete (8/8 tasks, 100%).
 
 ---
 
 ## Next Tasks
 
-- **Task 8:** Documentation (phase-3-complete.md, README updates)
+Phase 3 shipped. Next: **Phase 4 (Production Hardening)** planning.
 
-**Follow-up tickets (from Tasks 2 + 4 + 5 + 6 + 7):**
+**Follow-up tickets (from Tasks 2 + 4 + 5 + 6 + 7 + 8):**
 - Wire `approval_gate` step type in `workflow_orchestrator` to call `ApprovalService.request_approval` (enables real E2E pause behavior and activates Task 4's bias test)
 - Row-level locking in `ApprovalService.process_approval` for concurrent approvers
 - Document `error_message` format in `process_approval` docstring
@@ -392,8 +430,8 @@ None — Task 7 complete, awaiting approval to start Task 8 (Documentation)
 - Add 404 responses on unknown `template_id` in analytics endpoints
 - Push date-range + `failure_rate` aggregation into SQL (`GROUP BY`, `func.avg(func.extract(...))`) once data scales
 - Make `get_workflow_success_rate` return `Optional[float]` to distinguish "no data" from "0% success"
-- **(Task 7)** Fix pre-existing `frontend/lib/api.ts:78` TS7053 error that blocks `next build` — one-line fix (`(headers as Record<string,string>)['Authorization'] = ...` or switch to `Headers` class)
-- **(Task 7)** Decide whether to commit or delete the untracked `frontend/lib/websocket.ts` (never been in git; surfaced when the Python `lib/` ignore rule was un-masked)
+- **(Task 7)** ~~Fix pre-existing `frontend/lib/api.ts:78` TS7053 error~~ — **RESOLVED in Task 8** (commit `3c8a3c4`)
+- **(Task 7)** ~~Decide whether to commit or delete the untracked `frontend/lib/websocket.ts`~~ — **RESOLVED in Task 8** (committed — imported by `app/chat/page.tsx`)
 - **(Task 7)** Consolidate `frontend/lib/analytics.ts` into the `apiClient` singleton in `frontend/lib/api.ts` to avoid parallel auth/error-handling implementations
 - **(Task 7)** Global 401 → `/login` redirect on any API 401 response (affects both `apiClient` and the analytics `get<T>()` helper)
 - **(Task 7)** Extract shared `<AnalyticsCard loading error empty>` wrapper to deduplicate loading/error/empty branches across the 3 analytics components
@@ -470,10 +508,11 @@ pytest tests/integration/ -v
 
 ## Next Steps
 
-1. Start Task 8 (Documentation) after user approval — final task of Phase 3
-2. Before Phase 3 ships, resolve the pre-existing `frontend/lib/api.ts:78` TS7053 error so `next build` can pass (blocks any Vercel/prod deploy)
-3. File follow-up tickets listed under "Next Tasks" above
-4. Apply Task 5's migration (`alembic upgrade head`) the next time a dev environment with reachable Postgres is available
-5. Optional: provision `OPENAI_API_KEY` locally to actually run Task 4's 6 DeepEval tests against real scoring
-6. Decide the fate of the untracked `frontend/lib/websocket.ts` — commit as-is, refactor, or delete
-7. Follow TDD: Test → Fail → Implement → Pass → Review → Fix → Re-review (max 2 iterations per review stage)
+Phase 3 is complete (8/8 tasks, commits up to `3c8a3c4`). Suggested next work:
+
+1. Open Phase 4 (Production Hardening) planning — candidate scope: Guardrails AI for content filtering, A/B testing framework, reinforcement loop for prompt optimization, performance monitoring/alerts, production deployment config.
+2. **Before Phase 4 starts**, wire `approval_gate` step type in `workflow_orchestrator` to call `ApprovalService.request_approval` — unblocks real E2E pause behavior and activates Task 4's approval-prompt bias test.
+3. Apply Task 5's Alembic migration (`alembic upgrade head`) once a dev environment with a reachable Postgres `db` hostname is available; verify `prompt_templates` + `prompt_template_versions` tables and the `fk_prompt_templates_current_version` constraint.
+4. Provision `OPENAI_API_KEY` in CI (or switch DeepEval judge to a local model) so the 6 DeepEval tests under `tests/deepeval/` actually execute with scoring instead of being skipped.
+5. File the remaining follow-up tickets listed in "Next Tasks" above into the issue tracker.
+6. Decide whether to merge `phase-3-onboarding-testing-analytics` → `main` now, or hold until Phase 4 planning lands.
