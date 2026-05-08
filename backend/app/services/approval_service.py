@@ -84,7 +84,10 @@ class ApprovalService:
             workflow_run.status = WorkflowRunStatus.RUNNING
         else:
             workflow_run.status = WorkflowRunStatus.FAILED
-            workflow_run.error_message = f"Rejected by user {user_id}: {notes}"
+            workflow_run.error_message = (
+                f"Rejected by user {user_id}: {notes}" if notes
+                else f"Rejected by user {user_id}"
+            )
 
         workflow_run.approved_by = user_id
         workflow_run.approved_at = datetime.now(timezone.utc)

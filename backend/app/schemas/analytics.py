@@ -33,10 +33,21 @@ class PromptVersionMetrics(BaseModel):
     created_at: str
 
 
+class StepFailureBreakdown(BaseModel):
+    """Per-step failure counts and rate for a single step.
+
+    Nested value type used in DashboardSummaryResponse.step_failures.
+    """
+
+    total_executions: int
+    failed_executions: int
+    failure_rate: float
+
+
 class DashboardSummaryResponse(BaseModel):
     """Dashboard summary response."""
 
     success_rate: float
     avg_duration_seconds: Optional[float]
-    step_failures: Dict[str, Dict[str, float]]
+    step_failures: Dict[str, StepFailureBreakdown]
     total_runs: int

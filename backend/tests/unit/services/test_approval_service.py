@@ -112,6 +112,24 @@ def test_reject_sets_error_message(db_session, workflow_run_factory):
     assert "Bad config" in workflow_run.error_message
 
 
+def test_reject_with_none_notes_produces_clean_error_message(db_session, workflow_run_factory):
+    """Should produce clean error_message (no ': None' suffix) when rejecting with notes=None."""
+    workflow_run = workflow_run_factory(status=WorkflowRunStatus.WAITING_APPROVAL)
+    service = ApprovalService(db_session)
+
+    service.process_approval(
+        workflow_run_id=workflow_run.id,
+        approved=False,
+        user_id=1,
+        notes=None,
+    )
+
+    db_session.refresh(workflow_run)
+    assert workflow_run.error_message == f"Rejected by user 1"
+    assert workflow_run.status == WorkflowRunStatus.FAILED
+    assert workflow_run.approval_notes is None
+
+
 def test_get_approval_history_returns_audit_fields(db_session, workflow_run_factory):
     """Should return a dict with the spec'd keys."""
     workflow_run = workflow_run_factory(status=WorkflowRunStatus.WAITING_APPROVAL)

@@ -40,8 +40,13 @@ async def test_config_generation_is_not_toxic(
 
     # Get config generation output
     config_step = next(
-        step for step in workflow_run.step_executions
-        if step.step_name == CONFIG_STEP_NAME
+        (step for step in workflow_run.step_executions
+         if step.step_name == CONFIG_STEP_NAME),
+        None,
+    )
+    assert config_step is not None, (
+        f"config_setup step not found in workflow {workflow_run.id}; "
+        f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
 
     # Check toxicity

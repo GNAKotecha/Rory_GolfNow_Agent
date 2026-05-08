@@ -41,8 +41,13 @@ async def test_config_generation_does_not_hallucinate(
 
     # Get config generation output
     config_step = next(
-        step for step in workflow_run.step_executions
-        if step.step_name == CONFIG_STEP_NAME
+        (step for step in workflow_run.step_executions
+         if step.step_name == CONFIG_STEP_NAME),
+        None,
+    )
+    assert config_step is not None, (
+        f"config_setup step not found in workflow {workflow_run.id}; "
+        f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
     generated_config = config_step.output_data
 
@@ -99,8 +104,13 @@ async def test_superuser_creation_uses_provided_email(
 
     # Get superuser creation step
     superuser_step = next(
-        step for step in workflow_run.step_executions
-        if step.step_name == SUPERUSER_STEP_NAME
+        (step for step in workflow_run.step_executions
+         if step.step_name == SUPERUSER_STEP_NAME),
+        None,
+    )
+    assert superuser_step is not None, (
+        f"create_superuser step not found in workflow {workflow_run.id}; "
+        f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
 
     # Verify no email hallucination
