@@ -1,7 +1,7 @@
 # Gateway MCP — Design Spec
 
 **Status:** Draft for review
-**Date:** 2026-05-08
+**Date:** 2026-05-08 (amended same day: external integrations + OAuth)
 **Phase:** 4 (supersedes the former Phase 4 plan; Production Hardening becomes Phase 5)
 **Related:** `GATEWAY_MCP.md` (root), Phase 2 BRS Tools, Phase 3 Approval Service
 
@@ -9,9 +9,11 @@
 
 ## Goal
 
-Build a **Gateway MCP** server that exposes business-level tools (`create_club`, `create_admin_user`, `verify_club_setup`, …) to the agent. The server is the policy and execution boundary: every call is authenticated, permission-checked, env-gated, approval-gated where required, and audited. No raw shell, SQL, or HTTP escape hatches are exposed.
+Build a **Gateway MCP** server that exposes business-level tools (`create_club`, `create_admin_user`, `verify_club_setup`, `create_ticket`, …) to the agent. The server is the policy and execution boundary: every call is authenticated, permission-checked, env-gated, scope-checked, approval-gated where required, and audited. No raw shell, SQL, HTTP, or third-party tokens escape to the agent.
 
-MVP success = the agent can set up a club locally through structured MCP tools.
+Gateway also serves as the **single integration surface** for external systems (Atlassian, Github, Slack, …). External MCP servers and direct REST APIs are plugged in as `ExecutorBackend` implementations so they inherit the same policy, OAuth, RBAC, and audit guarantees as internal BRS tools.
+
+MVP success = the agent can (a) set up a club locally through structured MCP tools, and (b) log follow-up work to Jira through OAuth-authenticated, scope-checked tools.
 
 ---
 
@@ -20,8 +22,11 @@ MVP success = the agent can set up a club locally through structured MCP tools.
 | Decision | Choice |
 |---|---|
 | Relationship to Phase 2 `brs_tools` | **Wrap.** Reuse registry, schemas, parser. Only the executor swaps. |
-| MVP tool surface | 6 doc-exact tools (see §3) |
-| Execution model | Docker exec locally, `kubectl exec` in QA, workflow-API / job runner in prod |
+| MVP tool surface | 9 tools: 6 BRS + 3 Atlassian (see §3) |
+| Internal execution | Docker exec locally, `kubectl exec` in QA, workflow-API / job runner in prod |
+| External execution | Gateway proxies community/external MCP servers via `mcp_proxy` backend; direct REST via `http_rest` backend |
+| External auth | OAuth 2.0 Authz Code + PKCE; tokens stored encrypted per user; transparent refresh |
+| First external integration | Atlassian / Jira (3 tools) |
 | Transport | HTTP/SSE FastAPI on port 8090 |
 | Packaging | Sibling package: `backend/gateway_mcp/` |
 | Deployment (dev) | Host process; no docker socket mount |
@@ -42,28 +47,34 @@ MVP success = the agent can set up a club locally through structured MCP tools.
 │                                                                │
 │  Middleware chain (strict order):                              │
 │     start audit → auth → schema validate → env gate            │
-│     → permission check → approval check → handler              │
-│     → finish audit                                             │
+│     → permission check → scope check → approval check          │
+│     → handler → finish audit                                   │
 │                                                                │
-│  Tool router: create_club · get_club_by_name · get_club_config │
+│  Tool router:                                                  │
+│    BRS:       create_club · get_club_by_name · get_club_config │
 │               create_admin_user · call_internal_api            │
 │               verify_club_setup                                │
-└─────────┬──────────────────────────┬──────────────────┬────────┘
-          │                          │                  │
-          ▼                          ▼                  ▼
-  ExecutorBackend           brs_tools.parser     internal HTTP client
-  (docker_exec |            (schemas, mock)       (whitelisted ops)
-   k8s_exec |
-   job_runner)
-          │
-          ▼
-  brs-teesheet · brs-admin-api · brs-config-api · mysql · mongo
+│    Atlassian: create_ticket · get_ticket_status · add_comment  │
+│                                                                │
+│  OAuth subsystem: token_store · refresh · providers            │
+└─────────┬───────────────────────┬──────────────────────────────┘
+          │                       │
+          ▼                       ▼
+   ExecutorBackend          OAuth tokens (DB, encrypted)
+   ┌──────────────┐
+   │ docker_exec  │ ─────► brs-teesheet · mysql · mongo (local)
+   │ k8s_exec     │ ─────► k8s pods in QA
+   │ job_runner   │ ─────► workflow API in prod
+   │ mcp_proxy    │ ─────► external MCP servers (Atlassian, …)
+   │ http_rest    │ ─────► direct external REST (fallback)
+   └──────────────┘
 ```
 
 **Principles:**
 - The agent describes intent; the gateway owns execution.
-- No generic tools (`run_command`, `run_sql`, `curl`) exposed — ever.
+- No generic tools (`run_command`, `run_sql`, `curl`, raw upstream tool names) exposed — ever.
 - Tool code is portable across environments; executor backends are swapped via config.
+- External systems get the same policy layer as internal ones. OAuth tokens never leave the gateway.
 
 ---
 
@@ -72,34 +83,45 @@ MVP success = the agent can set up a club locally through structured MCP tools.
 ```
 backend/gateway_mcp/
 ├── pyproject.toml                       # own deps
-├── main.py                              # FastAPI app + MCP HTTP/SSE transport
+├── main.py                              # FastAPI app + MCP HTTP/SSE transport + OAuth routes
 ├── configs/
 │   ├── local.yaml
 │   ├── qa.yaml
 │   └── prod.yaml
 ├── core/
-│   ├── config.py                        # env + service map loader
+│   ├── config.py                        # env + service map + oauth provider config
 │   ├── auth.py                          # service token + user id validation
 │   ├── permissions.py                   # risk_level → env/role gate
+│   ├── scopes.py                        # required_scopes → token scope check
 │   ├── approval.py                      # bridge to Phase 3 ApprovalService
 │   ├── audit.py                         # structured logger (stdout + Langfuse)
 │   ├── errors.py                        # GatewayError hierarchy
 │   ├── middleware.py                    # request pipeline assembly
+│   ├── oauth/
+│   │   ├── token_store.py               # encrypted DB-backed token store
+│   │   ├── flow.py                      # authz code + PKCE, exchange, refresh
+│   │   └── providers/
+│   │       ├── base.py                  # OAuthProvider protocol
+│   │       └── atlassian.py             # Atlassian Cloud provider config
 │   └── executors/
 │       ├── base.py                      # ExecutorBackend protocol
-│       ├── docker_exec.py               # local
-│       ├── k8s_exec.py                  # qa
-│       ├── job_runner.py                # prod
-│       └── mock.py                      # tests (wraps MockBRSToolExecutor)
+│       ├── docker_exec.py               # local BRS
+│       ├── k8s_exec.py                  # qa BRS
+│       ├── job_runner.py                # prod BRS
+│       ├── mcp_proxy.py                 # upstream MCP server client (e.g. Atlassian MCP)
+│       ├── http_rest.py                 # direct external REST (fallback)
+│       └── mock.py                      # tests
 ├── tools/
 │   ├── __init__.py                      # ToolRegistry
-│   ├── base.py                          # Tool dataclass + metadata
+│   ├── base.py                          # Tool dataclass + metadata (incl. required_scopes)
 │   ├── clubs.py                         # create_club, get_club_by_name, verify_club_setup
 │   ├── config.py                        # get_club_config
 │   ├── users.py                         # create_admin_user
-│   └── api.py                           # call_internal_api
+│   ├── api.py                           # call_internal_api
+│   └── jira.py                          # create_ticket, get_ticket_status, add_comment
 ├── scripts/
-│   └── smoke_setup_club.py              # full-workflow MCP smoke test
+│   ├── smoke_setup_club.py              # full BRS workflow smoke test
+│   └── smoke_jira.py                    # OAuth + Atlassian smoke test
 └── tests/
     ├── unit/
     ├── integration/
@@ -114,10 +136,15 @@ backend/gateway_mcp/
 **Reuse from Phase 3:**
 - `app.services.approval_service.ApprovalService` — for `requires_approval=true` tools
 
+**New DB migration (Alembic):**
+- `external_oauth_tokens` table: `(id, user_id, provider, access_token_enc, refresh_token_enc, scope, expires_at, created_at, updated_at)`
+- Composite unique index on `(user_id, provider)`
+
 **File responsibility invariants:**
-- `core/executors/*.py` are the **only** files that start a subprocess or open a raw HTTP socket.
+- `core/executors/*.py` are the **only** files that start a subprocess, open a raw HTTP socket, or connect to an upstream MCP server.
+- `core/oauth/*.py` are the **only** files that touch provider tokens. Tools see them only via injected `UserContext`.
 - `tools/*.py` never import subprocess/HTTP directly — only `core/`.
-- `core/middleware.py` is the only place the request pipeline is defined — tools don't assemble their own middleware.
+- `core/middleware.py` is the only place the request pipeline is defined.
 
 ---
 
@@ -207,11 +234,101 @@ Loaded by `GATEWAY_ENV=local|qa|prod`. Secrets are **references** (env var names
 
 ---
 
+## External Integrations & OAuth
+
+Two executor backends handle external systems:
+
+### `mcp_proxy` backend
+Gateway acts as an MCP client to another MCP server and re-exposes that server's capabilities under Gateway's own policy layer.
+
+```python
+class MCPProxyBackend(ExecutorBackend):
+    def __init__(self, upstream_name: str, upstream_url: str):
+        self.client = MCPClient(upstream_url)  # reuses existing app.services.mcp_client
+
+    async def run_command(self, service, argv, timeout):
+        tool_name, args = argv[0], argv[1:]
+        return await self.client.call_tool(tool_name, args, timeout=timeout)
+```
+
+- Upstream MCP tool names (e.g. `atlassian_issues_create_v3`) are **never** visible to the agent. Gateway tools (`create_ticket`) translate between Gateway's business schema and the upstream tool's schema.
+- Transparent token injection: before `call_tool`, middleware injects the current user's OAuth token into the upstream request.
+
+### `http_rest` backend
+For external systems without an MCP server. Thin HTTP client with per-tool allowlisting of (host, method, path pattern). No free-form URL access.
+
+```python
+class HTTPRestBackend(ExecutorBackend):
+    async def call_http(self, service, method, path, body):
+        endpoint = self.allowlist.resolve(service, method, path)  # raises if not allowlisted
+        return await self.client.request(method, endpoint, body=body, auth=self.auth_for(service))
+```
+
+### OAuth subsystem
+
+**Storage (`external_oauth_tokens` table):**
+| column | type | notes |
+|---|---|---|
+| `id` | serial PK | |
+| `user_id` | int FK users.id | |
+| `provider` | str | `atlassian`, `github`, … |
+| `access_token_enc` | bytes | AES-GCM encrypted |
+| `refresh_token_enc` | bytes | AES-GCM encrypted |
+| `scope` | str | space-separated scope list |
+| `expires_at` | timestamptz | |
+| `created_at`, `updated_at` | timestamptz | |
+
+Composite unique index on `(user_id, provider)`. Encryption key from env (`OAUTH_ENCRYPTION_KEY`) — Vault / k8s secret in qa/prod.
+
+**Flow (frontend-initiated):**
+```
+1. User clicks "Connect Jira" in Open WebUI
+2. Frontend → backend GET /api/oauth/atlassian/authorize
+   → backend generates PKCE verifier + state, stores in session
+   → backend returns Atlassian authz URL with client_id + PKCE challenge + state
+3. Frontend redirects browser to Atlassian authz URL
+4. User consents in Atlassian, Atlassian redirects to
+   → backend GET /api/oauth/atlassian/callback?code=&state=
+   → backend validates state, exchanges code + PKCE verifier for tokens
+   → encrypts and stores tokens in external_oauth_tokens
+   → redirects browser back to Open WebUI
+5. Subsequent tool calls transparently use the stored token
+```
+
+**OAuth routes** live in the main backend app (`backend/app/api/oauth.py`), not Gateway — Gateway has no user session to anchor a callback. Backend stores the token after exchange. Gateway reads it via the token store (shared DB access).
+
+**Token refresh:** `token_store.get(user_id, provider)` checks `expires_at`; if expiring within 60s, refreshes transparently using the stored refresh_token and updates the record. Concurrent refresh serialised with an advisory lock (`pg_advisory_lock`) keyed by `(user_id, provider)` to prevent thundering-herd refresh. Refresh failures propagate as `token_refresh_failed` — caller must re-authorize.
+
+**Scope enforcement (middleware step):**
+Each tool declares `required_scopes`. Middleware fetches the token, checks the stored scope list covers `required_scopes`. Missing scope → `insufficient_scope` with a hint to re-authorize. Never silently downgrades or calls with fewer scopes.
+
+**Provider config (env):**
+```yaml
+# backend/gateway_mcp/configs/local.yaml (addition)
+oauth:
+  providers:
+    atlassian:
+      client_id_env: ATLASSIAN_CLIENT_ID
+      client_secret_env: ATLASSIAN_CLIENT_SECRET
+      authz_url: https://auth.atlassian.com/authorize
+      token_url: https://auth.atlassian.com/oauth/token
+      default_scopes: ["read:jira-work", "write:jira-work"]
+      redirect_uri: http://localhost:8000/api/oauth/atlassian/callback
+upstream_mcps:
+  atlassian:
+    url: http://localhost:9100/mcp      # Atlassian MCP server local
+    auth_mode: oauth                    # inject user's token per request
+```
+
+---
+
 ## MVP Tool Contracts
 
-Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `risk_level`, `allowed_environments`, `requires_approval`, `timeout_seconds`, `handler`, `audit_metadata`.
+Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `risk_level`, `allowed_environments`, `requires_approval`, `timeout_seconds`, `required_scopes` (external tools only), `handler`, `audit_metadata`.
 
-### 3.1 `create_club`
+### BRS Tools (6)
+
+#### 3.1 `create_club`
 | | |
 |---|---|
 | risk_level | `low_write` |
@@ -222,7 +339,7 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 | executes | `docker exec brs-teesheet ./bin/teesheet new-club <args>` |
 | output | `{ club_id, club_name, database_name, created_at }` |
 
-### 3.2 `get_club_by_name`
+#### 3.2 `get_club_by_name`
 | | |
 |---|---|
 | risk_level | `read` |
@@ -233,7 +350,7 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 | executes | `query_db` on `mysql`: `SELECT id,name,country,timezone,currency,created_at FROM clubs WHERE name=?` |
 | output | `{ club_id, name, country, timezone, currency, created_at }` or `null` |
 
-### 3.3 `get_club_config`
+#### 3.3 `get_club_config`
 | | |
 |---|---|
 | risk_level | `read` |
@@ -244,7 +361,7 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 | executes | `call_http` GET `config_api` `/configs/{club_id}` |
 | output | `{ club_id, modules: [str], settings: dict, version: int }` |
 
-### 3.4 `create_admin_user`
+#### 3.4 `create_admin_user`
 | | |
 |---|---|
 | risk_level | `medium_write` |
@@ -256,7 +373,7 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 | output | `{ user_id, club_id, email, role, created_at }` |
 | idempotency | handler checks for existing admin with same `(club_id, email)` via read-path and returns existing record on match |
 
-### 3.5 `call_internal_api`
+#### 3.5 `call_internal_api`
 | | |
 |---|---|
 | risk_level | `medium_write` |
@@ -267,7 +384,7 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 | executes | `call_http` POST `admin_api` `/clubs/{club_id}/features` with a body the gateway owns |
 | output | `{ club_id, enabled_features: [str] }` |
 
-### 3.6 `verify_club_setup`
+#### 3.6 `verify_club_setup`
 | | |
 |---|---|
 | risk_level | `read` |
@@ -283,6 +400,51 @@ Each tool declares: `name`, `description`, `input_schema`, `output_schema`, `ris
 - Output is a typed model serialised to JSON.
 - Failures map to `GatewayError` with a bounded `code` set (see §Errors).
 
+### Atlassian Tools (3)
+
+All Atlassian tools share:
+- `executor_backend: mcp_proxy` via upstream Atlassian MCP server
+- `required_scopes` checked against stored user token before handler runs
+- Per-user OAuth token injected transparently — tool handler code never touches tokens
+- `allowed_envs: [local, dev, qa, prod]` — reads and low-risk writes; safe across envs
+- On `token_refresh_failed` or missing token → `oauth_not_authorized` returned with a re-authorize hint
+
+#### 3.7 `create_ticket`
+| | |
+|---|---|
+| risk_level | `low_write` |
+| allowed_envs | `[local, dev, qa, prod]` |
+| requires_approval | `false` |
+| required_scopes | `["write:jira-work"]` |
+| timeout_seconds | 30 |
+| input | `{ project_key (required), summary (required), description, issue_type (enum: Task\|Bug\|Story, default Task), labels: [str] }` |
+| executes | `mcp_proxy.run_command(service="atlassian", argv=["create_issue", ...])` — upstream MCP receives project_key, summary, description, type |
+| output | `{ ticket_id, ticket_key (e.g. GOLF-123), url, status, created_at }` |
+
+#### 3.8 `get_ticket_status`
+| | |
+|---|---|
+| risk_level | `read` |
+| allowed_envs | `[local, dev, qa, prod]` |
+| requires_approval | `false` |
+| required_scopes | `["read:jira-work"]` |
+| timeout_seconds | 15 |
+| input | `{ ticket_key (e.g. GOLF-123) }` |
+| executes | `mcp_proxy.run_command(service="atlassian", argv=["get_issue", ticket_key])` |
+| output | `{ ticket_key, summary, status, assignee, updated_at, url }` or `null` if not found |
+
+#### 3.9 `add_comment`
+| | |
+|---|---|
+| risk_level | `low_write` |
+| allowed_envs | `[local, dev, qa, prod]` |
+| requires_approval | `false` |
+| required_scopes | `["write:jira-work"]` |
+| timeout_seconds | 20 |
+| input | `{ ticket_key, comment_body (required, max 32KB) }` |
+| executes | `mcp_proxy.run_command(service="atlassian", argv=["add_comment", ticket_key, body])` |
+| output | `{ ticket_key, comment_id, author, created_at }` |
+
 ---
 
 ## Middleware Chain (Final)
@@ -294,12 +456,15 @@ request
   → schema validate       # pydantic input validation
   → env gate              # tool.allowed_environments vs GATEWAY_ENV
   → permission check      # risk_level vs caller role
+  → scope check           # external tools: required_scopes vs stored token scope
   → approval check        # tool.requires_approval → ApprovalService
-  → handler               # tool.handler(input) → output
+  → handler               # tool.handler(input, user_ctx) → output
   → finish audit          # update record with status, duration, error code
 ```
 
 Failure at any stage writes an audit record with `status=denied|failure` and returns a `GatewayError`. Success writes `status=success`.
+
+`user_ctx` passed to handler carries `user_id`, injected OAuth token fetcher, correlation IDs. Tools never see raw tokens — they call `ctx.oauth_token("atlassian")` which goes through the token store + refresh.
 
 ---
 
@@ -359,16 +524,18 @@ Every rejection or failure returns a structured `GatewayError`:
 ```json
 {
   "error": {
-    "code": "permission_denied | env_restricted | validation_failed | container_unavailable | upstream_error | subprocess_timeout | approval_required",
-    "message": "human-safe message; never includes stdout/stderr verbatim",
+    "code": "permission_denied | env_restricted | validation_failed | container_unavailable | upstream_error | subprocess_timeout | approval_required | insufficient_scope | oauth_not_authorized | token_refresh_failed",
+    "message": "human-safe message; never includes stdout/stderr/tokens verbatim",
     "audit_id": "uuid",
-    "retryable": false
+    "retryable": false,
+    "reauthorize_url": "optional; only for oauth_not_authorized and insufficient_scope"
   }
 }
 ```
 
-- Stdout/stderr captured for debugging land in the audit log, **not** the agent response.
+- Stdout/stderr/tokens captured for debugging land in the audit log, **not** the agent response.
 - `retryable=true` only on `upstream_error` for read tools (see Retries).
+- `reauthorize_url` returned alongside OAuth-related codes so the frontend can prompt the user to re-consent cleanly.
 
 ---
 
@@ -482,21 +649,25 @@ python -m gateway_mcp.main     # host process on :8090
 
 **Unit tests cover:**
 - Each tool module (mocked executor).
-- Middleware chain isolated: auth fail, env denial, schema violation, permission deny, approval required, handler exception → correct `GatewayError` + audit record.
-- Each executor backend with its own client mocked.
+- Middleware chain isolated: auth fail, env denial, schema violation, permission deny, scope miss, approval required, handler exception → correct `GatewayError` + audit record.
+- Each executor backend with its own client mocked (`docker_exec`, `k8s_exec`, `job_runner`, `mcp_proxy`, `http_rest`).
+- OAuth subsystem: token encryption roundtrip, refresh at near-expiry, concurrent refresh serialization, refresh failure → `token_refresh_failed`.
+- Scope check: missing scope → `insufficient_scope`; token absent → `oauth_not_authorized`.
 
 **Integration tests cover:**
-- MCP `tools/list` and `tools/call` compliance for all 6 MVP tools.
-- Full club-setup workflow replay: `create_club` → `get_club_by_name` → `create_admin_user` → `call_internal_api` → `verify_club_setup`. Assert end state + audit sequence.
+- MCP `tools/list` and `tools/call` compliance for all 9 MVP tools.
+- Full BRS club-setup workflow replay: `create_club` → `get_club_by_name` → `create_admin_user` → `call_internal_api` → `verify_club_setup`. Assert end state + audit sequence.
+- Atlassian flow with mocked upstream MCP: `create_ticket` → `get_ticket_status` → `add_comment`. Token injected from fixture; verify upstream received it and Gateway audited the call.
+- OAuth routes: authz redirect, callback code exchange (mocked Atlassian token endpoint), token stored encrypted, reused on next tool call.
 
 **E2E tests cover:**
-- Bring up `docker-compose.brs.yml`, run gateway on host, run club-setup end-to-end against real containers.
-- Assert final state in real MySQL (`SELECT * FROM clubs`) and Mongo (config exists).
+- Bring up `docker-compose.brs.yml`, run gateway on host, run BRS club-setup end-to-end against real containers.
+- Assert final state in real MySQL and Mongo.
+- Atlassian E2E opt-in (`GATEWAY_E2E_ATLASSIAN=1`) against a real Atlassian test instance + real OAuth app — run manually, not in CI default.
 
-**Smoke script:**
-- Works against any backend via `GATEWAY_EXECUTOR_BACKEND=docker_exec|k8s_exec|job_runner|mock`.
-- Exercises all 6 tools in order, prints pass/fail.
-- Run after qa/prod deploy as a plumbing check.
+**Smoke scripts:**
+- `backend/gateway_mcp/scripts/smoke_setup_club.py` — BRS workflow, configurable executor backend.
+- `backend/gateway_mcp/scripts/smoke_jira.py` — exercises all 3 Atlassian tools given a user_id with stored token. Prints pass/fail.
 
 ---
 
@@ -504,29 +675,35 @@ python -m gateway_mcp.main     # host process on :8090
 
 MVP ships when all of the following hold:
 
-- [ ] Gateway MCP process starts on `:8090` and responds to MCP `tools/list` with the 6 tools.
-- [ ] Each of the 6 tools has a passing unit test.
-- [ ] Middleware order verified by integration test (audit record emitted for auth/env/permission denials, not only successes).
-- [ ] Full club-setup workflow passes as an integration test against the mock executor.
-- [ ] Full club-setup workflow passes as an E2E test against real BRS containers under `docker_exec`.
+- [ ] Gateway MCP process starts on `:8090` and responds to MCP `tools/list` with all 9 tools.
+- [ ] Each of the 9 tools has a passing unit test.
+- [ ] Middleware order verified by integration test (audit record emitted for auth / env / permission / scope / approval denials, not only successes).
+- [ ] Full BRS club-setup workflow passes as an integration test against the mock executor.
+- [ ] Full BRS club-setup workflow passes as an E2E test against real BRS containers under `docker_exec`.
 - [ ] Backend `MCPToolRegistry` lists Gateway MCP tools.
 - [ ] Onboarding workflow template updated to call `create_club` (not `brs_teesheet_init`) and passes its existing integration tests.
-- [ ] No generic tools (`run_command`, `run_sql`, free-form `curl`) exposed.
+- [ ] No generic tools (`run_command`, `run_sql`, free-form `curl`, raw upstream MCP tool names) exposed.
 - [ ] Every tool call produces an audit record visible in Langfuse.
-- [ ] `docker_exec`, `k8s_exec`, and `job_runner` executors all have unit tests; integration-tested only `docker_exec` and `mock` in MVP.
+- [ ] `docker_exec`, `k8s_exec`, `job_runner`, `mcp_proxy`, `http_rest` executors all have unit tests; integration-tested: `docker_exec`, `mock`, `mcp_proxy` (mocked upstream).
 - [ ] Config files for local/qa/prod present; secrets referenced, not stored.
+- [ ] `external_oauth_tokens` table migration applied; tokens stored encrypted at rest.
+- [ ] OAuth authz + callback routes work for Atlassian; user can connect Jira from Open WebUI.
+- [ ] Atlassian tool calls transparently fetch + refresh the user's token; no token ever appears in Gateway responses or audit payloads.
+- [ ] Missing scope returns `insufficient_scope` with a valid re-authorize URL; missing token returns `oauth_not_authorized`.
 
 ---
 
 ## Out of Scope (Deferred)
 
-- Tools beyond the 6 MVP set (green fee rates, booking rules, module management).
+- Tools beyond the 9 MVP set (green fee rates, booking rules, module management; Github; Slack; other Atlassian tools like search/JQL).
 - Role table in DB (MVP uses env allowlist).
 - `gateway_audit_log` table (MVP is stdout + Langfuse).
 - Circuit breakers, Prometheus metrics, OTEL.
 - Open WebUI direct connection to Gateway MCP.
 - Per-tool cancellation UX (handle exists, no UX).
 - Staging/prod `requires_approval=true` tool config (hook wired, not enabled).
+- Per-site OAuth tenants (currently one Atlassian Cloud site per user; multi-site selection deferred).
+- Service-account OAuth fallback when no user is attached to the call (e.g. background workflow). MVP requires a user context for external calls.
 
 ---
 
@@ -535,6 +712,8 @@ MVP ships when all of the following hold:
 - Exact body shape for `call_internal_api(operation=enable_required_features)` — depends on brs-admin-api endpoint contract. Plan will include a small research task to confirm.
 - Whether dev Dockerfiles need to be contributed back upstream to the BRS repos or held as local overrides.
 - Whether the `docker` Python SDK or shelling out to the `docker` CLI is a better `docker_exec` backend. Plan will prototype both in a spike task.
+- Which Atlassian MCP server to use (official Atlassian MCP vs community implementation). Plan will evaluate and pin one, or self-host a minimal proxy if both are inadequate.
+- Whether OAuth callback should live in the main backend (`app/api/oauth.py`) or inside Gateway MCP with session bridging. Design says backend; plan can revisit if the session bridging proves simpler.
 
 ---
 
@@ -547,6 +726,11 @@ MVP ships when all of the following hold:
 | `k8s_exec` and `job_runner` backends untestable before QA/prod infra is known | high | Unit test only; treat as interface-compatible placeholders until infra exists |
 | MCP protocol version mismatch between server and existing client | low | Pin `mcp` package version; add protocol compatibility test |
 | Docker `exec` latency on macOS adds test flakiness | low | Generous timeouts in E2E; mark E2E tests as slow-tier |
+| Atlassian MCP server availability / API stability (community vs official) | medium | Pin a specific MCP server image; self-host locally for dev; smoke test in CI to detect upstream drift |
+| OAuth token leakage via logs / error messages | high-impact, low-prob | Strict redaction in audit; unit test asserting no `access_token` substring appears in any response; secrets never logged |
+| Encryption key rotation complexity | medium | Design v1 accepts a single key; document rotation procedure in plan, implement dual-key read/single-key write when needed |
+| Concurrent OAuth refresh storms on shared workflows | low | `pg_advisory_lock` per `(user_id, provider)` prevents thundering-herd refresh |
+| User consent drift (user revokes scope in Atlassian) | medium | Token refresh failure surfaced as `oauth_not_authorized` with re-authorize URL; frontend guides user through reconnect |
 
 ---
 
