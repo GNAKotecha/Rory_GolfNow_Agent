@@ -25,8 +25,10 @@ MVP success = the agent can (a) set up a club locally through structured MCP too
 | MVP tool surface | 9 tools: 6 BRS + 3 Atlassian (see §3) |
 | Internal execution | Docker exec locally, `kubectl exec` in QA, workflow-API / job runner in prod |
 | External execution | Gateway proxies community/external MCP servers via `mcp_proxy` backend; direct REST via `http_rest` backend |
-| External auth | OAuth 2.0 Authz Code + PKCE; tokens stored encrypted per user; transparent refresh |
-| First external integration | Atlassian / Jira (3 tools) |
+| External credentials | Unified subsystem handles **both** OAuth (Atlassian) and **user-pasted PAT** (Github, future). Single encrypted `external_credentials` table. |
+| Atlassian MCP endpoint | `https://mcp.atlassian.com/v1/mcp` (official remote MCP, OAuth-authenticated) |
+| Github MCP endpoint | `https://api.githubcopilot.com/mcp/` (official remote MCP, PAT-authenticated). Infra wired in Phase 4; tools deferred. |
+| First external integration | Atlassian / Jira (3 tools). Github is wiring-only in Phase 4. |
 | Transport | HTTP/SSE FastAPI on port 8090 |
 | Packaging | Sibling package: `backend/gateway_mcp/` |
 | Deployment (dev) | Host process; no docker socket mount |
@@ -56,16 +58,16 @@ MVP success = the agent can (a) set up a club locally through structured MCP too
 │               verify_club_setup                                │
 │    Atlassian: create_ticket · get_ticket_status · add_comment  │
 │                                                                │
-│  OAuth subsystem: token_store · refresh · providers            │
+│  OAuth + PAT subsystem: credential_store · refresh · providers │
 └─────────┬───────────────────────┬──────────────────────────────┘
           │                       │
           ▼                       ▼
-   ExecutorBackend          OAuth tokens (DB, encrypted)
+   ExecutorBackend          External credentials (DB, encrypted)
    ┌──────────────┐
    │ docker_exec  │ ─────► brs-teesheet · mysql · mongo (local)
    │ k8s_exec     │ ─────► k8s pods in QA
    │ job_runner   │ ─────► workflow API in prod
-   │ mcp_proxy    │ ─────► external MCP servers (Atlassian, …)
+   │ mcp_proxy    │ ─────► Atlassian MCP (OAuth) · Github MCP (PAT)
    │ http_rest    │ ─────► direct external REST (fallback)
    └──────────────┘
 ```
@@ -74,7 +76,7 @@ MVP success = the agent can (a) set up a club locally through structured MCP too
 - The agent describes intent; the gateway owns execution.
 - No generic tools (`run_command`, `run_sql`, `curl`, raw upstream tool names) exposed — ever.
 - Tool code is portable across environments; executor backends are swapped via config.
-- External systems get the same policy layer as internal ones. OAuth tokens never leave the gateway.
+- External systems get the same policy layer as internal ones. User credentials (OAuth tokens or PATs) never leave the gateway.
 
 ---
 
@@ -97,12 +99,14 @@ backend/gateway_mcp/
 │   ├── audit.py                         # structured logger (stdout + Langfuse)
 │   ├── errors.py                        # GatewayError hierarchy
 │   ├── middleware.py                    # request pipeline assembly
-│   ├── oauth/
-│   │   ├── token_store.py               # encrypted DB-backed token store
-│   │   ├── flow.py                      # authz code + PKCE, exchange, refresh
+│   ├── credentials/
+│   │   ├── store.py                     # encrypted DB-backed credential store (OAuth + PAT)
+│   │   ├── oauth_flow.py                # authz code + PKCE, exchange, refresh
+│   │   ├── pat_flow.py                  # PAT validation + storage (user-pasted)
 │   │   └── providers/
-│   │       ├── base.py                  # OAuthProvider protocol
-│   │       └── atlassian.py             # Atlassian Cloud provider config
+│   │       ├── base.py                  # CredentialProvider protocol
+│   │       ├── atlassian.py             # Atlassian Cloud (OAuth)
+│   │       └── github.py                # Github (PAT; infra-only in Phase 4)
 │   └── executors/
 │       ├── base.py                      # ExecutorBackend protocol
 │       ├── docker_exec.py               # local BRS
@@ -137,12 +141,15 @@ backend/gateway_mcp/
 - `app.services.approval_service.ApprovalService` — for `requires_approval=true` tools
 
 **New DB migration (Alembic):**
-- `external_oauth_tokens` table: `(id, user_id, provider, access_token_enc, refresh_token_enc, scope, expires_at, created_at, updated_at)`
-- Composite unique index on `(user_id, provider)`
+- `external_credentials` table:
+  `(id, user_id, provider, credential_type, secret_enc, refresh_token_enc, scope, expires_at, metadata (jsonb), revoked_at, created_at, updated_at)`
+- `credential_type` is an enum: `oauth | pat`
+- `refresh_token_enc`, `scope`, `expires_at` nullable (not applicable to PATs)
+- Composite unique index on `(user_id, provider)` (one credential per provider per user)
 
 **File responsibility invariants:**
 - `core/executors/*.py` are the **only** files that start a subprocess, open a raw HTTP socket, or connect to an upstream MCP server.
-- `core/oauth/*.py` are the **only** files that touch provider tokens. Tools see them only via injected `UserContext`.
+- `core/credentials/*.py` are the **only** files that touch provider secrets. Tools see them only via injected `UserContext`.
 - `tools/*.py` never import subprocess/HTTP directly — only `core/`.
 - `core/middleware.py` is the only place the request pipeline is defined.
 
@@ -234,7 +241,7 @@ Loaded by `GATEWAY_ENV=local|qa|prod`. Secrets are **references** (env var names
 
 ---
 
-## External Integrations & OAuth
+## External Integrations & Credentials
 
 Two executor backends handle external systems:
 
@@ -243,81 +250,148 @@ Gateway acts as an MCP client to another MCP server and re-exposes that server's
 
 ```python
 class MCPProxyBackend(ExecutorBackend):
-    def __init__(self, upstream_name: str, upstream_url: str):
+    def __init__(self, upstream_name: str, upstream_url: str, auth_mode: str):
         self.client = MCPClient(upstream_url)  # reuses existing app.services.mcp_client
+        self.auth_mode = auth_mode             # "oauth" | "pat"
 
-    async def run_command(self, service, argv, timeout):
+    async def run_command(self, service, argv, timeout, user_ctx):
         tool_name, args = argv[0], argv[1:]
-        return await self.client.call_tool(tool_name, args, timeout=timeout)
+        credential = await user_ctx.credential(service)  # resolves OAuth or PAT
+        return await self.client.call_tool(
+            tool_name, args, timeout=timeout, auth=credential.as_bearer()
+        )
 ```
 
 - Upstream MCP tool names (e.g. `atlassian_issues_create_v3`) are **never** visible to the agent. Gateway tools (`create_ticket`) translate between Gateway's business schema and the upstream tool's schema.
-- Transparent token injection: before `call_tool`, middleware injects the current user's OAuth token into the upstream request.
+- Transparent credential injection: the middleware resolves the right credential type for the provider and hands a ready-to-use bearer to the backend.
+
+**Pinned MCP endpoints:**
+| Provider | URL | Auth |
+|---|---|---|
+| Atlassian | `https://mcp.atlassian.com/v1/mcp` | OAuth (PKCE) |
+| Github | `https://api.githubcopilot.com/mcp/` | PAT (user-pasted) |
+
+Github MCP is wired in Phase 4 (config, provider, executor, store, UI) but no Github **tools** are implemented in MVP — those come in a later phase.
 
 ### `http_rest` backend
 For external systems without an MCP server. Thin HTTP client with per-tool allowlisting of (host, method, path pattern). No free-form URL access.
 
 ```python
 class HTTPRestBackend(ExecutorBackend):
-    async def call_http(self, service, method, path, body):
+    async def call_http(self, service, method, path, body, user_ctx):
         endpoint = self.allowlist.resolve(service, method, path)  # raises if not allowlisted
-        return await self.client.request(method, endpoint, body=body, auth=self.auth_for(service))
+        credential = await user_ctx.credential(service) if self.requires_auth else None
+        return await self.client.request(method, endpoint, body=body, auth=credential)
 ```
 
-### OAuth subsystem
+### Credentials subsystem
 
-**Storage (`external_oauth_tokens` table):**
+Unified store handles both OAuth tokens and user-pasted PATs.
+
+**Storage (`external_credentials` table):**
 | column | type | notes |
 |---|---|---|
 | `id` | serial PK | |
 | `user_id` | int FK users.id | |
 | `provider` | str | `atlassian`, `github`, … |
-| `access_token_enc` | bytes | AES-GCM encrypted |
-| `refresh_token_enc` | bytes | AES-GCM encrypted |
-| `scope` | str | space-separated scope list |
-| `expires_at` | timestamptz | |
+| `credential_type` | enum(`oauth`, `pat`) | |
+| `secret_enc` | bytes | AES-GCM; the access_token (OAuth) or PAT (Github) |
+| `refresh_token_enc` | bytes nullable | OAuth only |
+| `scope` | str nullable | OAuth: space-separated scope list. PAT: null (scopes are inside the token and validated by probing upstream). |
+| `expires_at` | timestamptz nullable | OAuth only; PATs assumed non-expiring unless user set expiry |
+| `metadata` | jsonb | per-provider: e.g. Atlassian `cloud_id`, Github `user_login`, scope strings reported by validation probe |
+| `revoked_at` | timestamptz nullable | set when user disconnects or upstream reports 401/403 |
 | `created_at`, `updated_at` | timestamptz | |
 
-Composite unique index on `(user_id, provider)`. Encryption key from env (`OAUTH_ENCRYPTION_KEY`) — Vault / k8s secret in qa/prod.
+Composite unique index on `(user_id, provider)`. Encryption key from env (`GATEWAY_CREDENTIAL_ENCRYPTION_KEY`) — Vault / k8s secret in qa/prod.
 
-**Flow (frontend-initiated):**
+### Flow A: OAuth (Atlassian)
+
 ```
 1. User clicks "Connect Jira" in Open WebUI
-2. Frontend → backend GET /api/oauth/atlassian/authorize
+2. Frontend → backend GET /api/credentials/atlassian/authorize
    → backend generates PKCE verifier + state, stores in session
-   → backend returns Atlassian authz URL with client_id + PKCE challenge + state
+   → backend returns https://auth.atlassian.com/authorize?... with client_id + PKCE challenge + state
 3. Frontend redirects browser to Atlassian authz URL
 4. User consents in Atlassian, Atlassian redirects to
-   → backend GET /api/oauth/atlassian/callback?code=&state=
+   → backend GET /api/credentials/atlassian/callback?code=&state=
    → backend validates state, exchanges code + PKCE verifier for tokens
-   → encrypts and stores tokens in external_oauth_tokens
+   → backend probes Atlassian for cloud_id, stores in metadata
+   → encrypts and stores in external_credentials (credential_type=oauth)
    → redirects browser back to Open WebUI
 5. Subsequent tool calls transparently use the stored token
 ```
 
-**OAuth routes** live in the main backend app (`backend/app/api/oauth.py`), not Gateway — Gateway has no user session to anchor a callback. Backend stores the token after exchange. Gateway reads it via the token store (shared DB access).
+**Refresh:** `credentials.store.get(user_id, "atlassian")` checks `expires_at`; if expiring within 60s, refreshes transparently using `refresh_token_enc` and updates the record. Concurrent refresh serialised with an advisory lock (`pg_advisory_lock`) keyed by `(user_id, provider)` to prevent thundering-herd refresh. Refresh failures set `revoked_at` and raise `token_refresh_failed` — caller must re-authorize.
 
-**Token refresh:** `token_store.get(user_id, provider)` checks `expires_at`; if expiring within 60s, refreshes transparently using the stored refresh_token and updates the record. Concurrent refresh serialised with an advisory lock (`pg_advisory_lock`) keyed by `(user_id, provider)` to prevent thundering-herd refresh. Refresh failures propagate as `token_refresh_failed` — caller must re-authorize.
+### Flow B: PAT (Github)
 
-**Scope enforcement (middleware step):**
-Each tool declares `required_scopes`. Middleware fetches the token, checks the stored scope list covers `required_scopes`. Missing scope → `insufficient_scope` with a hint to re-authorize. Never silently downgrades or calls with fewer scopes.
+```
+1. User clicks "Connect Github" in Open WebUI
+2. Frontend opens a modal with:
+   - Link to https://github.com/settings/tokens/new
+     pre-filled with recommended scopes (e.g. repo, read:user) if possible via query params
+   - Paste field for the PAT
+   - "Save" button
+3. Frontend POST /api/credentials/github/pat  { pat: "ghp_..." }
+4. Backend validates the PAT:
+   - GET https://api.github.com/user using PAT → must 200
+   - GET https://api.github.com/user → extracts user_login, stored in metadata
+   - Validates scope coverage of configured default_required_scopes
+   - If validation fails → 400 with actionable error
+5. Backend encrypts and stores (credential_type=pat, refresh_token_enc=null, expires_at=null if not set)
+6. Subsequent tool calls use the stored PAT
+```
 
-**Provider config (env):**
+**No refresh for PATs.** On upstream 401/403, backend marks `revoked_at` and responds with `credential_missing` + `reconnect_url` pointing at the reconnect modal.
+
+### Credential routes (in main backend)
+
+Routes live in `backend/app/api/credentials.py` (not Gateway — Gateway has no session). Backend stores credentials; Gateway reads via shared DB access.
+
+- `GET  /api/credentials/atlassian/authorize` — start OAuth flow
+- `GET  /api/credentials/atlassian/callback`  — finish OAuth flow
+- `POST /api/credentials/github/pat`          — store a user-pasted PAT
+- `DELETE /api/credentials/{provider}`        — user disconnects, sets `revoked_at`
+- `GET  /api/credentials`                     — list user's connected providers (without secrets) for UI
+
+### Scope enforcement (middleware step)
+
+Each tool declares `required_scopes`. Middleware resolution varies by credential type:
+
+- **OAuth (Atlassian):** compare stored `scope` column to `required_scopes`. Missing → `insufficient_scope` with `reconnect_url` hint.
+- **PAT (Github, later phase):** probe upstream (`GET /user` for scope headers) lazily — cache result on the credential record in `metadata`. Missing → `insufficient_scope`.
+
+Never silently downgrades or calls with fewer scopes.
+
+### Provider + upstream config
+
 ```yaml
-# backend/gateway_mcp/configs/local.yaml (addition)
-oauth:
+# backend/gateway_mcp/configs/local.yaml (additions)
+credentials:
   providers:
     atlassian:
+      type: oauth
       client_id_env: ATLASSIAN_CLIENT_ID
       client_secret_env: ATLASSIAN_CLIENT_SECRET
       authz_url: https://auth.atlassian.com/authorize
       token_url: https://auth.atlassian.com/oauth/token
       default_scopes: ["read:jira-work", "write:jira-work"]
-      redirect_uri: http://localhost:8000/api/oauth/atlassian/callback
+      redirect_uri: http://localhost:8000/api/credentials/atlassian/callback
+    github:
+      type: pat
+      validate_url: https://api.github.com/user
+      default_required_scopes: ["repo", "read:user"]
+      token_creation_hint_url: https://github.com/settings/tokens/new
 upstream_mcps:
   atlassian:
-    url: http://localhost:9100/mcp      # Atlassian MCP server local
-    auth_mode: oauth                    # inject user's token per request
+    url: https://mcp.atlassian.com/v1/mcp
+    auth_mode: oauth
+    provider: atlassian
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    auth_mode: pat
+    provider: github
 ```
 
 ---
@@ -524,18 +598,19 @@ Every rejection or failure returns a structured `GatewayError`:
 ```json
 {
   "error": {
-    "code": "permission_denied | env_restricted | validation_failed | container_unavailable | upstream_error | subprocess_timeout | approval_required | insufficient_scope | oauth_not_authorized | token_refresh_failed",
-    "message": "human-safe message; never includes stdout/stderr/tokens verbatim",
+    "code": "permission_denied | env_restricted | validation_failed | container_unavailable | upstream_error | subprocess_timeout | approval_required | insufficient_scope | credential_missing | token_refresh_failed",
+    "message": "human-safe message; never includes stdout/stderr/tokens/PATs verbatim",
     "audit_id": "uuid",
     "retryable": false,
-    "reauthorize_url": "optional; only for oauth_not_authorized and insufficient_scope"
+    "reconnect_url": "optional; returned for credential-related errors. For OAuth providers → the authz start URL. For PAT providers → the frontend reconnect modal URL."
   }
 }
 ```
 
-- Stdout/stderr/tokens captured for debugging land in the audit log, **not** the agent response.
+- Stdout/stderr/tokens/PATs captured for debugging land in the audit log with redaction, **not** the agent response.
 - `retryable=true` only on `upstream_error` for read tools (see Retries).
-- `reauthorize_url` returned alongside OAuth-related codes so the frontend can prompt the user to re-consent cleanly.
+- `reconnect_url` returned on `credential_missing`, `insufficient_scope`, `token_refresh_failed` so the frontend can prompt the user to reconnect cleanly (OAuth re-consent or PAT re-paste, depending on provider).
+- `token_refresh_failed` only applies to OAuth providers; PAT providers never raise this code (they raise `credential_missing` with `revoked_at` set when the upstream rejects the token).
 
 ---
 
@@ -652,13 +727,15 @@ python -m gateway_mcp.main     # host process on :8090
 - Middleware chain isolated: auth fail, env denial, schema violation, permission deny, scope miss, approval required, handler exception → correct `GatewayError` + audit record.
 - Each executor backend with its own client mocked (`docker_exec`, `k8s_exec`, `job_runner`, `mcp_proxy`, `http_rest`).
 - OAuth subsystem: token encryption roundtrip, refresh at near-expiry, concurrent refresh serialization, refresh failure → `token_refresh_failed`.
-- Scope check: missing scope → `insufficient_scope`; token absent → `oauth_not_authorized`.
+- PAT subsystem: validation success (200 on `/user`) stores correctly; validation failure rejects with actionable 400; upstream 401 marks `revoked_at` and raises `credential_missing`.
+- Scope check: missing scope → `insufficient_scope`; credential absent → `credential_missing`.
 
 **Integration tests cover:**
 - MCP `tools/list` and `tools/call` compliance for all 9 MVP tools.
 - Full BRS club-setup workflow replay: `create_club` → `get_club_by_name` → `create_admin_user` → `call_internal_api` → `verify_club_setup`. Assert end state + audit sequence.
-- Atlassian flow with mocked upstream MCP: `create_ticket` → `get_ticket_status` → `add_comment`. Token injected from fixture; verify upstream received it and Gateway audited the call.
+- Atlassian flow with mocked upstream MCP: `create_ticket` → `get_ticket_status` → `add_comment`. OAuth token injected from fixture; verify upstream received it and Gateway audited the call.
 - OAuth routes: authz redirect, callback code exchange (mocked Atlassian token endpoint), token stored encrypted, reused on next tool call.
+- PAT routes: `POST /api/credentials/github/pat` validates against mocked Github `/user` endpoint, stores encrypted, rejects invalid PAT with 400. (No Github tools exercised — infra-only.)
 
 **E2E tests cover:**
 - Bring up `docker-compose.brs.yml`, run gateway on host, run BRS club-setup end-to-end against real containers.
@@ -686,10 +763,11 @@ MVP ships when all of the following hold:
 - [ ] Every tool call produces an audit record visible in Langfuse.
 - [ ] `docker_exec`, `k8s_exec`, `job_runner`, `mcp_proxy`, `http_rest` executors all have unit tests; integration-tested: `docker_exec`, `mock`, `mcp_proxy` (mocked upstream).
 - [ ] Config files for local/qa/prod present; secrets referenced, not stored.
-- [ ] `external_oauth_tokens` table migration applied; tokens stored encrypted at rest.
-- [ ] OAuth authz + callback routes work for Atlassian; user can connect Jira from Open WebUI.
-- [ ] Atlassian tool calls transparently fetch + refresh the user's token; no token ever appears in Gateway responses or audit payloads.
-- [ ] Missing scope returns `insufficient_scope` with a valid re-authorize URL; missing token returns `oauth_not_authorized`.
+- [ ] `external_credentials` table migration applied; credentials stored encrypted at rest.
+- [ ] OAuth authz + callback routes work for Atlassian (endpoint `https://mcp.atlassian.com/v1/mcp` is the pinned upstream); user can connect Jira from Open WebUI.
+- [ ] PAT paste + validate routes work for Github; `https://github.com/settings/tokens/new` link surfaced in the UI; invalid PAT rejected with actionable error. Github MCP upstream (`https://api.githubcopilot.com/mcp/`) configured but no Github tools exposed.
+- [ ] Atlassian tool calls transparently fetch + refresh the user's token; no token or PAT ever appears in Gateway responses or audit payloads.
+- [ ] Missing scope returns `insufficient_scope` with a valid `reconnect_url`; missing credential returns `credential_missing`.
 
 ---
 
@@ -712,8 +790,8 @@ MVP ships when all of the following hold:
 - Exact body shape for `call_internal_api(operation=enable_required_features)` — depends on brs-admin-api endpoint contract. Plan will include a small research task to confirm.
 - Whether dev Dockerfiles need to be contributed back upstream to the BRS repos or held as local overrides.
 - Whether the `docker` Python SDK or shelling out to the `docker` CLI is a better `docker_exec` backend. Plan will prototype both in a spike task.
-- Which Atlassian MCP server to use (official Atlassian MCP vs community implementation). Plan will evaluate and pin one, or self-host a minimal proxy if both are inadequate.
-- Whether OAuth callback should live in the main backend (`app/api/oauth.py`) or inside Gateway MCP with session bridging. Design says backend; plan can revisit if the session bridging proves simpler.
+- Whether `https://mcp.atlassian.com/v1/mcp` requires OAuth app registration in our GolfNow Atlassian tenant (client_id/secret provisioning). Plan includes a prerequisite task to register the app and document the redirect URI flow.
+- Github PAT scope recommendations — the UI should pre-populate a suggested scope list when pointing the user to `https://github.com/settings/tokens/new`. Plan confirms the exact query-string parameters Github accepts for scope pre-selection.
 
 ---
 
@@ -726,8 +804,9 @@ MVP ships when all of the following hold:
 | `k8s_exec` and `job_runner` backends untestable before QA/prod infra is known | high | Unit test only; treat as interface-compatible placeholders until infra exists |
 | MCP protocol version mismatch between server and existing client | low | Pin `mcp` package version; add protocol compatibility test |
 | Docker `exec` latency on macOS adds test flakiness | low | Generous timeouts in E2E; mark E2E tests as slow-tier |
-| Atlassian MCP server availability / API stability (community vs official) | medium | Pin a specific MCP server image; self-host locally for dev; smoke test in CI to detect upstream drift |
-| OAuth token leakage via logs / error messages | high-impact, low-prob | Strict redaction in audit; unit test asserting no `access_token` substring appears in any response; secrets never logged |
+| Atlassian MCP (`mcp.atlassian.com/v1/mcp`) API stability | medium | Pin upstream MCP version header if the server supports it; smoke test in CI to detect drift |
+| Credential leakage via logs / error messages | high-impact, low-prob | Strict redaction in audit; unit test asserting no `ghp_` / `Bearer ` substring appears in any response; secrets never logged |
+| User pastes the wrong PAT (e.g. a classic token instead of a fine-grained one, or wrong scopes) | medium | Validation probe on `/user` + scope coverage check before storing; actionable error back to UI |
 | Encryption key rotation complexity | medium | Design v1 accepts a single key; document rotation procedure in plan, implement dual-key read/single-key write when needed |
 | Concurrent OAuth refresh storms on shared workflows | low | `pg_advisory_lock` per `(user_id, provider)` prevents thundering-herd refresh |
 | User consent drift (user revokes scope in Atlassian) | medium | Token refresh failure surfaced as `oauth_not_authorized` with re-authorize URL; frontend guides user through reconnect |
