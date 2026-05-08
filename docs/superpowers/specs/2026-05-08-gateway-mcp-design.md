@@ -650,6 +650,22 @@ Any timeout → `subprocess_timeout`, non-retryable.
 4. **Chat API:** no change. `MCPToolRegistry` picks up gateway tools automatically once registered.
 5. **Open WebUI:** unchanged — Open WebUI → backend chat API → agent → `MCPToolRegistry` → Gateway MCP.
 
+### Other MCP Clients (Side-Effect, Not Supported in MVP)
+
+Because Gateway MCP speaks the MCP protocol over HTTP/SSE, it is reachable by any MCP-compliant client (Claude Code, Claude Desktop, Cursor, …) that is pointed at `localhost:8090/mcp` with a valid service token.
+
+**What works without extra effort:**
+- Tool discovery and calls for BRS tools (no user credentials required).
+- Audit records with the service-token caller identity.
+
+**What doesn't work and is explicitly out of Phase 4 scope:**
+- Credential setup via CLI or non-browser flow — OAuth callback assumes a web frontend; PAT paste assumes a web modal. Third-party clients can use Atlassian tools only if the target `X-User-Id` has already completed the web flow and that header is set in the client's config (e.g. `.mcp.json`).
+- Identity mapping from third-party clients to our user table.
+- Documentation, `.mcp.json` examples, or tests for these clients.
+- Running Gateway MCP in qa/prod reachable from Claude Code (env gate + service token allowlist must prevent this).
+
+**Implication:** the property is intentional — future phases may turn this into first-class support. Phase 4 does not invest in it beyond ensuring the protocol layer is clean enough that it naturally works for the simple read/write BRS tools.
+
 ---
 
 ## Local Infrastructure
