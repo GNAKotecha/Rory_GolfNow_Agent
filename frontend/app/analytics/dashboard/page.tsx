@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkflowSuccessRate } from '@/components/analytics/WorkflowSuccessRate';
 import { StepFailureAnalysis } from '@/components/analytics/StepFailureAnalysis';
 import { PromptVersionComparison } from '@/components/analytics/PromptVersionComparison';
 
-export default function AnalyticsDashboardPage() {
+function AnalyticsDashboardContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,5 +56,19 @@ export default function AnalyticsDashboardPage() {
         <PromptVersionComparison templateId={numericTemplateId} />
       </div>
     </div>
+  );
+}
+
+export default function AnalyticsDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen bg-gray-50">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      }
+    >
+      <AnalyticsDashboardContent />
+    </Suspense>
   );
 }

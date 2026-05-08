@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { analyticsApi, WorkflowAnalytics } from '@/lib/analytics';
 
+const SECONDS_PER_MINUTE = 60;
+
 interface Props {
   templateId: number;
 }
@@ -67,7 +69,7 @@ export function WorkflowSuccessRate({ templateId }: Props) {
   const successPercent = Math.round(data.success_rate * 100);
   const avgDurationMinutes =
     data.avg_duration_seconds !== null
-      ? (data.avg_duration_seconds / 60).toFixed(1)
+      ? (data.avg_duration_seconds / SECONDS_PER_MINUTE).toFixed(1)
       : null;
 
   return (
@@ -75,24 +77,41 @@ export function WorkflowSuccessRate({ templateId }: Props) {
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         Workflow Performance
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div
+        role="status"
+        aria-label="Workflow performance summary"
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+      >
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="text-sm text-green-700 font-medium">Success Rate</div>
-          <div className="text-3xl font-bold text-green-900 mt-1">
+          <p
+            aria-label={`Success rate: ${successPercent} percent`}
+            className="text-3xl font-bold text-green-900 mt-1"
+          >
             {successPercent}%
-          </div>
+          </p>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm text-blue-700 font-medium">Avg Duration</div>
-          <div className="text-3xl font-bold text-blue-900 mt-1">
+          <p
+            aria-label={
+              avgDurationMinutes !== null
+                ? `Average duration: ${avgDurationMinutes} minutes`
+                : 'Average duration: not available'
+            }
+            className="text-3xl font-bold text-blue-900 mt-1"
+          >
             {avgDurationMinutes !== null ? `${avgDurationMinutes}m` : 'N/A'}
-          </div>
+          </p>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="text-sm text-gray-700 font-medium">Total Runs</div>
-          <div className="text-3xl font-bold text-gray-900 mt-1">
+          <p
+            aria-label={`Total runs: ${data.total_runs}`}
+            className="text-3xl font-bold text-gray-900 mt-1"
+          >
             {data.total_runs}
-          </div>
+          </p>
         </div>
       </div>
     </div>

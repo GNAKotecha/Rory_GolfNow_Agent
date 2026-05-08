@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { analyticsApi, StepFailure } from '@/lib/analytics';
 
+const HIGH_FAILURE_RATE_THRESHOLD = 0.1;
+
 interface Props {
   templateId: number;
 }
@@ -81,7 +83,7 @@ export function StepFailureAnalysis({ templateId }: Props) {
       <div className="space-y-4">
         {sorted.map((step) => {
           const failurePercent = Math.round(step.failure_rate * 100);
-          const isHighFailure = step.failure_rate > 0.1;
+          const isHighFailure = step.failure_rate > HIGH_FAILURE_RATE_THRESHOLD;
           const barColor = isHighFailure ? 'bg-red-500' : 'bg-green-500';
           const labelColor = isHighFailure ? 'text-red-700' : 'text-green-700';
 
@@ -97,6 +99,11 @@ export function StepFailureAnalysis({ templateId }: Props) {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
+                  role="progressbar"
+                  aria-valuenow={failurePercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${step.step_name} failure rate`}
                   className={`${barColor} h-2 rounded-full transition-all`}
                   style={{ width: `${failurePercent}%` }}
                 />

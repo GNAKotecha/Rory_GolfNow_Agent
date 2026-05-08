@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { analyticsApi, PromptVersionMetrics } from '@/lib/analytics';
 
+const HIGH_SUCCESS_RATE_THRESHOLD = 0.8;
+
 interface Props {
   templateId: number;
 }
@@ -80,21 +82,22 @@ export function PromptVersionComparison({ templateId }: Props) {
       </h2>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
+          <caption className="sr-only">Prompt version performance comparison</caption>
           <thead>
             <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Version
               </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Usage
               </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Success Rate
               </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Avg Latency
               </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
             </tr>
@@ -103,7 +106,7 @@ export function PromptVersionComparison({ templateId }: Props) {
             {data.map((version) => {
               const successPercent = Math.round(version.success_rate * 100);
               const successColor =
-                version.success_rate > 0.8
+                version.success_rate > HIGH_SUCCESS_RATE_THRESHOLD
                   ? 'text-green-700'
                   : 'text-yellow-700';
               const rowClass = version.is_active ? 'bg-blue-50' : '';
