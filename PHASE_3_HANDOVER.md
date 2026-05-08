@@ -1,8 +1,8 @@
 # Phase 3 Handover: Onboarding Workflow + Testing + Analytics
 
-**Last Updated:** 2026-05-07  
+**Last Updated:** 2026-05-08  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Task 5 complete — ready for Task 6
+**Status:** Task 7 complete — ready for Task 8 (Documentation)
 
 ---
 
@@ -312,18 +312,72 @@
 
 ---
 
+### Task 7: Analytics Dashboard Frontend ✅
+
+**What was implemented:**
+- Created analytics API client (`frontend/lib/analytics.ts`, ~65 lines) with 4 TypeScript interfaces (`WorkflowAnalytics`, `StepFailure`, `PromptVersionMetrics`, `DashboardSummary`) and `analyticsApi` object exposing 4 methods that mirror backend endpoints under `/api/analytics/...`. Uses standalone `fetch`-based `get<T>()` helper that mirrors `apiClient.request` (Bearer token from `localStorage`, JSON error unwrapping).
+- Created 3 React components under `frontend/components/analytics/`:
+  - `WorkflowSuccessRate.tsx` — 3-metric card (success rate %, avg duration min, total runs) with `role="status"` + per-metric `aria-label`s. `SECONDS_PER_MINUTE` constant.
+  - `StepFailureAnalysis.tsx` — per-step bar list sorted by `failure_rate` desc, red-when-`>HIGH_FAILURE_RATE_THRESHOLD` (0.1) else green. Each bar has `role="progressbar"` + `aria-valuenow/min/max` + `aria-label`. `border-l-4 border-gray-200 pl-4` framing per spec.
+  - `PromptVersionComparison.tsx` — table with `<caption className="sr-only">`, `scope="col"` on all `<th>`s. Active row highlighted `bg-blue-50`; success rate green when `>HIGH_SUCCESS_RATE_THRESHOLD` (0.8) else yellow. Badge uses `font-semibold` per spec.
+- Created dashboard page `frontend/app/analytics/dashboard/page.tsx` — splits into `AnalyticsDashboardContent` (consumes `useSearchParams`, `useAuth`, `useRouter`, redirects unauthed users to `/login` mirroring `frontend/app/chat/page.tsx`) and a default export that wraps content in `<Suspense>` (required by Next 16 for `useSearchParams`). Shows "Select a workflow template to view analytics" when no `templateId` query param.
+- Modified `.gitignore` to add `!frontend/lib/` and `!frontend/lib/**` negations — the repo's root-level Python `lib/` ignore rule was silently matching `frontend/lib/`, which would have dropped the new `analytics.ts` on commit. Scope-narrow fix: only affects `frontend/lib/`, not `backend/lib/` or any other path.
+
+**Files touched:**
+- Created: `frontend/lib/analytics.ts`
+- Created: `frontend/components/analytics/WorkflowSuccessRate.tsx`
+- Created: `frontend/components/analytics/StepFailureAnalysis.tsx`
+- Created: `frontend/components/analytics/PromptVersionComparison.tsx`
+- Created: `frontend/app/analytics/dashboard/page.tsx`
+- Modified: `.gitignore` (4-line negation block for `frontend/lib/`)
+
+**Verification:**
+- `npm run lint` on new files: 0 errors, 0 warnings.
+- `tsc --noEmit` on new files: clean.
+- `npm run build` currently fails on the **pre-existing** `frontend/lib/api.ts:78 TS7053` error (last touched in `8c3ffc6` on main). Task 7 code is independently type-correct; the build blocker is unrelated and already on the follow-up list.
+
+**Commits:**
+- `f2ff751` — `feat: add analytics dashboard frontend components` (main implementation, +493 lines)
+- `4bb4b67` — `fix: address spec review for Task 7 analytics dashboard` (subtitle text, `border-l-4` step styling, `font-semibold` active badge; 3 single-line changes)
+- `f4009ea` — `refactor: improve Task 7 analytics dashboard quality` (Suspense boundary around `useSearchParams`, aria-labels + semantic table markup, named threshold constants)
+
+**Deviations from plan (approved before/during implementation):**
+1. **Path layout adapted.** Plan used `frontend/src/components/...`, `frontend/src/pages/...`, `frontend/src/lib/api/...` — none of which exist. Actual stack is Next.js 16 App Router with no `src/`, so paths became `frontend/components/analytics/...`, `frontend/app/analytics/dashboard/page.tsx`, `frontend/lib/analytics.ts`. The dashboard URL `/analytics/dashboard?templateId=1` is preserved via the App Router folder structure `app/analytics/dashboard/page.tsx`.
+2. **`WorkflowDurationChart.tsx` skipped.** Plan header listed it, but no step implemented it — consistent with prior Phase 3 tasks where header/step drift was resolved in favor of the step list.
+3. **API client pattern changed.** Plan's `import { api } from './client'; api.get<T>(path)` assumed an axios-style client that does not exist. Standalone `get<T>()` helper was written inline instead (auth token + fetch + JSON error unwrap), matching the existing `apiClient.request<T>` semantics. `response.data` references in plan component code became direct `T` returns throughout.
+4. **Router import changed.** `next/router` (Pages Router) → `next/navigation` (App Router). `router.query` → `useSearchParams().get('templateId')`.
+5. **Suspense boundary added.** Next 16 requires `useSearchParams` to be inside `<Suspense>`; the dashboard page default export now wraps `AnalyticsDashboardContent`. Not in plan, but mandatory for `next build`.
+6. **React 19 effect pattern.** State reset on `templateId` change uses the "derived state via conditional `setState` during render" idiom instead of calling `setLoading(true)` directly in an effect body — React 19 + next-config treat the latter as an error. Equivalent semantics.
+
+**Review flow:**
+- Spec compliance review iteration 1: ❌ 3 gaps (missing dashboard subtitle text, missing `border-l-4 border-gray-200 pl-4` on step rows, Active badge using `font-medium` not `font-semibold`). 2 benign extras (Inactive badge, empty-state branches) flagged but kept as reasonable UX polish.
+- Spec compliance review iteration 2: ✅ verified via diff after `4bb4b67` — 3-line surgical fix, all issues resolved.
+- Code quality review iteration 1: ⚠️ Changes-requested — 1 Critical (`useSearchParams` unwrapped in Suspense, would fail `next build`); 3 Important (analytics helper duplicates auth logic from `apiClient.request`, no global 401 handling, aria-label / semantic table markup gaps); Minor nits (magic numbers 0.1/0.8/60).
+- Code quality review iteration 2: ✅ via `f4009ea` — Critical Suspense wrap implemented, a11y gaps addressed (aria-labels, progressbar roles, sr-only caption, `scope="col"`), thresholds extracted to named constants. The 2 "Important" architectural items (apiClient consolidation, app-wide 401 redirect) intentionally deferred as follow-ups per scope discipline.
+
+**Deferred (non-blocking) from reviewer:**
+- Consolidate `frontend/lib/analytics.ts` into the existing `apiClient` class in `frontend/lib/api.ts` (single source of truth for auth + error handling).
+- Global 401 → `/login` redirect. Existing gap, app-wide, not Task 7 scope.
+- Shared `<AnalyticsCard loading error empty>` wrapper component to deduplicate the 3x loading/error/empty branches across the analytics components.
+- Backend success_rate=0.0 vs "no data" ambiguity — UI currently renders 0% for both states; if product wants a distinct "No data yet" display, surface `Optional[float]` from the service (per Task 6 watch-item) and branch in the component.
+
+**Watch-items for Task 8:**
+- `frontend/lib/websocket.ts` is **untracked in git** (never committed). Implementer flagged during Task 7 when `.gitignore` fix surfaced it. Not written or owned by Task 7 — likely missed commit from an earlier phase. Task 8 or a follow-up should decide whether to commit or delete.
+- `frontend/lib/api.ts:78` has a pre-existing `TS7053: Element implicitly has an 'any' type...` error that blocks `next build`. One-line fix (e.g., `(headers as Record<string, string>)['Authorization'] = ...` or use the `Headers` class). Should be resolved before Phase 3 ships, ideally in Task 8's pre-merge cleanup or a dedicated follow-up.
+
+---
+
 ## In Progress
 
-None — Task 6 complete, awaiting approval to start Task 7
+None — Task 7 complete, awaiting approval to start Task 8 (Documentation)
 
 ---
 
 ## Next Tasks
 
-- **Task 7:** Analytics Dashboard Frontend (React components, dashboard page)
 - **Task 8:** Documentation (phase-3-complete.md, README updates)
 
-**Follow-up tickets (from Tasks 2 + 4 + 5 + 6):**
+**Follow-up tickets (from Tasks 2 + 4 + 5 + 6 + 7):**
 - Wire `approval_gate` step type in `workflow_orchestrator` to call `ApprovalService.request_approval` (enables real E2E pause behavior and activates Task 4's bias test)
 - Row-level locking in `ApprovalService.process_approval` for concurrent approvers
 - Document `error_message` format in `process_approval` docstring
@@ -338,6 +392,12 @@ None — Task 6 complete, awaiting approval to start Task 7
 - Add 404 responses on unknown `template_id` in analytics endpoints
 - Push date-range + `failure_rate` aggregation into SQL (`GROUP BY`, `func.avg(func.extract(...))`) once data scales
 - Make `get_workflow_success_rate` return `Optional[float]` to distinguish "no data" from "0% success"
+- **(Task 7)** Fix pre-existing `frontend/lib/api.ts:78` TS7053 error that blocks `next build` — one-line fix (`(headers as Record<string,string>)['Authorization'] = ...` or switch to `Headers` class)
+- **(Task 7)** Decide whether to commit or delete the untracked `frontend/lib/websocket.ts` (never been in git; surfaced when the Python `lib/` ignore rule was un-masked)
+- **(Task 7)** Consolidate `frontend/lib/analytics.ts` into the `apiClient` singleton in `frontend/lib/api.ts` to avoid parallel auth/error-handling implementations
+- **(Task 7)** Global 401 → `/login` redirect on any API 401 response (affects both `apiClient` and the analytics `get<T>()` helper)
+- **(Task 7)** Extract shared `<AnalyticsCard loading error empty>` wrapper to deduplicate loading/error/empty branches across the 3 analytics components
+- **(Task 7)** Add a workflow-template picker UI so the analytics dashboard isn't URL-driven only; pair with 0-vs-null "no data" handling when the backend returns `Optional[float]`
 
 ---
 
@@ -369,6 +429,9 @@ None
 9. **Plan code can drift from actual APIs.** Task 4's test code referenced four non-existent APIs (two-arg ctor, `user_id` kwarg, `template` obj, `step.outputs` field). Preflight the plan's signatures against the actual code before implementing, and expect to adapt rather than copy-paste. The Task 4 review flow caught each mismatch before it ran.
 10. **DeepEval's judge model needs its own key.** `DEEPEVAL_API_KEY` authenticates Confident AI (the hosted service); metric evaluation locally still requires `OPENAI_API_KEY` (default judge is GPT). Set both, or configure a local judge model (e.g., Ollama) for self-hosted test runs.
 11. **Test-name filtering can silently fail.** The plan filtered `step_executions` by `step.step_name == "config_setup"`, but the orchestrator stores `step["name"]` (display name) — `next(...)` would have raised `StopIteration` with no context. Grep for the actual value before trusting a plan's filter predicate.
+12. **Python `.gitignore` patterns can silently swallow frontend files.** The repo root `.gitignore` contained `lib/` (a Python venv convention) which matched `frontend/lib/` as well. The implementer's initial `git add` silently skipped the new analytics client; only a paranoid `git status` + diff revealed it. Root-level language-specific ignores in a polyglot repo need language-specific scoping (`backend/lib/` or negation blocks like `!frontend/lib/`). Also: `frontend/lib/websocket.ts` had been sitting untracked in the working tree this entire phase because of this rule — never committed.
+13. **Next 16 requires `useSearchParams` inside `<Suspense>`.** Any App Router client component that reads query params must be wrapped in a Suspense boundary, or `next build` fails. Splitting the page into `Content` + default export that wraps `<Suspense><Content /></Suspense>` is the idiomatic fix and mirrors the pattern Next's own docs push post-14.
+14. **Plan code drifts when the stack has evolved.** Task 7's plan was written against a Pages Router + axios stack that never existed in this repo (no `src/`, App Router only, fetch-based singleton). Don't paste plan code verbatim in a UI task — recon the actual framework version, directory layout, and API client shape *before* dispatching the implementer, and bake the adaptations into the subagent prompt. The three-commit iteration loop that Task 7 took (implement → spec fix → quality fix) would have been one commit if the preflight had caught the React 19 effect pattern up front.
 
 ---
 
@@ -407,8 +470,10 @@ pytest tests/integration/ -v
 
 ## Next Steps
 
-1. Start Task 6 (Analytics Dashboard Backend API) after user approval
-2. File follow-up tickets listed under "Next Tasks" above
-3. Apply Task 5's migration (`alembic upgrade head`) the next time a dev environment with reachable Postgres is available
-4. Optional: provision `OPENAI_API_KEY` locally to actually run Task 4's 6 DeepEval tests against real scoring
-5. Follow TDD: Test → Fail → Implement → Pass → Review → Fix → Re-review (max 2 iterations per review stage)
+1. Start Task 8 (Documentation) after user approval — final task of Phase 3
+2. Before Phase 3 ships, resolve the pre-existing `frontend/lib/api.ts:78` TS7053 error so `next build` can pass (blocks any Vercel/prod deploy)
+3. File follow-up tickets listed under "Next Tasks" above
+4. Apply Task 5's migration (`alembic upgrade head`) the next time a dev environment with reachable Postgres is available
+5. Optional: provision `OPENAI_API_KEY` locally to actually run Task 4's 6 DeepEval tests against real scoring
+6. Decide the fate of the untracked `frontend/lib/websocket.ts` — commit as-is, refactor, or delete
+7. Follow TDD: Test → Fail → Implement → Pass → Review → Fix → Re-review (max 2 iterations per review stage)
