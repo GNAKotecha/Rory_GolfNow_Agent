@@ -25,6 +25,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Frontend lib/ (not the Python lib/)
+!frontend/lib/
+!frontend/lib/**
+
 # IDEs
 .vscode/
 .idea/
@@ -47,3 +51,7 @@ docker-compose.override.yml
 *.log
 logs/
 .mcp.json
+
+# DeepEval local cache
+.deepeval/
+.deepeval-cache/

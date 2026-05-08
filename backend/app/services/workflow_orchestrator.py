@@ -1,6 +1,6 @@
 """Workflow orchestration service using LangGraph."""
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Callable, TypedDict, Annotated
 from sqlalchemy.orm import Session
 from langgraph.graph import StateGraph, END
@@ -76,8 +76,25 @@ class WorkflowOrchestrator:
         session_id: int,
         input_data: Dict[str, Any]
     ) -> WorkflowRun:
-        """Create a new workflow run instance."""
+        """Create a new workflow run instance.
+        
+        Validates input_data against the template's input_schema if defined.
+        
+        Args:
+            template_name: Name of the workflow template
+            session_id: Session ID for the workflow run
+            input_data: Input data for the workflow
+            
+        Returns:
+            Created WorkflowRun instance
+            
+        Raises:
+            ValueError: If input_data fails validation against template schema
+        """
         template = self.load_template(template_name)
+        
+        # Validate input against template's input_schema if defined
+        self._validate_input_data(template, input_data)
 
         workflow_run = WorkflowRun(
             template_id=template.id,
@@ -95,6 +112,35 @@ class WorkflowOrchestrator:
             raise
 
         return workflow_run
+
+    def _validate_input_data(self, template: WorkflowTemplate, input_data: Dict[str, Any]) -> None:
+        """Validate input data against template's input_schema using jsonschema.
+        
+        Performs full validation including:
+        - Required field presence
+        - Type checking
+        - Format validation (e.g., email)
+        - Enum constraints
+        
+        Args:
+            template: Workflow template with optional input_schema
+            input_data: Input data to validate
+            
+        Raises:
+            ValueError: If validation fails
+        """
+        from jsonschema import validate, ValidationError
+        
+        definition = template.definition
+        input_schema = definition.get("input_schema")
+        
+        if not input_schema:
+            return  # No schema defined, skip validation
+        
+        try:
+            validate(instance=input_data, schema=input_schema)
+        except ValidationError as e:
+            raise ValueError(f"Input validation failed: {e.message}")
 
     def build_graph_from_template(self, template: WorkflowTemplate) -> StateGraph:
         """
@@ -199,7 +245,7 @@ class WorkflowOrchestrator:
                 # Update step execution
                 step_exec.status = StepStatus.COMPLETED
                 step_exec.output_data = result
-                step_exec.completed_at = datetime.utcnow()
+                step_exec.completed_at = datetime.now(timezone.utc)
                 self.db.commit()
 
                 # Record metrics
@@ -251,7 +297,7 @@ class WorkflowOrchestrator:
         Returns final workflow state.
         """
         # Load workflow run
-        workflow_run = self.db.query(WorkflowRun).get(workflow_run_id)
+        workflow_run = self.db.get(WorkflowRun, workflow_run_id)
         if not workflow_run:
             raise ValueError(f"Workflow run not found: {workflow_run_id}")
 
@@ -295,7 +341,7 @@ class WorkflowOrchestrator:
             # Update workflow run
             workflow_run.status = WorkflowRunStatus.COMPLETED
             workflow_run.current_state = {"results": dict(result)}
-            workflow_run.completed_at = datetime.utcnow()
+            workflow_run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
 
             return result

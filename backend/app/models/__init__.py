@@ -15,6 +15,12 @@ from app.models.metrics import (
     LLMDecisionMetrics
 )
 
+# Import prompt template models
+from app.models.prompt_template import (
+    PromptTemplate,
+    PromptTemplateVersion
+)
+
 __all__ = [
     "WorkflowTemplate",
     "WorkflowRun",
@@ -22,5 +28,7 @@ __all__ = [
     "WorkflowRunStatus",
     "StepStatus",
     "StepMetrics",
-    "LLMDecisionMetrics"
+    "LLMDecisionMetrics",
+    "PromptTemplate",
+    "PromptTemplateVersion"
 ]

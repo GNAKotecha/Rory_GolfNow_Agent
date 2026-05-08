@@ -23,3 +23,10 @@ langfuse==2.60.10
 # Structured output and LLM adapter
 instructor==1.7.0
 litellm==1.55.0
+
+# Workflow testing / evaluation
+deepeval==3.9.9
+
+# DeepEval Gemini judge model (avoids OpenAI dependency for test scoring)
+google-genai==1.75.0
+google-auth==2.51.0

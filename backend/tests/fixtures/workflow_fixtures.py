@@ -4,7 +4,13 @@ from datetime import datetime, timezone
 import pytest
 
 from app.models.models import User, Session, UserRole, WorkflowCategory
-from app.models.workflow import WorkflowTemplate, WorkflowRun, WorkflowRunStatus
+from app.models.workflow import (
+    StepStatus,
+    WorkflowRun,
+    WorkflowRunStatus,
+    WorkflowStepExecution,
+    WorkflowTemplate,
+)
 
 
 @pytest.fixture
@@ -74,3 +80,92 @@ def workflow_run_fixture(db_session, workflow_template_fixture, session):
     db_session.refresh(workflow_run)
 
     return workflow_run
+
+
+@pytest.fixture
+def workflow_run_factory(db_session, workflow_template_fixture, session):
+    """Factory for creating workflow runs with configurable status.
+
+    Usage:
+        run = workflow_run_factory(status=WorkflowRunStatus.RUNNING)
+    """
+    created_runs = []
+
+    def _create_workflow_run(
+        status: WorkflowRunStatus = WorkflowRunStatus.PENDING,
+        input_data: dict = None,
+        session_id: int = None,
+    ) -> WorkflowRun:
+        workflow_run = WorkflowRun(
+            template_id=workflow_template_fixture.id,
+            session_id=session_id or session.id,
+            status=status,
+            current_state=input_data or {"club_name": "Test Club"},
+            created_at=datetime.now(timezone.utc),
+        )
+        db_session.add(workflow_run)
+        db_session.commit()
+        db_session.refresh(workflow_run)
+        created_runs.append(workflow_run)
+        return workflow_run
+
+    yield _create_workflow_run
+
+    # Cleanup
+    for run in created_runs:
+        try:
+            db_session.delete(run)
+        except Exception:
+            pass
+    try:
+        db_session.commit()
+    except Exception:
+        db_session.rollback()
+
+
+@pytest.fixture
+def workflow_step_execution_factory(db_session):
+    """Factory for creating workflow step executions.
+
+    Usage:
+        step = workflow_step_execution_factory(
+            workflow_run_id=run.id,
+            step_name="config_setup",
+            status=StepStatus.COMPLETED,
+        )
+    """
+    created_executions = []
+
+    def _create_step_execution(
+        workflow_run_id: int,
+        step_name: str,
+        status: StepStatus = StepStatus.COMPLETED,
+        step_type: str = "tool_call",
+        step_id: str = None,
+    ) -> WorkflowStepExecution:
+        execution = WorkflowStepExecution(
+            workflow_run_id=workflow_run_id,
+            step_id=step_id or step_name,
+            step_name=step_name,
+            step_type=step_type,
+            status=status,
+            created_at=datetime.now(timezone.utc),
+        )
+        db_session.add(execution)
+        db_session.commit()
+        db_session.refresh(execution)
+        created_executions.append(execution)
+        return execution
+
+    yield _create_step_execution
+
+    # Cleanup
+    for execution in created_executions:
+        try:
+            db_session.delete(execution)
+        except Exception:
+            pass
+    try:
+        db_session.commit()
+    except Exception:
+        db_session.rollback()

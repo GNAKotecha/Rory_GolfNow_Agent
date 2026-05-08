@@ -1,0 +1,1 @@
+"""Workflow templates for common business processes."""
