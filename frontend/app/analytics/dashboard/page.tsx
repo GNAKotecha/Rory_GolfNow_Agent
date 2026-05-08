@@ -46,8 +46,8 @@ export default function AnalyticsDashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             Workflow Analytics Dashboard
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Template #{numericTemplateId}
+          <p className="mt-2 text-sm text-gray-600">
+            Monitor workflow performance and optimize prompts based on real data
           </p>
         </header>
 

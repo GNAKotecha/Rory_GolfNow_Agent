@@ -130,7 +130,7 @@ export function PromptVersionComparison({ templateId }: Props) {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {version.is_active ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                         Active
                       </span>
                     ) : (

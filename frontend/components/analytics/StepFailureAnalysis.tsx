@@ -86,7 +86,7 @@ export function StepFailureAnalysis({ templateId }: Props) {
           const labelColor = isHighFailure ? 'text-red-700' : 'text-green-700';
 
           return (
-            <div key={step.step_name}>
+            <div key={step.step_name} className="border-l-4 border-gray-200 pl-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-gray-900">
                   {step.step_name}
