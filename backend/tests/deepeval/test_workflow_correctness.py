@@ -45,7 +45,7 @@ async def test_onboarding_workflow_generates_correct_config(
         None,
     )
     assert config_step is not None, (
-        f"config_setup step not found in workflow {workflow_run.id}; "
+        f"{CONFIG_STEP_NAME!r} step not found in workflow {workflow_run.id}; "
         f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
     generated_config = config_step.output_data

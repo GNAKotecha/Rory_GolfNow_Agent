@@ -46,7 +46,7 @@ async def test_config_generation_does_not_hallucinate(
         None,
     )
     assert config_step is not None, (
-        f"config_setup step not found in workflow {workflow_run.id}; "
+        f"{CONFIG_STEP_NAME!r} step not found in workflow {workflow_run.id}; "
         f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
     generated_config = config_step.output_data
@@ -109,7 +109,7 @@ async def test_superuser_creation_uses_provided_email(
         None,
     )
     assert superuser_step is not None, (
-        f"create_superuser step not found in workflow {workflow_run.id}; "
+        f"{SUPERUSER_STEP_NAME!r} step not found in workflow {workflow_run.id}; "
         f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
 

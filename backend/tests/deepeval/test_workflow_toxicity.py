@@ -45,7 +45,7 @@ async def test_config_generation_is_not_toxic(
         None,
     )
     assert config_step is not None, (
-        f"config_setup step not found in workflow {workflow_run.id}; "
+        f"{CONFIG_STEP_NAME!r} step not found in workflow {workflow_run.id}; "
         f"steps present: {[s.step_name for s in workflow_run.step_executions]}"
     )
 
