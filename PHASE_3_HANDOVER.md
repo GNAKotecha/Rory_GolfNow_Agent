@@ -405,9 +405,52 @@
 
 ---
 
+### Post-Task-8 Hotfix: Three Defect Patches ✅
+
+**Trigger:** User flagged three CRITICAL defects in Phase 3 code after Task 8 shipped. Run through full subagent-driven flow (implementer → spec review → code quality review) per CLAUDE.md protocol.
+
+**Defects fixed:**
+1. **StopIteration crash risk** in `tests/deepeval/test_workflow_*.py` — 4 bare `next()` calls without defaults would throw opaque `StopIteration` if step executions schema changes.
+2. **None string concat** in `app/services/approval_service.py:87` — rejecting with `notes=None` produced literal `"Rejected by user 1: None"` in `error_message`.
+3. **Schema type mismatch** in `app/schemas/analytics.py:44` — `DashboardSummaryResponse.step_failures: Dict[str, Dict[str, float]]` silently coerced ints (for `total_executions`, `failed_executions`) to floats; semantically wrong.
+
+**Patches applied:**
+1. `next((gen), None)` + `assert <var> is not None, f"{CONSTANT!r} step not found in workflow {id}; steps present: [...]"` at all 4 sites (correctness×1, hallucination×2, toxicity×1). Assert messages reference `CONFIG_STEP_NAME` / `SUPERUSER_STEP_NAME` constants via `!r` so they can't drift from the filter.
+2. Ternary: `error_message = f"Rejected by user {user_id}: {notes}" if notes else f"Rejected by user {user_id}"`.
+3. New `StepFailureBreakdown(BaseModel)` nested class with `total_executions: int`, `failed_executions: int`, `failure_rate: float`. `DashboardSummaryResponse.step_failures` retyped to `Dict[str, StepFailureBreakdown]`.
+
+**Tests added:**
+- `test_reject_with_none_notes_produces_clean_error_message` in `tests/unit/services/test_approval_service.py` — verifies no `: None` suffix and correct FAILED / approval_notes=None state.
+
+**Test results after hotfix:** 17/17 unit tests pass (approval_service 8, analytics_service 4, prompt_template 5). DeepEval: 6 tests collect cleanly. Schema smoke test: `DashboardSummaryResponse` validates correctly with int counts.
+
+**Review flow:**
+- Spec review iteration 1: ❌ CHANGES_REQUESTED — 4 assert messages used hardcoded string literals (`"config_setup"`, `"create_superuser"`) instead of the `CONFIG_STEP_NAME` / `SUPERUSER_STEP_NAME` constants used in the filter. Flagged as controller spec bug (the patch spec itself had the wrong literals).
+- Spec review iteration 2: ✅ APPROVED — all 4 messages now use `{CONSTANT!r}` so the message can never drift from the filter.
+- Code quality review iteration 1: ✅ APPROVED — 0 Critical, 0 Important, 5 Minor nits (all deferred or accepted): `if notes` vs `if notes is not None` distinction for empty-string handling (acceptable, friendlier); superfluous `f` prefix in one test assertion (cosmetic); `!r` quoting intentional (matches `[s.step_name]` list output style for copy-paste debugging); commit message's "no silent coercion" slightly overstated (Pydantic v2 default mode still coerces lossless `float→int`, consistent with sibling `StepFailureAnalysis`); `StepFailureBreakdown` duplicates fields from `StepFailureAnalysis` (could unify later, out of scope for hotfix).
+
+**Commits:**
+- `85a595f` — fix: three Phase 3 defect patches (StopIteration, None concat, schema types)
+- `06e28e1` — fix: reference step-name constants in deepeval assert messages
+
+**Files changed across hotfix (6 source + 1 test):**
+- `backend/tests/deepeval/test_workflow_correctness.py`
+- `backend/tests/deepeval/test_workflow_hallucination.py`
+- `backend/tests/deepeval/test_workflow_toxicity.py`
+- `backend/app/services/approval_service.py`
+- `backend/app/schemas/analytics.py`
+- `backend/tests/unit/services/test_approval_service.py`
+
+**Deferred from code-quality review (non-blocking):**
+- Consider `model_config = ConfigDict(strict=True)` on `StepFailureBreakdown` + `StepFailureAnalysis` if strict int/float separation becomes important later (default Pydantic v2 is lossless-coercion-tolerant).
+- Consider unifying `StepFailureBreakdown` (nested in dashboard summary) with `StepFailureAnalysis` (list item response) via inheritance or shared base.
+- `if notes is not None` instead of `if notes` in `approval_service.process_approval` if empty string `""` should render as `"Rejected by user N: "` rather than the clean form.
+
+---
+
 ## In Progress
 
-None — Phase 3 complete (8/8 tasks, 100%).
+None — Phase 3 complete (8/8 tasks, 100%); post-Task-8 hotfix shipped.
 
 ---
 
