@@ -1,13 +1,13 @@
 """Analytics API endpoints for workflow and prompt metrics."""
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.auth_deps import get_approved_user
 from app.db.session import get_db
 from app.models.models import User
-from app.models.workflow import WorkflowRun
+from app.models.workflow import WorkflowRun, WorkflowTemplate
 from app.schemas.analytics import (
     DashboardSummaryResponse,
     PromptVersionMetrics,
@@ -17,6 +17,14 @@ from app.schemas.analytics import (
 from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+def _get_workflow_template_or_404(db: Session, template_id: int) -> WorkflowTemplate:
+    """Fetch workflow template or raise 404."""
+    template = db.query(WorkflowTemplate).filter(WorkflowTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail=f"Workflow template {template_id} not found")
+    return template
 
 
 @router.get(
@@ -29,6 +37,7 @@ async def get_workflow_success_rate(
     current_user: User = Depends(get_approved_user),
 ):
     """Get workflow success rate and basic metrics for a template."""
+    _get_workflow_template_or_404(db, template_id)
     service = AnalyticsService(db)
     total_runs = (
         db.query(WorkflowRun)
@@ -52,6 +61,7 @@ async def get_step_failure_analysis(
     current_user: User = Depends(get_approved_user),
 ):
     """Get step-by-step failure analysis for a workflow template."""
+    _get_workflow_template_or_404(db, template_id)
     service = AnalyticsService(db)
     analysis = service.get_step_failure_analysis(template_id)
     return [
@@ -84,5 +94,6 @@ async def get_dashboard_summary(
     current_user: User = Depends(get_approved_user),
 ):
     """Get dashboard summary statistics for a workflow template."""
+    _get_workflow_template_or_404(db, template_id)
     service = AnalyticsService(db)
     return service.get_dashboard_summary(template_id)

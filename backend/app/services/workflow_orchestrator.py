@@ -1,6 +1,6 @@
 """Workflow orchestration service using LangGraph."""
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Callable, TypedDict, Annotated
 from sqlalchemy.orm import Session
 from langgraph.graph import StateGraph, END
@@ -245,7 +245,7 @@ class WorkflowOrchestrator:
                 # Update step execution
                 step_exec.status = StepStatus.COMPLETED
                 step_exec.output_data = result
-                step_exec.completed_at = datetime.utcnow()
+                step_exec.completed_at = datetime.now(timezone.utc)
                 self.db.commit()
 
                 # Record metrics
@@ -297,7 +297,7 @@ class WorkflowOrchestrator:
         Returns final workflow state.
         """
         # Load workflow run
-        workflow_run = self.db.query(WorkflowRun).get(workflow_run_id)
+        workflow_run = self.db.get(WorkflowRun, workflow_run_id)
         if not workflow_run:
             raise ValueError(f"Workflow run not found: {workflow_run_id}")
 
@@ -341,7 +341,7 @@ class WorkflowOrchestrator:
             # Update workflow run
             workflow_run.status = WorkflowRunStatus.COMPLETED
             workflow_run.current_state = {"results": dict(result)}
-            workflow_run.completed_at = datetime.utcnow()
+            workflow_run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
 
             return result

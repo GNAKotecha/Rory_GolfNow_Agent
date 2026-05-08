@@ -4,6 +4,21 @@ from datetime import datetime, timezone
 from app.models.workflow import WorkflowTemplate, WorkflowCategory
 
 
+# Shared input schema for teesheet onboarding workflow
+TEESHEET_INPUT_SCHEMA = {
+    "type": "object",
+    "required": ["club_name", "club_id", "contact_email", "contact_name"],
+    "properties": {
+        "club_name": {"type": "string"},
+        "club_id": {"type": "string"},
+        "contact_email": {"type": "string", "format": "email"},
+        "contact_name": {"type": "string"},
+        "facility_type": {"type": "string", "enum": ["golf_course", "driving_range", "simulator"]},
+        "modules": {"type": "array", "items": {"type": "string"}}
+    }
+}
+
+
 def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
     """Create teesheet onboarding workflow template.
 
@@ -91,18 +106,7 @@ def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
                 "depends_on": ["approval_gate_config"]
             }
         ],
-        "input_schema": {
-            "type": "object",
-            "required": ["club_name", "club_id", "contact_email", "contact_name"],
-            "properties": {
-                "club_name": {"type": "string"},
-                "club_id": {"type": "string"},
-                "contact_email": {"type": "string", "format": "email"},
-                "contact_name": {"type": "string"},
-                "facility_type": {"type": "string", "enum": ["golf_course", "driving_range", "simulator"]},
-                "modules": {"type": "array", "items": {"type": "string"}}
-            }
-        },
+        "input_schema": TEESHEET_INPUT_SCHEMA,
         "entry_point": "init_database"
     }
 
@@ -137,21 +141,8 @@ def validate_onboarding_input(input_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     from jsonschema import validate, ValidationError
 
-    template_input_schema = {
-        "type": "object",
-        "required": ["club_name", "club_id", "contact_email", "contact_name"],
-        "properties": {
-            "club_name": {"type": "string"},
-            "club_id": {"type": "string"},
-            "contact_email": {"type": "string", "format": "email"},
-            "contact_name": {"type": "string"},
-            "facility_type": {"type": "string", "enum": ["golf_course", "driving_range", "simulator"]},
-            "modules": {"type": "array", "items": {"type": "string"}}
-        }
-    }
-
     try:
-        validate(instance=input_data, schema=template_input_schema)
+        validate(instance=input_data, schema=TEESHEET_INPUT_SCHEMA)
         return input_data
     except ValidationError as e:
         raise ValueError(f"Input validation failed: {e.message}")
