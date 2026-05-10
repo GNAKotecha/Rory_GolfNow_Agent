@@ -45,16 +45,16 @@ Build a Gateway MCP server exposing business-level tools with unified policy, au
 
 ---
 
-## Milestone 4: Core Middleware Chain
+## Milestone 4: Core Middleware Chain ✅
 
-- [ ] **4.1** Create `core/auth.py` — service token + X-User-Id validation
-- [ ] **4.2** Create `core/permissions.py` — risk_level vs env/role gate
-- [ ] **4.3** Create `core/scopes.py` — required_scopes vs token scope check (stub for external tools)
-- [ ] **4.4** Create `core/approval.py` — bridge to Phase 3 `ApprovalService`
-- [ ] **4.5** Create `core/audit.py` — structured JSON logger + Langfuse span creation
-- [ ] **4.6** Create `core/middleware.py` — assemble request pipeline (start audit → auth → schema validate → env gate → permission check → scope check → approval check → handler → finish audit)
-- [ ] **4.7** Unit tests for each middleware stage (auth fail, env denial, permission deny, etc.)
-- [ ] **4.8** Integration test verifying middleware order and audit records
+- [x] **4.1** Create `core/auth.py` — service token + X-User-Id validation
+- [x] **4.2** Create `core/permissions.py` — risk_level vs env/role gate
+- [x] **4.3** Create `core/scopes.py` — required_scopes vs token scope check (stub for external tools)
+- [x] **4.4** Create `core/approval.py` — bridge to Phase 3 `ApprovalService`
+- [x] **4.5** Create `core/audit.py` — structured JSON logger + Langfuse span creation
+- [x] **4.6** Create `core/middleware.py` — assemble request pipeline (start audit → auth → schema validate → env gate → permission check → scope check → approval check → handler → finish audit)
+- [x] **4.7** Unit tests for each middleware stage (auth fail, env denial, permission deny, etc.)
+- [x] **4.8** Integration test verifying middleware order and audit records
 
 ---
 
