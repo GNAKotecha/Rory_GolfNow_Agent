@@ -1,0 +1,58 @@
+# Gateway MCP - QA Environment Configuration
+# Loaded when GATEWAY_ENV=qa
+
+env: qa
+executor_backend: k8s_exec
+
+services:
+  teesheet:
+    k8s_namespace: brs-qa
+    pod_selector: app=teesheet
+  admin_api:
+    url: https://admin-api.brs.qa.internal
+  config_api:
+    url: https://config-api.brs.qa.internal
+  mysql:
+    k8s_namespace: brs-qa
+    pod_selector: app=mysql
+    db: brs
+  mongo:
+    k8s_namespace: brs-qa
+    pod_selector: app=mongo
+    db: brs
+
+audit:
+  stdout: true
+  langfuse: true
+
+# Credentials subsystem
+credentials:
+  providers:
+    atlassian:
+      type: oauth
+      client_id_env: ATLASSIAN_CLIENT_ID
+      client_secret_env: ATLASSIAN_CLIENT_SECRET
+      authz_url: https://auth.atlassian.com/authorize
+      token_url: https://auth.atlassian.com/oauth/token
+      default_scopes:
+        - read:jira-work
+        - write:jira-work
+      redirect_uri: https://agent.brs.qa.internal/api/credentials/atlassian/callback
+    github:
+      type: pat
+      validate_url: https://api.github.com/user
+      default_required_scopes:
+        - repo
+        - read:user
+      token_creation_hint_url: https://github.com/settings/tokens/new
+
+# Upstream MCP servers
+upstream_mcps:
+  atlassian:
+    url: https://mcp.atlassian.com/v1/mcp
+    auth_mode: oauth
+    provider: atlassian
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    auth_mode: pat
+    provider: github

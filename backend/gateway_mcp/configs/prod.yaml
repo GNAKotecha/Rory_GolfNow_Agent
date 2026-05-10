@@ -1,0 +1,55 @@
+# Gateway MCP - Production Environment Configuration
+# Loaded when GATEWAY_ENV=prod
+
+env: prod
+executor_backend: job_runner
+
+services:
+  teesheet:
+    job_template: brs-teesheet-command
+  admin_api:
+    url: https://admin-api.brs.prod.internal
+  config_api:
+    url: https://config-api.brs.prod.internal
+  mysql:
+    job_template: brs-mysql-readonly-query
+    db: brs
+  mongo:
+    job_template: brs-mongo-readonly-query
+    db: brs
+
+audit:
+  stdout: true
+  langfuse: true
+
+# Credentials subsystem
+credentials:
+  providers:
+    atlassian:
+      type: oauth
+      client_id_env: ATLASSIAN_CLIENT_ID
+      client_secret_env: ATLASSIAN_CLIENT_SECRET
+      authz_url: https://auth.atlassian.com/authorize
+      token_url: https://auth.atlassian.com/oauth/token
+      default_scopes:
+        - read:jira-work
+        - write:jira-work
+      redirect_uri: https://agent.brs.prod.internal/api/credentials/atlassian/callback
+    github:
+      type: pat
+      validate_url: https://api.github.com/user
+      default_required_scopes:
+        - repo
+        - read:user
+      token_creation_hint_url: https://github.com/settings/tokens/new
+
+# Upstream MCP servers
+upstream_mcps:
+  atlassian:
+    url: https://mcp.atlassian.com/v1/mcp
+    auth_mode: oauth
+    provider: atlassian
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    auth_mode: pat
+    provider: github
