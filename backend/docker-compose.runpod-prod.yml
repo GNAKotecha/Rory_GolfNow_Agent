@@ -1,0 +1,102 @@
+version: '3.8'
+
+# RunPod Production Profile
+# 
+# Topology:
+# - Backend (public): Port 8000 exposed via RunPod HTTPS proxy
+# - Gateway (private): Port 8090 internal only
+# - Ollama (private): Port 11434 internal only
+#
+# Usage:
+#   docker-compose -f docker-compose.runpod-prod.yml up -d
+
+services:
+  # Ollama - GPU inference, internal only
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    # NO ports exposed - internal only
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Gateway MCP - internal only
+  gateway:
+    image: gnakotecha/internal-agent-gateway:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: gateway
+    # NO ports exposed externally - internal only
+    environment:
+      - GATEWAY_ENV=prod
+      - GATEWAY_PORT=8090
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_CREDENTIAL_ENCRYPTION_KEY=${GATEWAY_CREDENTIAL_ENCRYPTION_KEY}
+      - GATEWAY_SERVICE_TOKEN=${GATEWAY_SERVICE_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      # Mount Docker socket for docker_exec backend to access sibling containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Backend - public facing
+  backend:
+    image: gnakotecha/internal-agent-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"  # ONLY public port
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - OLLAMA_URL=http://ollama:11434
+      - MCP_GATEWAY_URL=http://gateway:8090
+      - SECRET_KEY=${SECRET_KEY}
+      - BACKEND_ENV=prod
+      - GATEWAY_SERVICE_TOKEN=${GATEWAY_SERVICE_TOKEN}
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - app_data:/app/data
+
+volumes:
+  ollama_data:
+    driver: local
+  app_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

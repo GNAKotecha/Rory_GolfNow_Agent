@@ -18,6 +18,12 @@ if [ -z "$SECRET_KEY" ]; then
   exit 1
 fi
 
+if [ -z "$GATEWAY_SERVICE_TOKEN" ]; then
+  echo "❌ ERROR: GATEWAY_SERVICE_TOKEN not set"
+  echo "   Generate one: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
+  exit 1
+fi
+
 echo "✅ Environment variables set"
 echo ""
 
@@ -73,6 +79,36 @@ fi
 export OLLAMA_URL="http://localhost:11434"
 export HOST="0.0.0.0"
 export PORT="8000"
+export MCP_GATEWAY_URL="http://localhost:8090"
+export BACKEND_ENV="development"
+
+# Start Gateway MCP server
+echo "🔧 Starting Gateway MCP on port 8090..."
+export GATEWAY_ENV="local"
+export GATEWAY_PORT="8090"
+export GATEWAY_HOST="0.0.0.0"
+# GATEWAY_SERVICE_TOKEN is already set from env check above
+# GATEWAY_CREDENTIAL_ENCRYPTION_KEY is optional - gateway degrades gracefully if missing
+python -m gateway_mcp.main > /tmp/gateway.log 2>&1 &
+GATEWAY_PID=$!
+echo "   Gateway PID: $GATEWAY_PID"
+echo ""
+
+# Wait for gateway to be ready
+echo "⏳ Waiting for gateway to be ready..."
+for i in {1..30}; do
+  if curl -s http://localhost:8090/health > /dev/null 2>&1; then
+    echo "   ✅ Gateway is ready"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "   ⚠️  Gateway failed to start (MCP tools may be unavailable)"
+    echo "   Check logs: tail -f /tmp/gateway.log"
+    # Don't exit - backend can still run without gateway
+  fi
+  sleep 1
+done
+echo ""
 
 # Start backend
 echo "🔧 Starting backend on port 8000..."
@@ -103,6 +139,7 @@ echo "================================================"
 echo ""
 echo "Services:"
 echo "  - Backend:  http://localhost:8000"
+echo "  - Gateway:  http://localhost:8090"
 echo "  - Ollama:   http://localhost:11434"
 echo ""
 echo "Public URL (via RunPod):"
@@ -110,6 +147,7 @@ echo "  - Use RunPod's proxy URL for port 8000"
 echo ""
 echo "Test health:"
 echo "  curl http://localhost:8000/health"
+echo "  curl http://localhost:8090/health"
 echo ""
 echo "View logs:"
 echo "  tail -f /tmp/backend.log"
