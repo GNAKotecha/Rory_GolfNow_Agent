@@ -58,74 +58,76 @@ Build a Gateway MCP server exposing business-level tools with unified policy, au
 
 ---
 
-## Milestone 5: BRS Tools (6)
+## Milestone 5: BRS Tools (6) ✅
 
-- [ ] **5.1** Implement `tools/clubs.py` — `create_club` handler
-- [ ] **5.2** Implement `tools/clubs.py` — `get_club_by_name` handler
-- [ ] **5.3** Implement `tools/clubs.py` — `verify_club_setup` handler
-- [ ] **5.4** Implement `tools/config.py` — `get_club_config` handler
-- [ ] **5.5** Implement `tools/users.py` — `create_admin_user` handler
-- [ ] **5.6** Implement `tools/api.py` — `call_internal_api` handler (research `enable_required_features` body first)
-- [ ] **5.7** Register all 6 BRS tools in `ToolRegistry`
-- [ ] **5.8** Unit tests for each BRS tool with mock executor
-- [ ] **5.9** Integration test: full club-setup workflow replay (`create_club` → `get_club_by_name` → `create_admin_user` → `call_internal_api` → `verify_club_setup`)
-
----
-
-## Milestone 6: MCP Protocol Transport
-
-- [ ] **6.1** Add MCP HTTP/SSE transport to `main.py` (FastAPI routes for `tools/list`, `tools/call`)
-- [ ] **6.2** Implement `/tools` debugging endpoint
-- [ ] **6.3** Implement `/ready` health check (executor + service URL reachability)
-- [ ] **6.4** Unit tests for MCP protocol compliance
-- [ ] **6.5** Integration test: MCP client can list and call tools
+- [x] **5.1** Implement `tools/clubs.py` — `create_club` handler
+- [x] **5.2** Implement `tools/clubs.py` — `get_club_by_name` handler
+- [x] **5.3** Implement `tools/clubs.py` — `verify_club_setup` handler
+- [x] **5.4** Implement `tools/config.py` — `get_club_config` handler
+- [x] **5.5** Implement `tools/users.py` — `create_admin_user` handler
+- [x] **5.6** Implement `tools/api.py` — `call_internal_api` handler (research `enable_required_features` body first)
+- [x] **5.7** Register all 6 BRS tools in `ToolRegistry`
+- [x] **5.8** Unit tests for each BRS tool with mock executor
+- [x] **5.9** Integration test: full club-setup workflow replay (`create_club` → `get_club_by_name` → `create_admin_user` → `call_internal_api` → `verify_club_setup`)
 
 ---
 
-## Milestone 7: Credential Subsystem
+## Milestone 6: MCP Protocol Transport ✅
 
-- [ ] **7.1** Create Alembic migration for `external_credentials` table
-- [ ] **7.2** Create `core/credentials/store.py` — encrypted DB-backed credential store
-- [ ] **7.3** Create `core/credentials/providers/base.py` — `CredentialProvider` protocol
-- [ ] **7.4** Create `core/credentials/providers/atlassian.py` — OAuth provider config
-- [ ] **7.5** Create `core/credentials/providers/github.py` — PAT provider config (infra only)
-- [ ] **7.6** Create `core/credentials/oauth_flow.py` — authz code + PKCE, exchange, refresh
-- [ ] **7.7** Create `core/credentials/pat_flow.py` — PAT validation + storage
-- [ ] **7.8** Add OAuth/PAT routes to main backend (`app/api/credentials.py`): `/api/credentials/atlassian/authorize`, `/api/credentials/atlassian/callback`, `/api/credentials/github/pat`, `DELETE /api/credentials/{provider}`, `GET /api/credentials`
-- [ ] **7.9** Unit tests: encryption roundtrip, refresh logic, concurrent refresh serialization
-- [ ] **7.10** Unit tests: PAT validation success/failure, revocation handling
-- [ ] **7.11** Integration test: OAuth authz redirect → callback → token stored
+- [x] **6.1** Add MCP HTTP transport to `main.py` (FastAPI routes for `tools/list`, `tools/call`)
+- [x] **6.2** Implement `/tools` debugging endpoint
+- [x] **6.3** Implement `/ready` health check (executor + service URL reachability)
+- [x] **6.4** Unit tests for MCP protocol compliance
+- [x] **6.5** Integration test: MCP client can list and call tools
+
+**Note:** SSE transport is deferred to Milestone 12+ (post-MVP). Current implementation uses HTTP-only protocol which is sufficient for all MVP tool operations.
 
 ---
 
-## Milestone 8: External Executor Backends
+## Milestone 7: Credential Subsystem ✅
 
-- [ ] **8.1** Implement `core/executors/mcp_proxy.py` — upstream MCP client with credential injection
-- [ ] **8.2** Implement `core/executors/http_rest.py` — direct REST fallback with allowlist
-- [ ] **8.3** Add upstream MCP config to YAML files (`upstream_mcps` section)
-- [ ] **8.4** Unit tests for `mcp_proxy` with mocked upstream
-- [ ] **8.5** Unit tests for `http_rest` with mocked HTTP
+- [x] **7.1** Create Alembic migration for `external_credentials` table
+- [x] **7.2** Create `core/credentials/store.py` — encrypted DB-backed credential store
+- [x] **7.3** Create `core/credentials/providers/base.py` — `CredentialProvider` protocol
+- [x] **7.4** Create `core/credentials/providers/generic.py` — Config-driven OAuth/PAT providers with PROVIDER_PRESETS
+- [x] **7.5** ~~Create `core/credentials/providers/github.py`~~ Merged into generic.py with PROVIDER_PRESETS
+- [x] **7.6** Create `core/credentials/oauth_flow.py` — authz code + PKCE, exchange, refresh
+- [x] **7.7** Create `core/credentials/pat_flow.py` — PAT validation + storage
+- [x] **7.8** Add OAuth/PAT routes to main backend (`app/api/credentials.py`): `/api/credentials/atlassian/authorize`, `/api/credentials/atlassian/callback`, `/api/credentials/github/pat`, `DELETE /api/credentials/{provider}`, `GET /api/credentials`
+- [x] **7.9** Unit tests: encryption roundtrip, refresh logic, concurrent refresh serialization
+- [x] **7.10** Unit tests: PAT validation success/failure, revocation handling
+- [x] **7.11** Integration test: OAuth authz redirect → callback → token stored
+
+---
+
+## Milestone 8: External Executor Backends ✅
+
+- [x] **8.1** Implement `core/executors/mcp_proxy.py` — upstream MCP client with credential injection
+- [x] **8.2** Implement `core/executors/http_rest.py` — direct REST fallback with allowlist
+- [x] **8.3** Add upstream MCP config to YAML files (`upstream_mcps` section)
+- [x] **8.4** Unit tests for `mcp_proxy` with mocked upstream
+- [x] **8.5** Unit tests for `http_rest` with mocked HTTP
 
 ---
 
 ## Milestone 9: Atlassian Tools (3)
 
-- [ ] **9.1** Implement `tools/jira.py` — `create_ticket` handler
-- [ ] **9.2** Implement `tools/jira.py` — `get_ticket_status` handler
-- [ ] **9.3** Implement `tools/jira.py` — `add_comment` handler
-- [ ] **9.4** Register all 3 Atlassian tools in `ToolRegistry`
-- [ ] **9.5** Unit tests for each Atlassian tool with mocked `mcp_proxy`
-- [ ] **9.6** Integration test: `create_ticket` → `get_ticket_status` → `add_comment` with mocked upstream
+- [x] **9.1** Implement `tools/jira.py` — `create_ticket` handler
+- [x] **9.2** Implement `tools/jira.py` — `get_ticket_status` handler
+- [x] **9.3** Implement `tools/jira.py` — `add_comment` handler
+- [x] **9.4** Register all 3 Atlassian tools in `ToolRegistry`
+- [x] **9.5** Unit tests for each Atlassian tool with mocked `mcp_proxy`
+- [x] **9.6** Integration test: `create_ticket` → `get_ticket_status` → `add_comment` with mocked upstream
 
 ---
 
-## Milestone 10: System Integration
+## Milestone 10: System Integration ✅
 
-- [ ] **10.1** Register Gateway MCP in `backend/app/config/mcp_config.py` allowlist (per env)
-- [ ] **10.2** Update `WorkflowOrchestrator` routing to prefer Gateway MCP tools
-- [ ] **10.3** Update onboarding template to use `create_club` instead of raw BRS names
-- [ ] **10.4** Verify `MCPToolRegistry` picks up Gateway tools automatically
-- [ ] **10.5** Integration test: existing onboarding workflow passes with Gateway routing
+- [x] **10.1** Register Gateway MCP in `backend/app/config/mcp_config.py` allowlist (per env)
+- [x] **10.2** Update `WorkflowOrchestrator` routing to prefer Gateway MCP tools
+- [x] **10.3** Update onboarding template to use `create_club` instead of raw BRS names
+- [x] **10.4** Verify `MCPToolRegistry` picks up Gateway tools automatically
+- [x] **10.5** Integration test: existing onboarding workflow passes with Gateway routing
 
 ---
 
@@ -147,6 +149,26 @@ Build a Gateway MCP server exposing business-level tools with unified policy, au
 - [ ] **12.3** Document credential setup flow (OAuth + PAT) for operators
 - [ ] **12.4** Create `PHASE_4_HANDOVER.md` with completion status
 - [ ] **12.5** Final acceptance criteria checklist verification
+
+---
+
+## Post-MVP: Future Work 📋
+
+### SSE Transport (deferred from 6.1)
+- Implement Server-Sent Events for streaming tool output
+- Required for long-running tools with real-time progress updates
+- Not required for MVP as all current tools are short-lived operations
+- Stub exists in `core/transport.py:create_sse_stream()`
+
+### Advanced Executor Features
+- Connection pooling for upstream MCP backends
+- Circuit breaker pattern for upstream failures
+- Retry with exponential backoff for transient failures
+
+### Extended Credential Management
+- Redis-backed OAuth state store (currently in-memory)
+- Credential rotation alerts
+- Multi-tenant credential isolation
 
 ---
 
@@ -178,3 +200,11 @@ Build a Gateway MCP server exposing business-level tools with unified policy, au
 | 2026-05-10 | 1 | 1.1-1.6 | Milestone 1 complete: Package structure, main.py with /health /ready /tools endpoints, config loader with YAML, GatewayError hierarchy, gateway verified running on :8090 |
 | 2026-05-10 | 2 | 2.1-2.7 | Milestone 2 complete: ExecutorBackend protocol, docker_exec, mock, k8s_exec, job_runner. Code review fixes: SQL injection removed from query_db (now raises NotImplementedError), added MockJobHandle.stream(), created http_utils.py for shared HTTP logic. 20 tests passing. |
 | 2026-05-10 | 3 | 3.1-3.5 | Milestone 3 complete: Tool dataclass with all metadata (RiskLevel, Environment enums, ToolContext), ToolRegistry class with filtering/MCP schema generation, Gateway schemas for 9 tools (6 BRS + 3 Atlassian), OutputParser adapting Phase 2 parser pattern. 47 tests passing (20 executor + 27 tool registry). |
+| 2026-05-10 | 4 | 4.1-4.8 | Milestone 4 complete: Core middleware chain with auth, permissions, scopes, approval, audit. 89 tests passing. |
+| 2026-05-10 | 5 | 5.1-5.9 | Milestone 5 complete: 6 BRS tool handlers (create_club, get_club_by_name, verify_club_setup, get_club_config, create_admin_user, call_internal_api). Tools registered in ToolRegistry. Added ToolExecutionError to errors.py. CreateClubOutput updated with field alias for name. 21 unit tests + 3 integration tests (full club-setup workflow). 113 tests passing total. |
+| 2026-05-10 | 6 | 6.1-6.5 | Milestone 6 complete: MCP HTTP transport with POST /mcp/tools/list and POST /mcp/tools/call routes. /tools debug endpoint wired to ToolRegistry. /ready enhanced with Docker daemon and service URL reachability checks. Added ToolNotFoundError to errors.py. Added transport.py with MCP protocol models (MCPToolSchema, MCPToolCallRequest/Response). 20 unit tests + 14 integration tests. 147 tests passing total. |
+| 2026-05-11 | 7 | 7.1-7.11 | Milestone 7 complete: Credential subsystem with encrypted DB store, config-driven generic providers (PROVIDER_PRESETS for Atlassian OAuth + GitHub PAT), OAuth flow with PKCE, PAT validation flow, backend API routes at /api/credentials. Refactored from per-provider files to generic approach. 39 unit tests + 17 integration tests. 203 tests passing total. |
+| 2026-05-11 | 8 | 8.1-8.5 | Milestone 8 complete: External executor backends. MCPProxyBackend with upstream MCP client, credential injection via CredentialFetcher callback, call_mcp_tool method for direct tool calls, run_command adapter for ExecutorBackend interface. HTTPRestBackend with complete credential injection, allowlist validation, CredentialMissingError on auth failures. Added provider attribute to CredentialMissingError for better debugging. 27 new tests (17 mcp_proxy + 10 http_rest). 230 tests passing total. |
+| 2026-05-10 | 9 | 9.1-9.6 | Milestone 9 complete: Atlassian/Jira tools (create_ticket, get_ticket_status, add_comment). Tools use MCPProxyBackend to call upstream Atlassian MCP with credential injection. create_full_registry() includes all 9 tools. Stateful MockAtlassianMCP for integration tests. 21 unit tests + 6 integration tests. 257 tests passing total. |
+| 2026-05-10 | 10 | 10.1-10.5 | Milestone 10 complete: System Integration. Gateway MCP registered in mcp_config.py for all environments (development, staging, production). WorkflowOrchestrator updated with MCP registry integration and GATEWAY_TOOL_MAPPING for legacy BRS tool name resolution. Onboarding template updated to use Gateway tool names (create_club, create_admin_user, verify_club_setup). 19 new tests (16 gateway routing + 3 onboarding integration). Tests verify MCPToolRegistry discovers Gateway tools, orchestrator routes correctly, and legacy names are resolved. |
+| 2026-05-11 | 10+ | Spec gaps | Fixed: main.py now uses create_full_registry() exposing all 9 MVP tools. Scope enforcement integrated with credential store. /ready iterates configured services instead of non-existent service_url. call_internal_api uses admin_api service key. SSE transport documented as Milestone 12+ future work. Dual authorization layers documented in mcp_config.py. |

@@ -10,8 +10,8 @@ The Gateway MCP provides a safe way for the agent to perform internal workflows 
 
 It should support:
 
-- Internal CLI command execution
-- Internal API calls
+- Internal CLI command execution (via docker exec)
+- Internal API calls (HTTP to BRS services)
 - External HTTP API calls
 - Docker-based DB lookups
 - Docker-based app commands
@@ -58,11 +58,44 @@ verify_club_setup
 
 The model describes intent. The gateway owns execution.
 
+## BRS Tool Implementation
+
+The BRS tools use a hybrid approach:
+- **API-first**: Use HTTP APIs when available (get_club_by_name, verify_club_setup, call_internal_api)
+- **Docker exec fallback**: Use console commands only when no API exists (create_club, create_admin_user)
+
+### BRS Console Commands (via docker exec)
+
+```bash
+# Create a new club (no API available)
+docker exec php php app/console brs:tbs:create-installation \
+  --club-id=<club_id> \
+  --name="<name>" \
+  --country=<country> \
+  --latitude=<lat> \
+  --longitude=<lng> \
+  --member-module=y
+
+# Sync superusers (no API available)
+docker exec php php app/console brs:tbs:brs-superusers:update \
+  --club-id=<club_id>
+```
+
+### BRS API Endpoints (HTTP)
+
+```
+# Search for clubs
+GET /api/admin/v1/clubs?keyword=<name>
+
+# Get club configuration
+GET /{clubId}/api/v3/
+```
+
 ## Tool Categories
 
 ### 1. Internal CLI Tools
 
-Used for approved app commands.
+Used for approved app commands when no API exists.
 
 Example:
 
@@ -70,10 +103,10 @@ Example:
 create_club(name, country, timezone, currency)
 ```
 
-Internally routes to something like:
+Internally routes to:
 
 ```bash
-docker exec <app-container> ./bin/teesheet new-club ...
+docker exec php php app/console brs:tbs:create-installation --club-id=<derived> --name=<name> ...
 ```
 
 Requirements:
