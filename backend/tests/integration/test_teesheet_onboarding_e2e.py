@@ -1,7 +1,12 @@
 import pytest
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from app.workflows.teesheet_onboarding import create_teesheet_onboarding_template
-from app.services.workflow_orchestrator import WorkflowOrchestrator
+from app.services.workflow_orchestrator import WorkflowOrchestrator, GATEWAY_TOOL_MAPPING
+from app.services.mcp_registry import MCPToolRegistry
+from app.services.mcp_client import MCPToolResult
+from app.config.mcp_config import Environment
 from app.models.workflow import (
     WorkflowRun,
     WorkflowRunStatus,
@@ -92,3 +97,122 @@ async def test_teesheet_onboarding_workflow_validates_input(db_session, session)
 
     # Verify exception message contains "required"
     assert "required" in str(exc_info.value).lower()
+
+
+class TestGatewayMCPIntegration:
+    """Test onboarding workflow routes through Gateway MCP."""
+    
+    @pytest.fixture
+    def mock_db_session(self):
+        """Create a mock database session for tests that don't need real DB."""
+        return MagicMock()
+    
+    def test_template_uses_gateway_tool_names(self, mock_db_session):
+        """Onboarding template should use Gateway MCP tool names, not legacy BRS names."""
+        # Mock the database operations
+        mock_db_session.add = MagicMock()
+        mock_db_session.commit = MagicMock()
+        mock_db_session.refresh = MagicMock()
+        
+        template = create_teesheet_onboarding_template(mock_db_session)
+        
+        steps = template.definition["steps"]
+        tool_call_steps = [s for s in steps if s.get("type") == "tool_call"]
+        
+        # Get all tool names used in the template
+        tool_names = [s.get("tool") for s in tool_call_steps]
+        
+        # Verify Gateway MCP tool names are used
+        assert "create_club" in tool_names
+        assert "create_admin_user" in tool_names
+        assert "verify_club_setup" in tool_names
+        
+        # Verify legacy names are NOT used
+        assert "brs_teesheet_init" not in tool_names
+        assert "brs_create_superuser" not in tool_names
+        assert "brs_config_validate" not in tool_names
+    
+    @pytest.mark.asyncio
+    async def test_orchestrator_routes_to_gateway_mcp(self, mock_db_session):
+        """Orchestrator should route tool calls through Gateway MCP registry."""
+        # Create mock MCP registry that tracks calls
+        mock_registry = MagicMock(spec=MCPToolRegistry)
+        mock_registry.initialize = AsyncMock()
+        
+        # Track which tools are called
+        called_tools = []
+        
+        async def mock_execute_tool(tool_name, arguments, user):
+            called_tools.append(tool_name)
+            return MCPToolResult(
+                success=True,
+                result={"club_id": "TEST-001", "user_id": 123},
+                execution_time_ms=100.0,
+            )
+        
+        mock_registry.execute_tool = AsyncMock(side_effect=mock_execute_tool)
+        
+        # Create orchestrator with mock registry
+        orchestrator = WorkflowOrchestrator(
+            mock_db_session,
+            mcp_registry=mock_registry,
+            environment=Environment.DEVELOPMENT,
+        )
+        
+        # Execute a tool_call step
+        step = {
+            "id": "test_init",
+            "name": "Create Club",
+            "type": "tool_call",
+            "tool": "create_club",
+            "inputs": {"name": "Test Golf Club"},
+        }
+        
+        state = {
+            "workflow_run_id": 1,
+            "step_results": {},
+        }
+        
+        result = await orchestrator._execute_tool_call(step, state)
+        
+        # Verify Gateway MCP registry was used
+        assert "create_club" in called_tools
+        assert result["tool"] == "create_club"
+        assert result["result"]["club_id"] == "TEST-001"
+    
+    @pytest.mark.asyncio
+    async def test_legacy_tool_names_still_work(self, mock_db_session):
+        """Legacy BRS tool names should be resolved to Gateway MCP names."""
+        mock_registry = MagicMock(spec=MCPToolRegistry)
+        mock_registry.initialize = AsyncMock()
+        
+        called_tools = []
+        
+        async def mock_execute_tool(tool_name, arguments, user):
+            called_tools.append(tool_name)
+            return MCPToolResult(success=True, result={}, execution_time_ms=50.0)
+        
+        mock_registry.execute_tool = AsyncMock(side_effect=mock_execute_tool)
+        
+        orchestrator = WorkflowOrchestrator(
+            mock_db_session,
+            mcp_registry=mock_registry,
+        )
+        
+        # Use legacy tool name
+        step = {
+            "id": "test_init",
+            "name": "Init Database",
+            "type": "tool_call",
+            "tool": "brs_teesheet_init",  # Legacy name
+            "inputs": {},
+        }
+        
+        state = {"workflow_run_id": 1, "step_results": {}}
+        
+        result = await orchestrator._execute_tool_call(step, state)
+        
+        # Should be resolved to Gateway MCP name
+        assert "create_club" in called_tools
+        assert result["tool"] == "create_club"
+        assert result["original_tool"] == "brs_teesheet_init"
