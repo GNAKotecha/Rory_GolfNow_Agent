@@ -60,8 +60,19 @@ async def initialize_mcp_infrastructure() -> MCPToolRegistry:
         if _mcp_registry is not None:
             return _mcp_registry
         
+        # Determine environment from BACKEND_ENV or default to DEVELOPMENT
+        import os
+        from app.config.mcp_config import Environment
+        env_name = os.environ.get("BACKEND_ENV", "development").lower()
+        if env_name == "production":
+            env = Environment.PRODUCTION
+        elif env_name == "staging":
+            env = Environment.STAGING
+        else:
+            env = Environment.DEVELOPMENT
+        
         # Create registry
-        _mcp_registry = MCPToolRegistry(Environment.DEVELOPMENT)
+        _mcp_registry = MCPToolRegistry(env)
         await _mcp_registry.initialize()
         
         # Initialize health checker and register servers

@@ -227,7 +227,11 @@ class MCPToolRegistry:
             },
         )
 
-        result = await client.call_tool(tool_name, arguments)
+        result = await client.call_tool(
+            tool_name,
+            arguments,
+            user_id=user.id,
+        )
 
         # Log tool call
         self._log_tool_call(tool_name, server_name, user, arguments, result)

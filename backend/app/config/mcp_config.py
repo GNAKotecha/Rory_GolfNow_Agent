@@ -3,6 +3,7 @@
 Defines which MCP servers are available per environment and which tools
 are accessible per user role.
 """
+import os
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -39,7 +40,17 @@ class MCPServerConfig:
 # ==============================================================================
 
 # Development environment - includes test servers
+# MCP_GATEWAY_URL env var overrides the default localhost URL
+_gateway_url = os.environ.get("MCP_GATEWAY_URL", "http://localhost:8090")
+
 DEVELOPMENT_SERVERS = [
+    MCPServerConfig(
+        name="gateway-mcp",
+        url=f"{_gateway_url}/mcp",
+        timeout_seconds=30,
+        max_retries=3,
+        description="Gateway MCP - Business-level BRS and Atlassian tools",
+    ),
     MCPServerConfig(
         name="test-mcp",
         url="http://localhost:8080/mcp",
@@ -59,6 +70,13 @@ DEVELOPMENT_SERVERS = [
 # Staging environment - subset of production servers
 STAGING_SERVERS = [
     MCPServerConfig(
+        name="gateway-mcp",
+        url="https://gateway-mcp-staging.example.com/mcp",
+        timeout_seconds=30,
+        max_retries=3,
+        description="Gateway MCP - Business-level BRS and Atlassian tools",
+    ),
+    MCPServerConfig(
         name="search-staging",
         url="https://search-staging.example.com/mcp",
         timeout_seconds=30,
@@ -69,6 +87,13 @@ STAGING_SERVERS = [
 
 # Production environment - fully qualified servers
 PRODUCTION_SERVERS = [
+    MCPServerConfig(
+        name="gateway-mcp",
+        url="https://gateway-mcp.example.com/mcp",
+        timeout_seconds=30,
+        max_retries=3,
+        description="Gateway MCP - Business-level BRS and Atlassian tools",
+    ),
     MCPServerConfig(
         name="search-prod",
         url="https://search.example.com/mcp",
@@ -96,6 +121,28 @@ MCP_SERVERS: Dict[Environment, List[MCPServerConfig]] = {
 # ==============================================================================
 # Tool Allowlists
 # ==============================================================================
+#
+# AUTHORIZATION LAYERS:
+# This file implements the **backend role-based allowlist** for MCP tool access.
+# There is also a **Gateway MCP permission layer** in gateway_mcp/core/permissions.py
+# that enforces risk_level checks at the gateway.
+#
+# How they work together:
+# 1. Backend allowlist (this file): Controls which tools a user can even attempt
+#    to call based on their role. This is checked by MCPToolRegistry.execute_tool().
+#
+# 2. Gateway permissions (gateway_mcp/core/permissions.py): Enforces risk_level
+#    restrictions (read/low_write/medium_write/high_write) and environment
+#    restrictions (local/dev/qa/prod) at the gateway boundary.
+#
+# Both layers must pass for a tool call to succeed.
+# Changes to allowlists here should be coordinated with Gateway tool definitions.
+#
+# Gateway Tool Risk Levels (for reference):
+# - read: get_club_by_name, get_club_config, verify_club_setup, get_ticket_status
+# - low_write: create_club, create_ticket, add_comment
+# - medium_write: create_admin_user, call_internal_api
+# ==============================================================================
 
 # Admin: full access to all tools
 ADMIN_ALLOWLIST = ["*"]  # Wildcard = all tools
@@ -108,6 +155,34 @@ USER_ALLOWLIST = [
     "summarize",
     "translate",
     "format",
+    # Gateway MCP BRS tools (read-only or operator-approved)
+    "get_club_by_name",
+    "get_club_config",
+    "verify_club_setup",
+    # Gateway MCP Atlassian tools (read-only)
+    "get_ticket_status",
+]
+
+# Operator: workflow execution tools
+OPERATOR_ALLOWLIST = [
+    # User tools
+    "search",
+    "analyze",
+    "compute",
+    "summarize",
+    "translate",
+    "format",
+    "get_club_by_name",
+    "get_club_config",
+    "verify_club_setup",
+    "get_ticket_status",
+    # Gateway MCP BRS tools (write operations)
+    "create_club",
+    "create_admin_user",
+    "call_internal_api",
+    # Gateway MCP Atlassian tools (write operations)
+    "create_ticket",
+    "add_comment",
 ]
 
 # Pending: minimal access (awaiting approval)
@@ -116,6 +191,7 @@ PENDING_ALLOWLIST: List[str] = []  # No tools until approved
 # Role-based tool allowlists
 TOOL_ALLOWLIST: Dict[str, List[str]] = {
     "admin": ADMIN_ALLOWLIST,
+    "operator": OPERATOR_ALLOWLIST,
     "user": USER_ALLOWLIST,
     "pending": PENDING_ALLOWLIST,
 }

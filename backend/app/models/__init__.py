@@ -21,6 +21,12 @@ from app.models.prompt_template import (
     PromptTemplateVersion
 )
 
+# Import external credential models
+from app.models.external_credential import (
+    ExternalCredential,
+    CredentialType
+)
+
 __all__ = [
     "WorkflowTemplate",
     "WorkflowRun",
@@ -30,5 +36,7 @@ __all__ = [
     "StepMetrics",
     "LLMDecisionMetrics",
     "PromptTemplate",
-    "PromptTemplateVersion"
+    "PromptTemplateVersion",
+    "ExternalCredential",
+    "CredentialType",
 ]

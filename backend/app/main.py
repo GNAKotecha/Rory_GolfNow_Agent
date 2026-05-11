@@ -9,6 +9,7 @@ from app.api.sessions import router as sessions_router
 from app.api.chat import router as chat_router
 from app.api.chat_ws import router as chat_ws_router
 from app.api.ollama_compat import router as ollama_compat_router
+from app.api.credentials import router as credentials_router
 
 app = FastAPI(
     title="Internal Agent MVP",
@@ -40,6 +41,7 @@ app.include_router(sessions_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(chat_ws_router, prefix="/api")  # WebSocket endpoint
 app.include_router(ollama_compat_router)  # Ollama-compatible endpoints for Open WebUI
+app.include_router(credentials_router, prefix="/api")  # Credential management
 
 
 @app.on_event("startup")

@@ -5,15 +5,17 @@ env: local
 executor_backend: docker_exec
 
 services:
+  # brs-teesheet: prefer API calls, docker exec for console commands only
   teesheet:
-    container: brs-teesheet
+    container: php  # Container name in brs-teesheet docker-compose (usually 'php')
+    url: http://localhost:8056  # Symfony app with REST APIs
   admin_api:
-    url: http://localhost:8100
+    url: http://localhost:8056  # Same app, different routes /{clubId}/api/admin/...
   config_api:
-    url: http://localhost:8101
+    url: http://localhost:8056  # Same app, /{clubId}/api/v3/...
   mysql:
     container: brs-mysql
-    db: brs
+    db: brsgolf_admin  # Admin database with cross_ref table
   mongo:
     container: brs-mongo
     db: brs

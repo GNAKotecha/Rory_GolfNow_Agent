@@ -23,10 +23,10 @@ def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
     """Create teesheet onboarding workflow template.
 
     Workflow Steps:
-    1. Init Database - Create club-specific database (./bin/teesheet init)
-    2. Create Superuser - Setup admin account (./bin/teesheet update-superusers)
-    3. Config Setup - Add club config to MongoDB (brs-config-api)
-    4. Validate Config - Verify setup is correct
+    1. Create Club - Create club in BRS system (Gateway MCP: create_club)
+    2. Create Admin User - Setup admin account (Gateway MCP: create_admin_user)
+    3. Config Setup - Generate club configuration (LLM decision)
+    4. Validate Config - Verify setup is correct (Gateway MCP: verify_club_setup)
 
     Approval Gates:
     - After config setup (before validation) - human reviews generated config
@@ -38,32 +38,34 @@ def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
         WorkflowTemplate for teesheet onboarding
     """
 
-    # Define workflow steps
+    # Define workflow steps using Gateway MCP tool names
     workflow_definition = {
         "steps": [
             {
                 "id": "init_database",
-                "name": "Initialize Database",
+                "name": "Create Club",
                 "type": "tool_call",
-                "tool": "brs_teesheet_init",
-                "description": "Initialize club database",
+                "tool": "create_club",
+                "description": "Create club in BRS system via Gateway MCP",
                 "inputs": {
-                    "club_name": "{{input.club_name}}",
-                    "club_id": "{{input.club_id}}"
+                    "name": "{{input.club_name}}",
+                    "country": "IE",
+                    "timezone": "Europe/Dublin",
+                    "currency": "EUR"
                 },
                 "next": ["create_superuser"],
                 "timeout_seconds": 120
             },
             {
                 "id": "create_superuser",
-                "name": "Create Superuser",
+                "name": "Create Admin User",
                 "type": "tool_call",
-                "tool": "brs_create_superuser",
-                "description": "Create admin account",
+                "tool": "create_admin_user",
+                "description": "Create admin account via Gateway MCP",
                 "inputs": {
-                    "club_name": "{{input.club_name}}",
+                    "club_id": "{{init_database.club_id}}",
                     "email": "{{input.contact_email}}",
-                    "name": "{{input.contact_name}}"
+                    "role": "superuser"
                 },
                 "next": ["config_setup"],
                 "timeout_seconds": 60,
@@ -77,7 +79,7 @@ def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
                 "prompt_template": "teesheet_config_generation",
                 "inputs": {
                     "club_name": "{{input.club_name}}",
-                    "club_id": "{{input.club_id}}",
+                    "club_id": "{{init_database.club_id}}",
                     "facility_type": "{{input.facility_type}}",
                     "modules": "{{input.modules}}"
                 },
@@ -97,10 +99,10 @@ def create_teesheet_onboarding_template(db: Session) -> WorkflowTemplate:
                 "id": "validate_config",
                 "name": "Validate Configuration",
                 "type": "tool_call",
-                "tool": "brs_config_validate",
-                "description": "Validate configuration",
+                "tool": "verify_club_setup",
+                "description": "Validate club setup via Gateway MCP",
                 "inputs": {
-                    "club_id": "{{input.club_id}}"
+                    "club_id": "{{init_database.club_id}}"
                 },
                 "next": [],
                 "depends_on": ["approval_gate_config"]
