@@ -144,8 +144,16 @@ def create_auth_service_from_settings(settings) -> AuthService:
     Returns:
         Configured AuthService
     """
-    # Settings should have service_tokens: dict[str, list[str]]
-    service_tokens = getattr(settings, "service_tokens", {})
+    # Preferred format: explicit token->scopes map.
+    service_tokens = getattr(settings, "service_tokens", {}) or {}
+
+    # Backward-compatible fallback for single-token config via GATEWAY_SERVICE_TOKEN.
+    # This keeps local/dev Gateway usable without requiring a token map file.
+    if not service_tokens:
+        single_token = getattr(settings, "service_token", "")
+        if single_token:
+            service_tokens = {single_token: ["operator", "admin"]}
+
     require_user_id = getattr(settings, "require_user_id", True)
     
     return AuthService(

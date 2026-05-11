@@ -22,6 +22,7 @@ class ErrorCode(str, Enum):
     
     # Validation
     VALIDATION_FAILED = "validation_failed"
+    TOOL_NOT_FOUND = "tool_not_found"
     
     # Execution
     CONTAINER_UNAVAILABLE = "container_unavailable"
@@ -45,6 +46,7 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.PERMISSION_DENIED: 403,
     ErrorCode.ENV_RESTRICTED: 403,
     ErrorCode.VALIDATION_FAILED: 400,
+    ErrorCode.TOOL_NOT_FOUND: 404,
     ErrorCode.CONTAINER_UNAVAILABLE: 503,
     ErrorCode.UPSTREAM_ERROR: 502,
     ErrorCode.SUBPROCESS_TIMEOUT: 504,
@@ -190,6 +192,7 @@ class CredentialMissingError(GatewayError):
     """User has not connected the required provider."""
     
     def __init__(self, provider: str, reconnect_url: str, **kwargs):
+        self.provider = provider  # Store provider for debugging/testing
         message = f"No credential found for {provider}. Please connect your account."
         super().__init__(
             ErrorCode.CREDENTIAL_MISSING,
@@ -217,3 +220,19 @@ class InternalError(GatewayError):
     
     def __init__(self, message: str = "Internal error", **kwargs):
         super().__init__(ErrorCode.INTERNAL_ERROR, message, **kwargs)
+
+
+class ToolExecutionError(GatewayError):
+    """Tool execution failed due to parsing or processing error."""
+    
+    def __init__(self, tool_name: str, message: str, **kwargs):
+        full_message = f"Tool '{tool_name}' execution failed: {message}"
+        super().__init__(ErrorCode.INTERNAL_ERROR, full_message, **kwargs)
+
+
+class ToolNotFoundError(GatewayError):
+    """Requested tool does not exist in the registry."""
+    
+    def __init__(self, tool_name: str, **kwargs):
+        message = f"Tool '{tool_name}' not found"
+        super().__init__(ErrorCode.TOOL_NOT_FOUND, message, **kwargs)

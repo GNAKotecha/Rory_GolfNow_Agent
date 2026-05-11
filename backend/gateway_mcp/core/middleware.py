@@ -86,6 +86,7 @@ class MiddlewarePipeline:
         approval_bridge: ApprovalBridge,
         audit_logger: AuditLogger,
         executor_factory=None,
+        executor_router=None,
         credential_fetcher=None,
     ):
         """
@@ -97,7 +98,8 @@ class MiddlewarePipeline:
             scope_service: OAuth scope validator
             approval_bridge: Approval gate handler
             audit_logger: Structured audit logger
-            executor_factory: Factory for executor backends
+            executor_factory: Factory for executor backends (deprecated, use executor_router)
+            executor_router: Function (tool: Tool) -> ExecutorBackend for per-tool routing
             credential_fetcher: Async function to fetch OAuth tokens
         """
         self._auth = auth_service
@@ -106,6 +108,7 @@ class MiddlewarePipeline:
         self._approval = approval_bridge
         self._audit = audit_logger
         self._executor_factory = executor_factory
+        self._executor_router = executor_router
         self._credential_fetcher = credential_fetcher
     
     async def process(
@@ -274,13 +277,21 @@ class MiddlewarePipeline:
                 audit_id=audit_record.audit_id,
             )
         
+        # Select executor based on tool type (external vs BRS)
+        # executor_router takes tool and returns appropriate backend
+        executor = None
+        if self._executor_router:
+            executor = self._executor_router(tool)
+        elif self._executor_factory:
+            executor = self._executor_factory()
+        
         # Build tool context
         context = ToolContext(
             user_id=auth.user_id,
             correlation_id=audit_record.correlation_id,
             audit_id=audit_record.audit_id,
             environment=self._permissions.current_env,
-            _executor=self._executor_factory() if self._executor_factory else None,
+            _executor=executor,
             _credential_fetcher=self._credential_fetcher,
         )
         
@@ -332,6 +343,8 @@ def create_middleware_pipeline(
     settings,
     db_session=None,
     executor_factory=None,
+    executor_router=None,
+    credential_store=None,
     credential_fetcher=None,
 ) -> MiddlewarePipeline:
     """
@@ -340,7 +353,9 @@ def create_middleware_pipeline(
     Args:
         settings: Gateway settings object
         db_session: Optional database session for ApprovalService
-        executor_factory: Optional factory for executor backends
+        executor_factory: Optional factory for executor backends (deprecated)
+        executor_router: Optional function (tool: Tool) -> ExecutorBackend for per-tool routing
+        credential_store: Optional credential store for OAuth token management
         credential_fetcher: Optional async function for OAuth tokens
         
     Returns:
@@ -352,12 +367,16 @@ def create_middleware_pipeline(
     from gateway_mcp.core.permissions import create_permission_service_from_settings
     from gateway_mcp.core.scopes import create_scope_service_from_settings
     
+    # Create scope service with credential store for external tool scope enforcement
+    scope_service = create_scope_service_from_settings(settings, credential_store)
+    
     return MiddlewarePipeline(
         auth_service=create_auth_service_from_settings(settings),
         permission_service=create_permission_service_from_settings(settings),
-        scope_service=create_scope_service_from_settings(settings),
+        scope_service=scope_service,
         approval_bridge=create_approval_bridge_from_settings(settings, db_session),
         audit_logger=create_audit_logger_from_settings(settings),
         executor_factory=executor_factory,
+        executor_router=executor_router,
         credential_fetcher=credential_fetcher,
     )
