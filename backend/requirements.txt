@@ -2,11 +2,11 @@ fastapi==0.110.0
 uvicorn[standard]==0.27.1
 sqlalchemy==2.0.27
 psycopg2-binary==2.9.9
-pydantic==2.10.6
-pydantic-settings==2.1.0
-httpx==0.26.0
+pydantic==2.11.7
+pydantic-settings==2.10.1
+httpx==0.28.1
 aiohttp==3.9.3
-python-dotenv==1.0.1
+python-dotenv==1.1.1
 email-validator==2.1.0
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
@@ -17,12 +17,11 @@ pytest-asyncio==0.23.5
 # Workflow orchestration
 langgraph==0.2.16
 langgraph-checkpoint-postgres==1.0.9
-langchain==0.2.16
 langfuse==2.60.10
 
 # Structured output and LLM adapter
-instructor==1.7.0
-litellm==1.55.0
+instructor==1.5.2
+litellm==1.70.0
 
 # Workflow testing / evaluation
 deepeval==3.9.9

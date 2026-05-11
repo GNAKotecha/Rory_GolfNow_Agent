@@ -44,9 +44,34 @@ require_env() {
   fi
 }
 
+select_python_bin() {
+  for candidate in python3.11 python3.10 python3; do
+    if command -v "${candidate}" >/dev/null 2>&1; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 load_env_file "${REPO_ROOT}/infrastructure/.env"
 load_env_file "${SCRIPT_DIR}/.env"
 echo ""
+
+PYTHON_BIN="${PYTHON_BIN:-$(select_python_bin || true)}"
+if [ -z "${PYTHON_BIN}" ]; then
+  echo "❌ ERROR: No python3 interpreter found"
+  exit 1
+fi
+
+PYTHON_VERSION="$("${PYTHON_BIN}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PY_MAJOR="${PYTHON_VERSION%%.*}"
+PY_MINOR="${PYTHON_VERSION##*.}"
+if [ "${PY_MAJOR}" -lt 3 ] || { [ "${PY_MAJOR}" -eq 3 ] && [ "${PY_MINOR}" -lt 10 ]; }; then
+  echo "❌ ERROR: ${PYTHON_BIN} is Python ${PYTHON_VERSION}, but this stack requires Python 3.10+"
+  exit 1
+fi
+echo "🐍 Using ${PYTHON_BIN} (Python ${PYTHON_VERSION})"
 
 # Backward compatibility for legacy variable names
 if [ -n "${BACKEND_MODE:-}" ] && [ -z "${BACKEND_ENV:-}" ]; then
@@ -131,7 +156,7 @@ echo ""
 
 if [ ! -x "${VENV_DIR}/bin/python" ]; then
   echo "🔧 Creating Python virtual environment..."
-  python3 -m venv "${VENV_DIR}"
+  "${PYTHON_BIN}" -m venv "${VENV_DIR}"
 fi
 source "${VENV_DIR}/bin/activate"
 
@@ -146,7 +171,7 @@ GATEWAY_PID=""
 if [ "${START_GATEWAY_LOCAL}" = "true" ]; then
   echo "🔧 Starting Gateway MCP on port ${GATEWAY_PORT}..."
   export GATEWAY_ENV="local"
-  python3 -m gateway_mcp.main >/tmp/gateway.log 2>&1 &
+  "${VENV_DIR}/bin/python" -m gateway_mcp.main >/tmp/gateway.log 2>&1 &
   GATEWAY_PID="$!"
   echo "   Gateway PID: ${GATEWAY_PID}"
   echo "⏳ Waiting for Gateway MCP to be ready..."
