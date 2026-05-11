@@ -164,10 +164,78 @@ class ToolRegistry:
         return iter(self._tools.values())
 
 
+# Import BRS tools
+from gateway_mcp.tools.clubs import CLUB_TOOLS
+from gateway_mcp.tools.config import CONFIG_TOOLS
+from gateway_mcp.tools.users import USER_TOOLS
+from gateway_mcp.tools.api import API_TOOLS
+
+# Import Atlassian/Jira tools
+from gateway_mcp.tools.jira import JIRA_TOOLS
+
+
+def create_brs_registry() -> ToolRegistry:
+    """
+    Create a registry with all BRS tools registered.
+    
+    BRS Tools (6):
+    - create_club
+    - get_club_by_name
+    - verify_club_setup
+    - get_club_config
+    - create_admin_user
+    - call_internal_api
+    
+    Returns:
+        ToolRegistry with all BRS tools
+    """
+    registry = ToolRegistry()
+    registry.register_all(CLUB_TOOLS)
+    registry.register_all(CONFIG_TOOLS)
+    registry.register_all(USER_TOOLS)
+    registry.register_all(API_TOOLS)
+    return registry
+
+
+# All BRS tools combined for convenience
+BRS_TOOLS = CLUB_TOOLS + CONFIG_TOOLS + USER_TOOLS + API_TOOLS
+
+
+def create_full_registry() -> ToolRegistry:
+    """
+    Create a registry with all Gateway tools registered.
+    
+    BRS Tools (6):
+    - create_club
+    - get_club_by_name
+    - verify_club_setup
+    - get_club_config
+    - create_admin_user
+    - call_internal_api
+    
+    Atlassian Tools (3):
+    - create_ticket
+    - get_ticket_status
+    - add_comment
+    
+    Returns:
+        ToolRegistry with all 9 tools
+    """
+    registry = create_brs_registry()
+    registry.register_all(JIRA_TOOLS)
+    return registry
+
+
+# All tools combined
+ALL_TOOLS = BRS_TOOLS + JIRA_TOOLS
+
+
 # Exports
 __all__ = [
     # Registry
     "ToolRegistry",
+    "create_brs_registry",
+    "create_full_registry",
     # Base types
     "Tool",
     "ToolContext",
@@ -175,4 +243,13 @@ __all__ = [
     "Environment",
     "EmptyInput",
     "EmptyOutput",
+    # BRS tool collections
+    "BRS_TOOLS",
+    "CLUB_TOOLS",
+    "CONFIG_TOOLS",
+    "USER_TOOLS",
+    "API_TOOLS",
+    # Atlassian tool collections
+    "JIRA_TOOLS",
+    "ALL_TOOLS",
 ]

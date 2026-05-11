@@ -13,7 +13,7 @@ Input schemas are validated before handler execution.
 Output schemas ensure consistent response format.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
@@ -92,10 +92,12 @@ class CreateClubInput(BaseModel):
 class CreateClubOutput(BaseModel):
     """Output for create_club tool."""
     
-    club_id: int = Field(..., description="Created club ID")
-    club_name: str = Field(..., description="Club name as stored")
+    club_id: int | str = Field(..., description="Created club ID (string in BRS)")
+    club_name: str = Field(..., description="Club name as stored", alias="name")
     database_name: str = Field(..., description="Name of created database")
-    created_at: datetime = Field(..., description="Creation timestamp")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation timestamp")
+    
+    model_config = {"populate_by_name": True}
 
 
 # --- get_club_by_name ---
@@ -113,7 +115,7 @@ class GetClubByNameInput(BaseModel):
 class GetClubByNameOutput(BaseModel):
     """Output for get_club_by_name tool. Returns None if not found."""
     
-    club_id: Optional[int] = Field(None, description="Club ID if found")
+    club_id: Optional[int | str] = Field(None, description="Club ID if found")
     name: Optional[str] = Field(None, description="Club name")
     country: Optional[str] = Field(None, description="ISO 3166-1 alpha-2 country code")
     timezone: Optional[str] = Field(None, description="IANA timezone")
@@ -127,13 +129,13 @@ class GetClubByNameOutput(BaseModel):
 class GetClubConfigInput(BaseModel):
     """Input for get_club_config tool."""
     
-    club_id: int = Field(..., description="Club ID to get config for", gt=0)
+    club_id: int | str = Field(..., description="Club ID to get config for")
 
 
 class GetClubConfigOutput(BaseModel):
     """Output for get_club_config tool."""
     
-    club_id: int = Field(..., description="Club ID")
+    club_id: int | str = Field(..., description="Club ID")
     modules: list[str] = Field(
         default_factory=list,
         description="Enabled module names",
@@ -150,7 +152,7 @@ class GetClubConfigOutput(BaseModel):
 class CreateAdminUserInput(BaseModel):
     """Input for create_admin_user tool."""
     
-    club_id: int = Field(..., description="Club ID to create admin for", gt=0)
+    club_id: int | str = Field(..., description="Club ID to create admin for")
     email: str = Field(
         ...,
         description="Admin email address",
@@ -165,11 +167,11 @@ class CreateAdminUserInput(BaseModel):
 class CreateAdminUserOutput(BaseModel):
     """Output for create_admin_user tool."""
     
-    user_id: int = Field(..., description="Created user ID")
-    club_id: int = Field(..., description="Club ID")
-    email: str = Field(..., description="Admin email")
+    user_id: int | str = Field(..., description="User ID (or placeholder for sync operation)")
+    club_id: int | str = Field(..., description="Club ID")
+    email: str = Field(default="", description="Admin email")
     role: AdminRole = Field(..., description="Assigned role")
-    created_at: datetime = Field(..., description="Creation timestamp")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation timestamp")
     already_existed: bool = Field(
         default=False,
         description="True if user already existed (idempotent return)",
@@ -181,7 +183,7 @@ class CreateAdminUserOutput(BaseModel):
 class CallInternalApiInput(BaseModel):
     """Input for call_internal_api tool."""
     
-    club_id: int = Field(..., description="Club ID", gt=0)
+    club_id: int | str = Field(..., description="Club ID")
     operation: InternalApiOperation = Field(
         ...,
         description="Operation to perform (enum, not free-form)",
@@ -191,7 +193,7 @@ class CallInternalApiInput(BaseModel):
 class CallInternalApiOutput(BaseModel):
     """Output for call_internal_api tool."""
     
-    club_id: int = Field(..., description="Club ID")
+    club_id: int | str = Field(..., description="Club ID")
     enabled_features: list[str] = Field(
         default_factory=list,
         description="List of features that are now enabled",
@@ -203,7 +205,7 @@ class CallInternalApiOutput(BaseModel):
 class VerifyClubSetupInput(BaseModel):
     """Input for verify_club_setup tool."""
     
-    club_id: int = Field(..., description="Club ID to verify", gt=0)
+    club_id: int | str = Field(..., description="Club ID to verify")
 
 
 class VerifyClubSetupOutput(BaseModel):
@@ -211,7 +213,7 @@ class VerifyClubSetupOutput(BaseModel):
     
     club_exists: bool = Field(..., description="Whether club exists")
     config_valid: bool = Field(..., description="Whether config is valid")
-    has_admin: bool = Field(..., description="Whether club has an admin user")
+    has_admin: bool = Field(default=False, description="Whether club has an admin user")
     features_enabled: list[str] = Field(
         default_factory=list,
         description="List of enabled features",
