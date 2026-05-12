@@ -6,7 +6,48 @@ from app.services.error_handler import (
     ErrorContext,
     ErrorRecoveryStrategy,
     ErrorRecoveryAction,
+    classify_error_from_message,
 )
+
+
+# ==============================================================================
+# Error Classification Tests
+# ==============================================================================
+
+def test_container_error_classified_as_resource_exhausted():
+    """Test 'no such container' is classified as RESOURCE_EXHAUSTED, not TOOL_NOT_FOUND."""
+    error_type = classify_error_from_message("No such container: php")
+    assert error_type == ErrorType.RESOURCE_EXHAUSTED
+
+
+def test_docker_daemon_error_classified_as_resource_exhausted():
+    """Test Docker daemon errors are classified as RESOURCE_EXHAUSTED."""
+    error_type = classify_error_from_message("Cannot connect to Docker daemon at unix:///var/run/docker.sock")
+    assert error_type == ErrorType.RESOURCE_EXHAUSTED
+
+
+def test_container_not_running_classified_as_resource_exhausted():
+    """Test 'container not running' errors are classified correctly."""
+    error_type = classify_error_from_message("Container brs-teesheet is not running")
+    assert error_type == ErrorType.RESOURCE_EXHAUSTED
+
+
+def test_tool_not_found_on_mcp_server():
+    """Test actual tool lookup failures are classified as TOOL_NOT_FOUND."""
+    error_type = classify_error_from_message("Tool 'create_club' not found on any MCP server")
+    assert error_type == ErrorType.TOOL_NOT_FOUND
+
+
+def test_http_404_without_container_is_tool_not_found():
+    """Test HTTP 404 without container context is TOOL_NOT_FOUND."""
+    error_type = classify_error_from_message("HTTP 404: Tool endpoint not found")
+    assert error_type == ErrorType.TOOL_NOT_FOUND
+
+
+def test_connection_refused_is_resource_exhausted():
+    """Test connection refused is classified as RESOURCE_EXHAUSTED."""
+    error_type = classify_error_from_message("Connection refused to localhost:8056")
+    assert error_type == ErrorType.RESOURCE_EXHAUSTED
 
 
 # ==============================================================================
@@ -247,26 +288,28 @@ def test_rate_limit_retry_with_delay():
 # Unknown Error Type Tests
 # ==============================================================================
 
-def test_unknown_error_type_abort():
-    """Test unknown error type triggers abort."""
+def test_resource_exhausted_asks_user():
+    """Test RESOURCE_EXHAUSTED (container/infra failures) triggers ASK_USER with remediation."""
     handler = AgentErrorHandler()
 
-    # Use RESOURCE_EXHAUSTED which should trigger default case
+    # Use RESOURCE_EXHAUSTED which should trigger infra remediation
     context = ErrorContext(
         error_type=ErrorType.RESOURCE_EXHAUSTED,
         step_number=1,
-        tool_name=None,
-        error_message="Unknown error",
+        tool_name="create_club",
+        error_message="No such container: php",
         retry_count=0,
         metadata={},
     )
 
     action = handler.decide_recovery(context)
 
-    assert action.strategy == ErrorRecoveryStrategy.ABORT
+    assert action.strategy == ErrorRecoveryStrategy.ASK_USER
     assert action.terminal is True
-    # RESOURCE_EXHAUSTED now has its own specific message
-    assert "resource" in action.reason.lower() or "exhausted" in action.reason.lower()
+    assert "infrastructure" in action.reason.lower()
+    assert action.remediation_prompt is not None
+    # Should mention container issue in remediation
+    assert "container" in action.remediation_prompt.lower()
 
 
 # ==============================================================================

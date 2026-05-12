@@ -164,6 +164,29 @@ def classify_error_from_message(error_message: str, http_status: Optional[int] =
     # Parse error message for classification hints
     msg_lower = error_message.lower()
     
+    # =========================================================================
+    # INFRASTRUCTURE/CONTAINER ERRORS - classify as TOOL_FAILURE or RESOURCE_EXHAUSTED
+    # These are NOT "tool not found" - the tool exists but its backend is unavailable
+    # =========================================================================
+    infra_error_patterns = [
+        "no such container",
+        "container unavailable",
+        "cannot connect to docker daemon",
+        "docker exec",
+        "container not running",
+        "error response from daemon",
+        "is not running",
+        "oci runtime exec failed",
+        "upstream service unavailable",
+        "backend unavailable",
+        "executor backend",
+        "connection refused",
+        "service temporarily unavailable",
+    ]
+    if any(pattern in msg_lower for pattern in infra_error_patterns):
+        # Container/infra issues are resource failures, not missing tools
+        return ErrorType.RESOURCE_EXHAUSTED
+    
     # Auth errors
     if any(term in msg_lower for term in [
         "unauthorized", "authentication", "401", "403", 
@@ -179,10 +202,20 @@ def classify_error_from_message(error_message: str, http_status: Optional[int] =
     ]):
         return ErrorType.VALIDATION_ERROR
     
-    # Not found
-    if any(term in msg_lower for term in [
-        "not found", "404", "unknown tool", "no such"
-    ]):
+    # Tool not found - ONLY for actual tool lookup failures
+    # Be specific to avoid catching container errors
+    tool_not_found_patterns = [
+        "tool not found",
+        "not found on any mcp server",
+        "unknown tool name",
+        "unknown tool:",
+        "no tool named",
+    ]
+    if any(pattern in msg_lower for pattern in tool_not_found_patterns):
+        return ErrorType.TOOL_NOT_FOUND
+    
+    # 404 in message but NOT container-related should be TOOL_NOT_FOUND
+    if "404" in msg_lower and not any(p in msg_lower for p in ["container", "docker", "upstream"]):
         return ErrorType.TOOL_NOT_FOUND
     
     # Rate limiting
@@ -357,11 +390,13 @@ class AgentErrorHandler:
                     terminal=True,
                 )
 
-        # Resource exhausted
+        # Resource exhausted - infrastructure/container issues
         if context.error_type == ErrorType.RESOURCE_EXHAUSTED:
+            remediation = self._build_infra_remediation_prompt(context)
             return ErrorRecoveryAction(
-                strategy=ErrorRecoveryStrategy.ABORT,
-                reason="Resource exhausted, stopping workflow",
+                strategy=ErrorRecoveryStrategy.ASK_USER,
+                reason="Infrastructure dependency unavailable. Admin action required.",
+                remediation_prompt=remediation,
                 terminal=True,
             )
 
@@ -490,6 +525,58 @@ class AgentErrorHandler:
             prompt += f"\n\nCurrent values attempted: {args_summary}"
 
         return prompt
+
+    def _build_infra_remediation_prompt(self, context: ErrorContext) -> str:
+        """Build a structured remediation prompt for infrastructure/container failures."""
+        tool_name = context.tool_name or "the requested tool"
+        raw_message = context.error_message or "Infrastructure dependency unavailable."
+        msg_lower = raw_message.lower()
+        
+        # Detect specific infrastructure issues
+        if "no such container" in msg_lower or "container not running" in msg_lower:
+            issue = "Required container is not running"
+            remediation = (
+                "1. Start the required BRS containers: `docker-compose up -d brs-teesheet`\n"
+                "2. Verify the container is healthy: `docker ps | grep brs-teesheet`\n"
+                "3. Check container logs for startup errors: `docker logs brs-teesheet`"
+            )
+        elif "docker daemon" in msg_lower:
+            issue = "Docker daemon is not accessible"
+            remediation = (
+                "1. Start Docker Desktop or the Docker daemon\n"
+                "2. Verify Docker is running: `docker info`\n"
+                "3. Check Docker socket permissions"
+            )
+        elif "connection refused" in msg_lower:
+            issue = "Backend service is not reachable"
+            remediation = (
+                "1. Check if the required service is running\n"
+                "2. Verify network connectivity to the service\n"
+                "3. Check firewall rules and port availability"
+            )
+        elif "executor" in msg_lower:
+            issue = "Gateway executor backend is misconfigured"
+            remediation = (
+                "1. Check gateway executor configuration (GATEWAY_ENV)\n"
+                "2. Verify the executor backend is available (docker/k8s/http)\n"
+                "3. Review gateway logs for configuration errors"
+            )
+        else:
+            issue = "Infrastructure dependency is unavailable"
+            remediation = (
+                "1. Check that all required services are running\n"
+                "2. Verify gateway health: curl http://localhost:8090/health\n"
+                "3. Review backend and gateway logs for errors"
+            )
+        
+        return (
+            f"Infrastructure error for tool '{tool_name}':\n"
+            f"{raw_message}\n\n"
+            f"Issue: {issue}\n\n"
+            f"To resolve:\n{remediation}\n\n"
+            "This is an infrastructure issue, not a problem with your request. "
+            "Please contact your administrator or DevOps team if you cannot resolve it."
+        )
 
     def _find_fallback_tool(self, failed_tool: Optional[str]) -> Optional[str]:
         """

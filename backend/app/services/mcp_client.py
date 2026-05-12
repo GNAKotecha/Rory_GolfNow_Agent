@@ -44,6 +44,7 @@ class MCPToolResult:
     execution_time_ms: Optional[float] = None
     retry_count: int = 0
     http_status: Optional[int] = None  # P1-2: HTTP status for error classification
+    error_category: Optional[str] = None  # Machine-readable error category (e.g., "container_unavailable")
 
 
 class MCPErrorType(Enum):
@@ -271,12 +272,15 @@ class MCPClient:
                                 # Do NOT set http_status=200 - this allows the error classifier
                                 # to parse the error message for auth/validation/etc classification
                                 # instead of being overridden by the 200 status code.
+                                error_text = self._extract_error_text(data)
+                                error_category = self._classify_error_category(error_text)
                                 return MCPToolResult(
                                     success=False,
-                                    error=self._extract_error_text(data),
+                                    error=error_text,
                                     execution_time_ms=elapsed_ms,
                                     retry_count=retry_count,
                                     http_status=None,  # Let classifier parse error text
+                                    error_category=error_category,
                                 )
 
                             parsed_result = self._extract_success_result(data)
@@ -439,6 +443,58 @@ class MCPClient:
                     if isinstance(text, str) and text.strip():
                         return text
         return "Tool execution failed"
+    
+    def _classify_error_category(self, error_text: str) -> Optional[str]:
+        """
+        Classify error into machine-readable category.
+        
+        Returns a category string for use by error handlers,
+        avoiding brittle substring matching in downstream code.
+        """
+        if not error_text:
+            return None
+        
+        msg_lower = error_text.lower()
+        
+        # Container/Docker errors
+        if any(p in msg_lower for p in [
+            "no such container",
+            "container not running",
+            "container unavailable",
+            "oci runtime exec failed",
+        ]):
+            return "container_unavailable"
+        
+        if "docker daemon" in msg_lower or "cannot connect to docker" in msg_lower:
+            return "docker_unavailable"
+        
+        # Connection errors
+        if "connection refused" in msg_lower:
+            return "connection_refused"
+        
+        if "upstream" in msg_lower and ("unavailable" in msg_lower or "error" in msg_lower):
+            return "upstream_unavailable"
+        
+        # Auth errors
+        if any(p in msg_lower for p in ["401", "unauthorized", "invalid token", "expired token"]):
+            return "auth_failure"
+        
+        if any(p in msg_lower for p in ["403", "forbidden", "permission denied"]):
+            return "permission_denied"
+        
+        # Validation
+        if any(p in msg_lower for p in ["validation", "invalid", "400", "422"]):
+            return "validation_error"
+        
+        # Rate limiting
+        if any(p in msg_lower for p in ["rate limit", "429", "throttl"]):
+            return "rate_limited"
+        
+        # Timeout
+        if any(p in msg_lower for p in ["timeout", "timed out"]):
+            return "timeout"
+        
+        return None
 
     def _extract_success_result(self, data: Dict[str, Any]) -> Any:
         """

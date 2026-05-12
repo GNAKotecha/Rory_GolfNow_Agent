@@ -204,6 +204,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         executor_backend = settings.executor_backend
         if executor_backend == "docker_exec":
             checks["executor_available"] = await _check_docker_available()
+            
+            # Check BRS container prerequisites for write tools
+            if checks["executor_available"]:
+                brs_status = await _check_brs_prerequisites()
+                checks["brs_prerequisites"] = brs_status
+                
+                # Warn but don't fail readiness if BRS containers missing
+                # (gateway is still functional for non-BRS tools)
+                if brs_status.get("message"):
+                    checks["warnings"] = checks.get("warnings", [])
+                    checks["warnings"].append(brs_status["message"])
+                    
         elif executor_backend == "mock":
             checks["executor_available"] = True
         else:
@@ -398,6 +410,53 @@ async def _check_docker_available() -> bool:
         return returncode == 0
     except Exception:
         return False
+
+
+async def _check_container_running(container_name: str) -> bool:
+    """Check if a specific Docker container is running."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "inspect", "-f", "{{.State.Running}}", container_name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=2.0)
+        return stdout.decode().strip().lower() == "true"
+    except Exception:
+        return False
+
+
+async def _check_brs_prerequisites() -> dict[str, Any]:
+    """
+    Check if BRS write tool prerequisites are available.
+    
+    Returns:
+        Dict with status details for each prerequisite
+    """
+    # Container names used by BRS tools - may vary by deployment
+    brs_containers = ["brs-teesheet", "php"]
+    
+    checks: dict[str, Any] = {
+        "docker_available": await _check_docker_available(),
+        "containers": {},
+    }
+    
+    if not checks["docker_available"]:
+        checks["message"] = "Docker daemon not available"
+        return checks
+    
+    # Check each BRS container
+    for container in brs_containers:
+        checks["containers"][container] = await _check_container_running(container)
+    
+    # Check if any BRS container is available
+    if not any(checks["containers"].values()):
+        checks["message"] = (
+            f"No BRS containers running. Required: {', '.join(brs_containers)}. "
+            "BRS write tools (create_club, create_admin_user) will fail."
+        )
+    
+    return checks
 
 
 # Create default app instance
