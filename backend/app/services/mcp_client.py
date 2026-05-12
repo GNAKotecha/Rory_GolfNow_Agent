@@ -126,25 +126,47 @@ class MCPClient:
         try:
             session = await self._get_session()
             url = f"{self.config.url}/tools/list"
+            
+            # Build auth headers (gateway-mcp requires service token)
+            headers = self._build_auth_headers(user_id=None)
 
             # Prefer POST for Gateway MCP transport; fallback to GET for legacy servers.
             response_data = None
-            async with session.post(url, json={}) as response:
+            response_status = None
+            response_content_type = None
+            response_body_snippet = None
+            
+            async with session.post(url, json={}, headers=headers) as response:
+                response_status = response.status
+                response_content_type = response.headers.get("Content-Type", "")
+                
                 if response.status == 200:
-                    response_data = await response.json()
+                    response_data = await self._parse_json_response(response)
                 elif response.status in (404, 405):
-                    async with session.get(url) as get_response:
-                        if get_response.status != 200:
-                            logger.error(
-                                f"Failed to list tools from {self.config.name}: HTTP {get_response.status}"
-                            )
-                            return []
-                        response_data = await get_response.json()
+                    async with session.get(url, headers=headers) as get_response:
+                        response_status = get_response.status
+                        response_content_type = get_response.headers.get("Content-Type", "")
+                        
+                        if get_response.status == 200:
+                            response_data = await self._parse_json_response(get_response)
+                        else:
+                            response_body_snippet = await self._get_body_snippet(get_response)
                 else:
-                    logger.error(
-                        f"Failed to list tools from {self.config.name}: HTTP {response.status}"
-                    )
-                    return []
+                    response_body_snippet = await self._get_body_snippet(response)
+            
+            # Handle parse failures with diagnostic logging
+            if response_data is None:
+                logger.error(
+                    f"Failed to list tools from {self.config.name}: "
+                    f"HTTP {response_status}, Content-Type: {response_content_type}, "
+                    f"Body: {response_body_snippet or '(empty)'}",
+                    extra={
+                        "server": self.config.name,
+                        "status": response_status,
+                        "content_type": response_content_type,
+                    },
+                )
+                return []
 
             data = response_data or {}
             tools = [
@@ -174,6 +196,34 @@ class MCPClient:
                 extra={"server": self.config.name, "error": str(e)},
             )
             return []
+    
+    async def _parse_json_response(self, response: aiohttp.ClientResponse) -> Optional[Dict[str, Any]]:
+        """
+        Parse JSON response with tolerant content-type handling.
+        
+        Returns None on parse failure (caller should log diagnostics).
+        """
+        try:
+            # Use content_type=None to skip content-type validation
+            # (some servers return text/html for JSON, or have charset issues)
+            return await response.json(content_type=None)
+        except (json.JSONDecodeError, aiohttp.ContentTypeError) as e:
+            # Try fallback: read as text and parse manually
+            try:
+                text = await response.text()
+                return json.loads(text)
+            except Exception:
+                return None
+    
+    async def _get_body_snippet(self, response: aiohttp.ClientResponse, max_len: int = 300) -> str:
+        """Get first N chars of response body for diagnostic logging."""
+        try:
+            text = await response.text()
+            if len(text) > max_len:
+                return text[:max_len] + "..."
+            return text
+        except Exception:
+            return "(could not read body)"
 
     async def call_tool(
         self,

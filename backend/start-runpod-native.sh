@@ -91,6 +91,11 @@ export GATEWAY_HOST="${GATEWAY_HOST:-0.0.0.0}"
 export OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5-coder:32b}"
 export VENV_DIR="${VENV_DIR:-venv}"
 
+# Runpod/native defaults: disable auxiliary MCP servers and bash tool
+# (test-mcp and mock-search are not deployed in Runpod native mode)
+export ENABLE_AUX_MCP_SERVERS="${ENABLE_AUX_MCP_SERVERS:-false}"
+export ENABLE_BASH_TOOL="${ENABLE_BASH_TOOL:-false}"
+
 # Native mode runs ollama locally, so normalize docker-compose URL if present.
 if [ "${OLLAMA_URL:-}" = "http://ollama:11434" ]; then
   export OLLAMA_URL="http://localhost:11434"
@@ -124,6 +129,8 @@ require_env "DATABASE_URL"
 require_env "SECRET_KEY"
 require_env "GATEWAY_SERVICE_TOKEN"
 echo "✅ Required environment variables are set"
+echo "   MCP_GATEWAY_URL: ${MCP_GATEWAY_URL:-http://localhost:8090}"
+echo "   ENABLE_AUX_MCP_SERVERS: ${ENABLE_AUX_MCP_SERVERS}"
 echo ""
 
 # Install Ollama if not present

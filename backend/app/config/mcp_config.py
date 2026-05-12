@@ -39,22 +39,55 @@ class MCPServerConfig:
 # Server Registry
 # ==============================================================================
 
-# Development environment - includes test servers
+def _normalize_gateway_url(raw_url: str) -> str:
+    """
+    Normalize gateway URL to ensure clean /mcp suffix.
+    
+    Handles:
+    - Trailing slashes
+    - Duplicate /mcp suffixes
+    - Missing /mcp suffix
+    
+    Examples:
+        http://localhost:8090 -> http://localhost:8090/mcp
+        http://localhost:8090/ -> http://localhost:8090/mcp
+        http://localhost:8090/mcp -> http://localhost:8090/mcp
+        http://localhost:8090/mcp/ -> http://localhost:8090/mcp
+        http://localhost:8090/mcp/mcp -> http://localhost:8090/mcp
+    """
+    url = raw_url.rstrip("/")
+    
+    # Strip trailing /mcp repeatedly to handle /mcp/mcp cases
+    while url.endswith("/mcp"):
+        url = url[:-4].rstrip("/")
+    
+    # Add single /mcp suffix
+    return f"{url}/mcp"
+
+
 # Prefer MCP_GATEWAY_URL; fall back to legacy MCP_SERVER_URL for compatibility.
-_gateway_url = (
+_raw_gateway_url = (
     os.environ.get("MCP_GATEWAY_URL")
     or os.environ.get("MCP_SERVER_URL")
     or "http://localhost:8090"
 )
+_gateway_mcp_url = _normalize_gateway_url(_raw_gateway_url)
 
-DEVELOPMENT_SERVERS = [
-    MCPServerConfig(
-        name="gateway-mcp",
-        url=f"{_gateway_url}/mcp",
-        timeout_seconds=30,
-        max_retries=3,
-        description="Gateway MCP - Business-level BRS and Atlassian tools",
-    ),
+# Auxiliary MCP servers (test-mcp, mock-search) are opt-in for development.
+# Set ENABLE_AUX_MCP_SERVERS=true to include them (noisy if not running).
+_enable_aux_servers = os.environ.get("ENABLE_AUX_MCP_SERVERS", "false").lower() in ("true", "1", "yes")
+
+# Core gateway server - always included in development
+_GATEWAY_SERVER = MCPServerConfig(
+    name="gateway-mcp",
+    url=_gateway_mcp_url,
+    timeout_seconds=30,
+    max_retries=3,
+    description="Gateway MCP - Business-level BRS and Atlassian tools",
+)
+
+# Auxiliary servers - only included when ENABLE_AUX_MCP_SERVERS=true
+_AUX_SERVERS = [
     MCPServerConfig(
         name="test-mcp",
         url="http://localhost:8080/mcp",
@@ -70,6 +103,9 @@ DEVELOPMENT_SERVERS = [
         description="Mock search service",
     ),
 ]
+
+# Development environment servers
+DEVELOPMENT_SERVERS = [_GATEWAY_SERVER] + (_AUX_SERVERS if _enable_aux_servers else [])
 
 # Staging environment - subset of production servers
 STAGING_SERVERS = [

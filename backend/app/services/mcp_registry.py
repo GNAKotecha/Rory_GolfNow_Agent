@@ -201,10 +201,30 @@ class MCPToolRegistry:
         # Find tool across all servers
         server_name, client = await self._find_tool(tool_name)
 
+        # Self-heal: if tool not found, force refresh all caches and retry once
         if client is None:
-            logger.warning(
-                f"Tool not found: {tool_name}",
+            logger.info(
+                f"Tool '{tool_name}' not found in cache, forcing discovery refresh...",
                 extra={"tool": tool_name, "user_id": user.id},
+            )
+            await self.discover_all_tools(force_refresh=True)
+            server_name, client = await self._find_tool(tool_name)
+
+        if client is None:
+            # Log per-server tool counts for diagnostics
+            tool_counts = {}
+            for srv_name, srv_client in self.clients.items():
+                count = len(srv_client._tools_cache or [])
+                tool_counts[srv_name] = count
+            
+            logger.warning(
+                f"Tool not found after refresh: {tool_name}. "
+                f"Per-server tool counts: {tool_counts}",
+                extra={
+                    "tool": tool_name,
+                    "user_id": user.id,
+                    "tool_counts": tool_counts,
+                },
             )
 
             result = MCPToolResult(
