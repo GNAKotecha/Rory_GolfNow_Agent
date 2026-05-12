@@ -6,16 +6,19 @@ import logging
 import asyncio
 import json
 import time
+import os
 
 from app.services.ollama import OllamaClient, OllamaError
 from app.services.mcp_registry import MCPToolRegistry
 from app.services.mcp_client import MCPTool
-from app.services.agent_state import AgentState
+from app.services.agent_state import AgentState, ActionOutcome
 from app.services.error_handler import (
     AgentErrorHandler,
     ErrorType,
     ErrorContext,
-    ErrorRecoveryStrategy
+    ErrorRecoveryStrategy,
+    ToolCallTelemetry,
+    is_error_retryable,
 )
 from app.services.agent_planner import AgentPlanner, TaskPlan
 from app.services.bash_tool import BashTool
@@ -27,6 +30,9 @@ if TYPE_CHECKING:
     from app.services.mcp_health import MCPHealthChecker
 
 logger = logging.getLogger(__name__)
+
+# Global retry budget for agent-level retries (MCP client has its own)
+AGENT_RETRY_BUDGET = int(os.environ.get("AGENT_RETRY_BUDGET", "3"))
 
 
 @dataclass
@@ -57,7 +63,7 @@ class AgenticResult:
     final_response: str
     steps: List[AgenticStep]
     total_steps: int
-    stopped_reason: str  # "completed", "max_steps", "error", "approval_needed", "loop_detected", "timeout"
+    stopped_reason: str  # "completed", "max_steps", "error", "approval_needed", "loop_detected", "timeout", "ask_user", "rate_limited", "tool_unavailable"
     error: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -168,9 +174,14 @@ class AgenticService:
 
 Available tools: {', '.join(tool_names)}
 
-To use a tool, respond with a function call in the format expected by the API. Do NOT describe what you would do - actually call the tool.
+IMPORTANT RULES:
+1. If a tool requires parameters the user has not provided, ASK THE USER for those values. Do NOT make up data like names, IDs, or other specific values.
+2. When you receive tool results, use them to formulate your final response.
+3. If a tool call fails, explain the error to the user and ask how to proceed.
+4. Do NOT repeatedly call the same tool with the same arguments - if it fails once, investigate why.
+5. After successfully completing a task, provide a clear confirmation to the user.
 
-When you receive tool results, use them to formulate your final response to the user."""
+To use a tool, respond with a function call in the format expected by the API."""
 
             current_messages.insert(0, {
                 "role": "system",
@@ -449,6 +460,18 @@ When you receive tool results, use them to formulate your final response to the 
                             circuit_ok, circuit_msg = await self.rate_limiter.check_circuit(server_name)
                             if not circuit_ok:
                                 logger.warning(f"Circuit breaker open for {server_name}: {circuit_msg}")
+                                
+                                # Record circuit breaker skip
+                                action_data_circuit = {"name": tool_name, "args": tool_args}
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data_circuit,
+                                    result=circuit_msg,
+                                    success=False,
+                                    outcome=ActionOutcome.SKIPPED,
+                                    error_type="circuit_breaker",
+                                )
+                                
                                 tool_executions.append({
                                     "tool_call_id": tool_id,
                                     "tool_name": tool_name,
@@ -478,6 +501,16 @@ When you receive tool results, use them to formulate your final response to the 
                                 )
                             else:
                                 # Skip read tools in degraded mode
+                                action_data_degraded = {"name": tool_name, "args": tool_args}
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data_degraded,
+                                    result=tool_msg,
+                                    success=False,
+                                    outcome=ActionOutcome.SKIPPED,
+                                    error_type="degraded_mode",
+                                )
+                                
                                 tool_executions.append({
                                     "tool_call_id": tool_id,
                                     "tool_name": tool_name,
@@ -488,9 +521,46 @@ When you receive tool results, use them to formulate your final response to the 
                                 })
                                 continue
 
+                    # Check if this tool has already failed terminally (non-retryable)
+                    action_data = {"name": tool_name, "args": tool_args}
+                    if state.has_action_failed_terminally("tool_call", action_data):
+                        logger.warning(f"Tool {tool_name} previously failed with terminal error - stopping for user intervention")
+                        state.record_action(
+                            action_type="tool_call",
+                            action_data=action_data,
+                            result=None,
+                            success=False,
+                            outcome=ActionOutcome.ABORTED,
+                            error_type="previously_failed_terminal",
+                        )
+                        # P1-1: Deterministic stop for terminal failures - return ASK_USER
+                        terminal_error_msg = (
+                            f"Tool '{tool_name}' previously failed with a non-retryable error and cannot be retried. "
+                            f"Please review the error and provide alternative instructions."
+                        )
+                        return AgenticResult(
+                            final_response=terminal_error_msg,
+                            steps=steps,
+                            total_steps=step_num,
+                            stopped_reason="ask_user",
+                            error=f"Terminal tool failure: {tool_name}",
+                        )
+                    
+                    # Check global budget
+                    if state.is_budget_exhausted():
+                        logger.error("Global attempt budget exhausted")
+                        return AgenticResult(
+                            final_response="",
+                            steps=steps,
+                            total_steps=step_num,
+                            stopped_reason="error",
+                            error="Maximum total tool attempts exceeded",
+                        )
+
                     # Execute tool via MCP registry with error handling
                     retry_key = f"{step_num}:{tool_name}"
                     current_retries = retry_count.get(retry_key, 0)
+                    attempt_budget = min(AGENT_RETRY_BUDGET, self.error_handler.max_retries)
 
                     # Track tool execution time
                     tool_start_time = time.time()
@@ -525,6 +595,9 @@ When you receive tool results, use them to formulate your final response to the 
                                 user=user,
                             )
 
+                        # Calculate execution duration
+                        tool_duration_ms = int((time.time() - tool_start_time) * 1000)
+
                         # Update circuit breaker on success/failure
                         if self.rate_limiter and server_name:
                             if result.success:
@@ -534,27 +607,86 @@ When you receive tool results, use them to formulate your final response to the 
 
                         # Handle tool failure with recovery strategy
                         if not result.success:
+                            # Classify the error type
+                            http_status = getattr(result, 'http_status', None)
+                            error_type = self.error_handler.classify_error(
+                                result.error or "Unknown error",
+                                http_status=http_status,
+                            )
+                            
+                            # Check if error is retryable
+                            retryable = is_error_retryable(error_type)
+                            
                             context = ErrorContext(
-                                error_type=ErrorType.TOOL_FAILURE,
+                                error_type=error_type,
                                 step_number=step_num,
                                 tool_name=tool_name,
                                 error_message=result.error or "Unknown error",
                                 retry_count=current_retries,
                                 metadata={},
+                                http_status=http_status,
+                                attempt_budget=attempt_budget,
                             )
 
                             action = self.error_handler.decide_recovery(context)
+                            
+                            # Build telemetry
+                            telemetry = ToolCallTelemetry(
+                                tool_name=tool_name,
+                                error_type=error_type.value,
+                                http_status=http_status,
+                                retryable=retryable,
+                                attempt_index=current_retries,
+                                attempt_budget=attempt_budget,
+                                recovery_strategy=action.strategy.value,
+                                terminal=action.terminal,
+                                duration_ms=tool_duration_ms,
+                            )
+                            
+                            logger.warning(
+                                f"Tool failure: {tool_name}",
+                                extra=telemetry.to_dict(),
+                            )
+                            
+                            # Emit telemetry event
+                            if self.config.stream_callback:
+                                await self.config.stream_callback({
+                                    "type": "tool_error",
+                                    "tool_name": tool_name,
+                                    "error": result.error,
+                                    "error_type": error_type.value,
+                                    "http_status": http_status,
+                                    "retryable": retryable,
+                                    "attempt_index": current_retries,
+                                    "attempt_budget": attempt_budget,
+                                    "recovery_strategy": action.strategy.value,
+                                    "terminal": action.terminal,
+                                    "duration_ms": tool_duration_ms,
+                                    "step_number": step_num,
+                                })
 
                             if action.strategy == ErrorRecoveryStrategy.RETRY:
+                                # Record retry attempt
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data,
+                                    result=result.error,
+                                    success=False,
+                                    outcome=ActionOutcome.RETRYABLE_FAILURE,
+                                    error_type=error_type.value,
+                                    http_status=http_status,
+                                    duration_ms=tool_duration_ms,
+                                )
+                                
                                 # Use rate limiter's backoff if available
                                 if self.rate_limiter and self.rate_limiter.should_retry(current_retries):
                                     delay = await self.rate_limiter.wait_with_backoff(current_retries)
-                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1}, delay {delay:.2f}s)")
+                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1}/{attempt_budget}, delay {delay:.2f}s)")
                                 elif action.retry_delay_seconds:
                                     await asyncio.sleep(action.retry_delay_seconds)
-                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1})")
+                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1}/{attempt_budget})")
                                 else:
-                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1})")
+                                    logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1}/{attempt_budget})")
 
                                 retry_count[retry_key] = current_retries + 1
 
@@ -564,6 +696,17 @@ When you receive tool results, use them to formulate your final response to the 
 
                             elif action.strategy == ErrorRecoveryStrategy.FALLBACK:
                                 logger.info(f"Using fallback tool: {action.fallback_tool}")
+                                
+                                # Record fallback attempt
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data,
+                                    result=result.error,
+                                    success=False,
+                                    outcome=ActionOutcome.RETRYABLE_FAILURE,
+                                    error_type=error_type.value,
+                                    duration_ms=tool_duration_ms,
+                                )
 
                                 # Execute fallback tool
                                 result = await self.mcp.execute_tool(
@@ -572,37 +715,82 @@ When you receive tool results, use them to formulate your final response to the 
                                     user=user,
                                 )
 
-                            elif action.strategy == ErrorRecoveryStrategy.SKIP:
-                                logger.warning(f"Skipping failed tool: {tool_name}")
-                                tool_executions.append({
-                                    "tool_call_id": tool_id,
-                                    "tool_name": tool_name,
-                                    "arguments": tool_args,
-                                    "result": result,
-                                    "skipped": True,
-                                })
-                                continue
+                            elif action.strategy == ErrorRecoveryStrategy.ASK_USER:
+                                # Record the failure
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data,
+                                    result=result.error,
+                                    success=False,
+                                    outcome=ActionOutcome.NON_RETRYABLE_FAILURE if action.terminal else ActionOutcome.RETRYABLE_FAILURE,
+                                    error_type=error_type.value,
+                                    http_status=http_status,
+                                    duration_ms=tool_duration_ms,
+                                )
+                                
+                                logger.info(f"Requesting user intervention for tool: {tool_name}")
+                                
+                                if self.config.stream_callback:
+                                    await self.config.stream_callback({
+                                        "type": "ask_user",
+                                        "tool_name": tool_name,
+                                        "reason": action.reason,
+                                        "remediation_prompt": action.remediation_prompt,
+                                        "error_type": error_type.value,
+                                    })
+                                
+                                return AgenticResult(
+                                    final_response="",
+                                    steps=steps,
+                                    total_steps=step_num,
+                                    stopped_reason="ask_user",
+                                    error=action.reason,
+                                    metadata={
+                                        "tool_name": tool_name,
+                                        "remediation_prompt": action.remediation_prompt,
+                                        "error_type": error_type.value,
+                                    },
+                                )
 
                             elif action.strategy == ErrorRecoveryStrategy.ABORT:
-                                logger.error(f"Aborting due to tool failure: {tool_name}")
+                                # Record terminal failure
+                                state.record_action(
+                                    action_type="tool_call",
+                                    action_data=action_data,
+                                    result=result.error,
+                                    success=False,
+                                    outcome=ActionOutcome.ABORTED,
+                                    error_type=error_type.value,
+                                    http_status=http_status,
+                                    duration_ms=tool_duration_ms,
+                                )
+                                
+                                logger.error(f"Aborting due to tool failure: {tool_name} - {action.reason}")
                                 return AgenticResult(
                                     final_response="",
                                     steps=steps,
                                     total_steps=step_num,
                                     stopped_reason="error",
                                     error=action.reason,
+                                    metadata={
+                                        "error_type": error_type.value,
+                                        "http_status": http_status,
+                                        "action_history": state.get_action_history_summary(),
+                                    },
                                 )
+                            
+                            # SKIP strategy is no longer used for tool failures
+                            # (only for circuit breaker/degraded mode, handled above)
 
                         # Record successful action
                         state.record_action(
                             action_type="tool_call",
-                            action_data={"name": tool_name, "args": tool_args},
+                            action_data=action_data,
                             result=result.result,
                             success=result.success,
+                            outcome=ActionOutcome.SUCCESS if result.success else ActionOutcome.RETRYABLE_FAILURE,
+                            duration_ms=tool_duration_ms,
                         )
-
-                        # Calculate execution duration
-                        tool_duration_ms = int((time.time() - tool_start_time) * 1000)
 
                         tool_executions.append({
                             "tool_call_id": tool_id,
@@ -641,22 +829,40 @@ When you receive tool results, use them to formulate your final response to the 
 
                     except Exception as e:
                         tool_duration_ms = int((time.time() - tool_start_time) * 1000)
+                        
+                        # Classify the exception
+                        error_type = self.error_handler.classify_error(str(e))
+                        
                         logger.error(
                             f"Tool execution exception: {tool_name} - {e}",
                             extra={
                                 "tool_name": tool_name,
                                 "error": str(e),
+                                "error_type": error_type.value,
                                 "duration_ms": tool_duration_ms,
                                 "step": step_num,
                             },
                             exc_info=True
                         )
+                        
+                        # Record the exception as a failure
+                        state.record_action(
+                            action_type="tool_call",
+                            action_data=action_data,
+                            result=str(e),
+                            success=False,
+                            outcome=ActionOutcome.NON_RETRYABLE_FAILURE if not is_error_retryable(error_type) else ActionOutcome.RETRYABLE_FAILURE,
+                            error_type=error_type.value,
+                            duration_ms=tool_duration_ms,
+                        )
+                        
                         tool_executions.append({
                             "tool_call_id": tool_id,
                             "tool_name": tool_name,
                             "arguments": tool_args,
                             "result": None,
                             "error": str(e),
+                            "error_type": error_type.value,
                             "duration_ms": tool_duration_ms,
                         })
 
@@ -666,9 +872,25 @@ When you receive tool results, use them to formulate your final response to the 
                                 "type": "tool_error",
                                 "tool_name": tool_name,
                                 "error": str(e),
+                                "error_type": error_type.value,
+                                "retryable": is_error_retryable(error_type),
                                 "duration_ms": tool_duration_ms,
                                 "step_number": step_num,
                             })
+                        
+                        # For exceptions, check if we should abort
+                        if not is_error_retryable(error_type):
+                            return AgenticResult(
+                                final_response="",
+                                steps=steps,
+                                total_steps=step_num,
+                                stopped_reason="error",
+                                error=f"Non-retryable error in tool {tool_name}: {e}",
+                                metadata={
+                                    "error_type": error_type.value,
+                                    "action_history": state.get_action_history_summary(),
+                                },
+                            )
 
                 # If retry flag set, repeat this step without recording
                 if should_retry_step:

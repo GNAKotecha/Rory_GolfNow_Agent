@@ -43,6 +43,7 @@ class MCPToolResult:
     error: Optional[str] = None
     execution_time_ms: Optional[float] = None
     retry_count: int = 0
+    http_status: Optional[int] = None  # P1-2: HTTP status for error classification
 
 
 class MCPErrorType(Enum):
@@ -216,11 +217,16 @@ class MCPClient:
                         # Gateway MCP format: {"content": [...], "isError": bool}
                         if "isError" in data:
                             if data.get("isError", False):
+                                # MCP semantic error: HTTP transport succeeded but tool reported error.
+                                # Do NOT set http_status=200 - this allows the error classifier
+                                # to parse the error message for auth/validation/etc classification
+                                # instead of being overridden by the 200 status code.
                                 return MCPToolResult(
                                     success=False,
                                     error=self._extract_error_text(data),
                                     execution_time_ms=elapsed_ms,
                                     retry_count=retry_count,
+                                    http_status=None,  # Let classifier parse error text
                                 )
 
                             parsed_result = self._extract_success_result(data)
@@ -229,6 +235,7 @@ class MCPClient:
                                 result=parsed_result,
                                 execution_time_ms=elapsed_ms,
                                 retry_count=retry_count,
+                                http_status=200,
                             )
 
                         logger.info(
@@ -246,6 +253,7 @@ class MCPClient:
                             result=data.get("result"),
                             execution_time_ms=elapsed_ms,
                             retry_count=retry_count,
+                            http_status=200,
                         )
 
                     elif response.status == 404:
@@ -260,6 +268,7 @@ class MCPClient:
                             error=error_msg,
                             execution_time_ms=elapsed_ms,
                             retry_count=retry_count,
+                            http_status=404,
                         )
 
                     else:
@@ -285,6 +294,7 @@ class MCPClient:
                             error=f"Server error: HTTP {response.status}",
                             execution_time_ms=elapsed_ms,
                             retry_count=retry_count,
+                            http_status=response.status,
                         )
 
             except asyncio.TimeoutError:

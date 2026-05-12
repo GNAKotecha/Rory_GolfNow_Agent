@@ -84,8 +84,10 @@ def test_tool_failure_max_retries_no_fallback():
 
     action = handler.decide_recovery(context)
 
-    assert action.strategy == ErrorRecoveryStrategy.SKIP
-    assert "no fallback" in action.reason.lower()
+    # Changed from SKIP to ABORT - exhausted retries with no fallback should abort
+    assert action.strategy == ErrorRecoveryStrategy.ABORT
+    assert action.terminal is True
+    assert "failed" in action.reason.lower() or "no fallback" in action.reason.lower()
 
 
 # ==============================================================================
@@ -262,7 +264,9 @@ def test_unknown_error_type_abort():
     action = handler.decide_recovery(context)
 
     assert action.strategy == ErrorRecoveryStrategy.ABORT
-    assert "unhandled" in action.reason.lower()
+    assert action.terminal is True
+    # RESOURCE_EXHAUSTED now has its own specific message
+    assert "resource" in action.reason.lower() or "exhausted" in action.reason.lower()
 
 
 # ==============================================================================
