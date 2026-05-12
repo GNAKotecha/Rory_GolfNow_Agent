@@ -40,8 +40,12 @@ class MCPServerConfig:
 # ==============================================================================
 
 # Development environment - includes test servers
-# MCP_GATEWAY_URL env var overrides the default localhost URL
-_gateway_url = os.environ.get("MCP_GATEWAY_URL", "http://localhost:8090")
+# Prefer MCP_GATEWAY_URL; fall back to legacy MCP_SERVER_URL for compatibility.
+_gateway_url = (
+    os.environ.get("MCP_GATEWAY_URL")
+    or os.environ.get("MCP_SERVER_URL")
+    or "http://localhost:8090"
+)
 
 DEVELOPMENT_SERVERS = [
     MCPServerConfig(

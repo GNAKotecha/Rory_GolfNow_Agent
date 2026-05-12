@@ -64,6 +64,9 @@ export default function ChatPage() {
             setStreamingStatus(`🔄 Loop detected at step ${event.step}`);
           } else if (event.type === 'workflow_complete') {
             setStreamingStatus(`✅ Workflow completed in ${event.total_steps} steps`);
+          } else if (event.type === 'ask_user') {
+            setStreamingStatus('I need a few details from you to continue...');
+            setLoading(false);
           } else if (event.type === 'final_response') {
             setStreamingStatus('');
             // Add assistant message

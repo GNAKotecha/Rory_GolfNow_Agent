@@ -199,8 +199,8 @@ class TestErrorRecoveryDecisions:
         assert action.remediation_prompt is not None
         assert "credential" in action.remediation_prompt.lower() or "auth" in action.remediation_prompt.lower()
     
-    def test_validation_error_aborts_immediately(self):
-        """VALIDATION_ERROR should ABORT immediately without retrying."""
+    def test_validation_error_asks_user_immediately(self):
+        """VALIDATION_ERROR should ASK_USER immediately without retrying."""
         handler = AgentErrorHandler(max_retries=3)
         
         context = ErrorContext(
@@ -215,8 +215,9 @@ class TestErrorRecoveryDecisions:
         
         action = handler.decide_recovery(context)
         
-        assert action.strategy == ErrorRecoveryStrategy.ABORT
+        assert action.strategy == ErrorRecoveryStrategy.ASK_USER
         assert action.terminal is True
+        assert action.remediation_prompt is not None
     
     def test_tool_not_found_aborts_immediately(self):
         """TOOL_NOT_FOUND should ABORT immediately."""
@@ -236,6 +237,27 @@ class TestErrorRecoveryDecisions:
         
         assert action.strategy == ErrorRecoveryStrategy.ABORT
         assert action.terminal is True
+
+    def test_validation_prompt_includes_field_hint_when_present(self):
+        """Validation remediation should include field-level hint when parsable."""
+        handler = AgentErrorHandler(max_retries=3)
+
+        context = ErrorContext(
+            error_type=ErrorType.VALIDATION_ERROR,
+            step_number=1,
+            tool_name="create_club",
+            error_message="Error: Invalid input at 'name': String should have at least 1 character",
+            retry_count=0,
+            metadata={"tool_args": {"name": "", "country": "GB"}},
+            http_status=400,
+        )
+
+        action = handler.decide_recovery(context)
+
+        assert action.strategy == ErrorRecoveryStrategy.ASK_USER
+        assert action.remediation_prompt is not None
+        assert "name" in action.remediation_prompt.lower()
+        assert "create_club" in action.remediation_prompt
     
     def test_tool_failure_retries_with_budget(self):
         """TOOL_FAILURE should RETRY when retry budget remains."""

@@ -8,6 +8,8 @@ from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 import logging
 import os
+import json
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -265,9 +267,11 @@ class AgentErrorHandler:
         
         # Validation error - bad request, won't succeed on retry
         if context.error_type == ErrorType.VALIDATION_ERROR:
+            remediation = self._build_validation_remediation_prompt(context)
             return ErrorRecoveryAction(
-                strategy=ErrorRecoveryStrategy.ABORT,
-                reason=f"Validation error: {context.error_message}. Check tool arguments.",
+                strategy=ErrorRecoveryStrategy.ASK_USER,
+                reason="Tool input validation failed. User clarification required.",
+                remediation_prompt=remediation,
                 terminal=True,
             )
         
@@ -440,6 +444,52 @@ class AgentErrorHandler:
             "3. Try refreshing your credentials\n"
             "4. Contact your administrator if the issue persists"
         )
+
+    def _build_validation_remediation_prompt(self, context: ErrorContext) -> str:
+        """Build a structured remediation prompt for validation failures."""
+        tool_name = context.tool_name or "the requested tool"
+        raw_message = context.error_message or "Validation failed."
+        message = raw_message.strip()
+
+        # Extract likely field names from common validator error formats.
+        fields: list[str] = []
+        for pattern in [
+            r"at ['\"]([a-zA-Z0-9_]+)['\"]",
+            r"field ['\"]([a-zA-Z0-9_]+)['\"]",
+            r"parameter ['\"]([a-zA-Z0-9_]+)['\"]",
+        ]:
+            for match in re.findall(pattern, message):
+                if match not in fields:
+                    fields.append(match)
+
+        # Include current attempted args when available for easier correction.
+        tool_args = context.metadata.get("tool_args") if isinstance(context.metadata, dict) else None
+        args_summary = ""
+        if isinstance(tool_args, dict) and tool_args:
+            try:
+                args_summary = json.dumps(tool_args, ensure_ascii=True)
+            except Exception:
+                args_summary = str(tool_args)
+            if len(args_summary) > 400:
+                args_summary = args_summary[:400] + "..."
+
+        field_guidance = (
+            f"Please provide corrected values for: {', '.join(fields)}."
+            if fields else
+            "Please provide corrected values for the invalid or missing fields."
+        )
+
+        prompt = (
+            f"I couldn't execute '{tool_name}' because the tool input failed validation.\n"
+            f"Validation error: {message}\n\n"
+            f"{field_guidance}\n"
+            "Reply with the corrected values only, and I will retry."
+        )
+
+        if args_summary:
+            prompt += f"\n\nCurrent values attempted: {args_summary}"
+
+        return prompt
 
     def _find_fallback_tool(self, failed_tool: Optional[str]) -> Optional[str]:
         """

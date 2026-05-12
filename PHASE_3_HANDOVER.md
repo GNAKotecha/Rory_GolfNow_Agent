@@ -36,6 +36,43 @@
 
 ---
 
+## Post-Plan Hotfix (2026-05-12): Validation HITL + Worker Probe Stability
+
+**Issue observed:**
+- Validation errors (for example invalid `create_club` args) aborted the workflow with a raw error instead of asking user for corrected fields.
+- In Runpod-native mode, bash worker DNS probes (`worker:8001`) produced noisy `ConnectError` logs and could add latency on each request.
+
+**What was changed:**
+- Updated validation handling in `backend/app/services/error_handler.py`:
+  - `VALIDATION_ERROR` now returns `ASK_USER` with a structured remediation prompt.
+  - Added field-hint extraction from error text (for example `at 'name'`) and includes attempted args snapshot when available.
+- Updated `backend/app/services/agentic_service.py`:
+  - Passes `tool_args` into `ErrorContext.metadata` for better remediation prompts.
+  - Returns user-facing `final_response` for `ASK_USER` and `ABORT` so UI receives clear guidance.
+  - Bash escape-hatch is now opt-in via `ENABLE_BASH_TOOL=true`; disabled by default to avoid worker probe failures in environments without worker service.
+- Updated frontend websocket handling:
+  - Added `'ask_user'` event type support in `frontend/lib/websocket.ts`.
+  - Prevented duplicate assistant messages by letting `final_response` remain the single rendered chat message.
+- Updated `backend/.env.example` with `ENABLE_BASH_TOOL=false` documentation.
+
+**Files touched:**
+- `backend/app/services/error_handler.py`
+- `backend/app/services/agentic_service.py`
+- `frontend/lib/websocket.ts`
+- `frontend/app/chat/page.tsx`
+- `backend/.env.example`
+- `backend/tests/test_error_handling.py`
+- `backend/tests/test_error_handling_integration.py`
+
+**Tests run:**
+- `./.venv/bin/python -m pytest -q backend/tests/test_error_handling.py backend/tests/test_error_handling_integration.py::TestRepeatedToolFailureIntegration::test_validation_error_stops_without_retry backend/tests/test_tool_protocol_alignment.py`
+- Result: `43 passed`
+
+**Remaining risk / follow-up:**
+- If backend still appears unresponsive on Runpod, check process health and DNS/network at container level (`worker` hostname may be unresolved by design in native mode). Functional agent paths no longer depend on worker when `ENABLE_BASH_TOOL=false`.
+
+---
+
 ## Completed Work
 
 ### Task 1: Teesheet Onboarding Workflow Template ✅ (with review feedback)

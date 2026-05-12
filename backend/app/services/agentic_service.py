@@ -642,7 +642,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 tool_name=tool_name,
                                 error_message=result.error or "Unknown error",
                                 retry_count=current_retries,
-                                metadata={},
+                                metadata={"tool_args": tool_args},
                                 http_status=http_status,
                                 attempt_budget=attempt_budget,
                             )
@@ -759,7 +759,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     })
                                 
                                 return AgenticResult(
-                                    final_response="",
+                                    final_response=action.remediation_prompt or action.reason,
                                     steps=steps,
                                     total_steps=step_num,
                                     stopped_reason="ask_user",
@@ -786,7 +786,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 
                                 logger.error(f"Aborting due to tool failure: {tool_name} - {action.reason}")
                                 return AgenticResult(
-                                    final_response="",
+                                    final_response=action.reason,
                                     steps=steps,
                                     total_steps=step_num,
                                     stopped_reason="error",
@@ -1047,12 +1047,17 @@ To use a tool, respond with a function call in the format expected by the API.""
                 }
             })
 
-        # Add bash escape hatch tool (only if worker available)
-        if await self.bash_tool.is_available():
+        # Add bash escape hatch tool only when explicitly enabled.
+        # In native/Runpod modes without a worker service, probing worker DNS can
+        # add latency and noisy failures on every chat turn.
+        bash_tool_enabled = os.environ.get("ENABLE_BASH_TOOL", "false").lower() == "true"
+        if bash_tool_enabled and await self.bash_tool.is_available():
             tool_definitions.append(BashTool.get_tool_definition())
-            logger.info("Bash tool added to available tools")
+            logger.info("Bash tool added to available tools (ENABLE_BASH_TOOL=true)")
+        elif bash_tool_enabled:
+            logger.warning("Bash tool enabled but worker service not reachable")
         else:
-            logger.warning("Bash tool unavailable - worker service not reachable")
+            logger.info("Bash tool disabled (set ENABLE_BASH_TOOL=true to enable)")
 
         # Add simple built-in tools (always available)
         tool_definitions.extend(SimpleTool.get_tool_definitions())

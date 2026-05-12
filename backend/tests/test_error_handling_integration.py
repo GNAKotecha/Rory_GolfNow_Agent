@@ -277,8 +277,10 @@ class TestRepeatedToolFailureIntegration:
             session_id=1,
         )
         
-        # Should abort immediately
-        assert result.stopped_reason == "error"
+        # Should ask user immediately
+        assert result.stopped_reason == "ask_user"
+        assert result.final_response
+        assert "validation" in result.final_response.lower()
         assert mock_mcp_registry.execute_tool.call_count == 1
 
 

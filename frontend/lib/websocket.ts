@@ -19,6 +19,7 @@ export interface StreamEvent {
     | 'max_steps_reached'
     | 'workflow_complete'
     | 'approval_request'
+    | 'ask_user'
     | 'final_response'
     | 'error';
   // Common fields
