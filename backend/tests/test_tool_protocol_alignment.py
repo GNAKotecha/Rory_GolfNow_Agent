@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import patch
 
 from app.models.models import User, UserRole
 from app.services.agentic_service import AgenticConfig, AgenticService
@@ -91,3 +92,43 @@ async def test_agentic_service_sends_tool_name_on_tool_result_messages(
     assert tool_messages[0].get("tool_name") == "create_club"
     assert tool_messages[0].get("tool_call_id") == "call_1"
 
+
+@pytest.mark.asyncio
+async def test_ollama_parses_prefixed_tool_call_text_shape():
+    """Qwen-style 'tool_name {json}' text should be converted into tool_calls."""
+    ollama = OllamaClient()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock(return_value=None)
+    mock_response.json.return_value = {
+        "message": {
+            "content": (
+                'create_club {"name":"Cranevalley27","country":"GB",'
+                '"timezone":"Europe/London","currency":"GBP"}'
+            )
+        }
+    }
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    with patch("app.services.ollama.httpx.AsyncClient") as mock_async_client_cls:
+        mock_async_client_cls.return_value.__aenter__.return_value = mock_client
+
+        result = await ollama.generate_chat_completion_with_tools(
+            messages=[{"role": "user", "content": "Create the club"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "create_club",
+                    "description": "Create a club",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            }],
+        )
+
+    assert result["type"] == "tool_calls"
+    assert len(result["tool_calls"]) == 1
+    assert result["tool_calls"][0]["function"]["name"] == "create_club"
+    assert result["tool_calls"][0]["function"]["arguments"]["country"] == "GB"

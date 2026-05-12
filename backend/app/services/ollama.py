@@ -238,6 +238,32 @@ class OllamaClient:
                         )
                         return {"type": "tool_calls", "tool_calls": tagged_tool_calls}
 
+                    # Some models emit tool calls as: <tool_name> { ...json args... }
+                    # Example: create_club {"name":"X","country":"GB",...}
+                    prefixed_match = re.match(
+                        r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(\{.*\})\s*$",
+                        content,
+                        flags=re.DOTALL,
+                    )
+                    if prefixed_match:
+                        prefixed_tool_name = prefixed_match.group(1)
+                        prefixed_args_raw = prefixed_match.group(2)
+                        try:
+                            prefixed_args = json.loads(prefixed_args_raw)
+                            if isinstance(prefixed_args, dict):
+                                logger.info(
+                                    "Detected tool call in prefixed text format",
+                                    extra={"tool_name": prefixed_tool_name},
+                                )
+                                return {
+                                    "type": "tool_calls",
+                                    "tool_calls": [
+                                        _build_tool_call(prefixed_tool_name, prefixed_args)
+                                    ],
+                                }
+                        except json.JSONDecodeError:
+                            pass
+
                     # Some model responses are raw JSON in content.
                     try:
                         parsed_content = json.loads(content)

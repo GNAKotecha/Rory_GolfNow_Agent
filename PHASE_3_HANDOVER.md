@@ -1,8 +1,38 @@
 # Phase 3 Handover: Onboarding Workflow + Testing + Analytics
 
-**Last Updated:** 2026-05-08  
+**Last Updated:** 2026-05-12  
 **Branch:** `phase-3-onboarding-testing-analytics`  
 **Status:** Task 7 complete — ready for Task 8 (Documentation)
+
+---
+
+## Post-Plan Hotfix (2026-05-12): Qwen/Ollama Tool-Call Parsing
+
+**Issue observed:**
+- In live chat, model sometimes emitted raw text like `create_club {"name": "...", ...}` as a final assistant response instead of executing the tool call.
+
+**What was changed:**
+- Updated `backend/app/services/ollama.py` tool-call parser to detect and convert prefixed tool-call text format:
+  - `<tool_name> { ...json args... }` → normalized `tool_calls` response
+- Kept existing support for:
+  - native `message.tool_calls`
+  - tagged tool-call blocks
+  - raw JSON tool-call payloads
+- Added regression test in `backend/tests/test_tool_protocol_alignment.py` to lock behavior.
+
+**Files touched:**
+- `backend/app/services/ollama.py`
+- `backend/tests/test_tool_protocol_alignment.py`
+
+**Tests run:**
+- `./.venv/bin/python -m pytest -q backend/tests/test_tool_protocol_alignment.py`
+- Result: `2 passed`
+
+**Remaining risk / follow-up:**
+- If some Qwen variants emit non-JSON argument objects (Python dict syntax / malformed JSON), they will still fall back to text response; add tolerant parsing only if this appears in logs.
+
+**Suggested next task:**
+- Add run-level event correlation (`run_id` on all websocket stream events) so UI can safely de-duplicate and ignore stale `final_response` events from prior runs.
 
 ---
 
