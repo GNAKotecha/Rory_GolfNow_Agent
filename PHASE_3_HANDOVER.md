@@ -448,6 +448,66 @@
 
 ---
 
+### Security Remediation: Credential Protection + Error Determinism ✅
+
+**Trigger:** Code review identified 4 security/reliability issues requiring immediate remediation.
+
+**Priority 0 (Security Critical):**
+
+1. **P0-1: Eliminated secret exposure from MCP tool surface**
+   - Replaced `get_superuser_api_key` tool with `authenticate_club` tool
+   - API keys are NEVER returned to agents or logged
+   - Credential retrieval + OAuth token exchange happens fully inside gateway internals
+   - Only success/failure status returned to agent
+   - Added `_redact_secrets()` helper for log sanitization
+   
+2. **P0-2: Fixed SQL/command injection vectors in superuser lookup**
+   - Added `_validate_club_id()` function with strict alphanumeric regex pattern
+   - Removed `email` parameter from input schema (was used in SQL interpolation)
+   - Club ID validation enforces: alphanumeric + underscore + hyphen only, max 64 chars
+   - Both `create_admin_user` and `authenticate_club` now validate club_id before use
+
+**Priority 1 (Reliability):**
+
+3. **P1-1: Deterministic stop for terminal failures**
+   - Changed `has_action_failed_terminally()` handling from silent SKIP to ASK_USER
+   - Agent now returns error with `stopped_reason="ask_user"` when tool previously failed terminally
+   - Prevents infinite retry loops and provides clear user feedback
+
+4. **P1-2: HTTP status propagation end-to-end**
+   - Added `http_status: Optional[int]` field to `MCPToolResult` dataclass
+   - Populated on all HTTP responses (200, 404, 5xx, etc.)
+   - Error classification now uses `http_status` directly when available (no string parsing)
+   - Telemetry events include `http_status` for observability
+
+**Files changed:**
+- `backend/gateway_mcp/tools/users.py` — rewrote to use `authenticate_club` (secure), added validation helpers
+- `backend/gateway_mcp/tools/schemas.py` — replaced `GetSuperuserApiKey*` with `AuthenticateClub*` schemas
+- `backend/gateway_mcp/tools/__init__.py` — updated tool list documentation
+- `backend/app/services/mcp_client.py` — added `http_status` field to `MCPToolResult`
+- `backend/app/services/agentic_service.py` — changed terminal failure handling to ASK_USER
+
+**Tests added:**
+- `backend/tests/test_security_remediations.py` — 16 tests covering:
+  - Credential protection (no api_key in output, secret redaction)
+  - Injection prevention (valid/invalid club IDs, SQL/command injection attempts)
+  - Terminal failure handling
+  - HTTP status propagation
+
+**Test results:** 48 tests pass (32 error handler + 16 security)
+
+**Commits:**
+- Security remediation work (P0-1, P0-2, P1-1, P1-2)
+
+**Security posture improvements:**
+- API keys never leave gateway internals
+- SQL injection via email parameter eliminated (parameter removed)
+- Command injection via club_id eliminated (strict validation)
+- Error messages do not leak credentials
+- Log entries redact secrets automatically
+
+---
+
 ## In Progress
 
 None — Phase 3 complete (8/8 tasks, 100%); post-Task-8 hotfix shipped.
