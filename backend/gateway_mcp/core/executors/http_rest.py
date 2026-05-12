@@ -212,6 +212,7 @@ class HTTPRestBackend:
         headers: dict[str, str] | None = None,
         user_id: int | None = None,
         timeout: int | None = None,
+        club_id: str | None = None,
     ) -> HTTPResult:
         """
         Make HTTP call to an allowlisted endpoint.
@@ -224,6 +225,7 @@ class HTTPRestBackend:
             headers: Additional headers.
             user_id: User ID for credential lookup (if requires_auth).
             timeout: Optional timeout override.
+            club_id: Optional club ID for per-club BRS authentication.
             
         Returns:
             HTTPResult with status, body, and headers.

@@ -186,6 +186,7 @@ class ExecutorBackend(Protocol):
         path: str,
         body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        club_id: str | None = None,
     ) -> HTTPResult:
         """
         Make an HTTP call to a service.
@@ -196,6 +197,8 @@ class ExecutorBackend(Protocol):
             path: URL path (appended to service base URL)
             body: Request body (JSON-serializable)
             headers: Additional headers
+            club_id: Optional club ID for per-club BRS authentication.
+                     If provided, uses cached token from authenticate_club.
             
         Returns:
             HTTPResult with status, body, headers

@@ -174,6 +174,7 @@ class MockExecutorBackend:
         path: str,
         body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        club_id: str | None = None,
     ) -> HTTPResult:
         """Mock HTTP call."""
         self._record_call(
@@ -183,6 +184,7 @@ class MockExecutorBackend:
             path=path,
             body=body,
             headers=headers,
+            club_id=club_id,
         )
         
         response = self._get_response("call_http", service, {

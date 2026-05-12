@@ -382,6 +382,7 @@ class MCPProxyBackend:
         path: str,
         body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        club_id: str | None = None,
     ) -> HTTPResult:
         """
         MCP proxy doesn't use raw HTTP - use call_mcp_tool for tool calls.

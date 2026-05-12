@@ -85,6 +85,7 @@ class K8sExecBackend:
         path: str,
         body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        club_id: str | None = None,
     ) -> HTTPResult:
         """
         Make HTTP call to a k8s service.
@@ -101,6 +102,7 @@ class K8sExecBackend:
             path=path,
             body=body,
             headers=headers,
+            club_id=club_id,
         )
 
 
