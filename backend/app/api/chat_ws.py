@@ -241,6 +241,10 @@ async def chat_websocket(websocket: WebSocket):
             # Create streaming callback
             async def stream_callback(event: Dict[str, Any]):
                 """Send event to WebSocket client."""
+                logger.debug(
+                    f"Streaming event to client: {event.get('type')}",
+                    extra={"event_type": event.get("type"), "session_id": session_id}
+                )
                 await websocket.send_json(event)
 
             # Determine approval requirement (fail-safe: can only make stricter)
@@ -267,6 +271,17 @@ async def chat_websocket(websocket: WebSocket):
             # Generate run ID for this request
             run_id = str(uuid.uuid4())
 
+            logger.info(
+                f"Starting agentic workflow",
+                extra={
+                    "run_id": run_id,
+                    "user_id": authenticated_user.id,
+                    "session_id": session_id,
+                    "message_length": len(message_text),
+                    "require_approval": final_approval_setting,
+                }
+            )
+
             # Execute agentic workflow with streaming
             try:
                 agentic_service = AgenticService(
@@ -289,6 +304,18 @@ async def chat_websocket(websocket: WebSocket):
                     messages=ollama_messages,
                     user=authenticated_user,
                     session_id=session_id,
+                )
+
+                logger.info(
+                    f"Agentic workflow completed",
+                    extra={
+                        "run_id": run_id,
+                        "user_id": authenticated_user.id,
+                        "session_id": session_id,
+                        "total_steps": result.total_steps,
+                        "stopped_reason": result.stopped_reason,
+                        "response_length": len(result.final_response) if result.final_response else 0,
+                    }
                 )
 
                 # Save assistant message
@@ -315,10 +342,21 @@ async def chat_websocket(websocket: WebSocket):
                 except Exception as rollback_error:
                     logger.error(f"Failed to rollback transaction: {rollback_error}")
 
-                logger.error(f"Agentic workflow error: {e}", exc_info=True)
+                logger.error(
+                    f"Agentic workflow error",
+                    extra={
+                        "run_id": run_id,
+                        "user_id": authenticated_user.id,
+                        "session_id": session_id,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    },
+                    exc_info=True
+                )
                 await websocket.send_json({
                     "type": "error",
-                    "error": f"Workflow error: {str(e)}"
+                    "error": f"Workflow error: {str(e)}",
+                    "run_id": run_id,
                 })
 
     except WebSocketDisconnect:

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import logging
 import asyncio
 import json
+import time
 
 from app.services.ollama import OllamaClient, OllamaError
 from app.services.mcp_registry import MCPToolRegistry
@@ -349,12 +350,15 @@ When you receive tool results, use them to formulate your final response to the 
                 tool_calls = llm_response["tool_calls"]
                 tool_executions = []
 
+                # Extract tool names for logging and events
+                tool_names = [tc.get("function", {}).get("name") for tc in tool_calls]
+
                 logger.info(
-                    f"Step {step_num}: Executing {len(tool_calls)} tool calls",
+                    f"Step {step_num}: Executing {len(tool_calls)} tool calls: {tool_names}",
                     extra={
                         "step": step_num,
                         "tool_count": len(tool_calls),
-                        "tools": [tc.get("function", {}).get("name") for tc in tool_calls],
+                        "tools": tool_names,
                     }
                 )
 
@@ -364,6 +368,8 @@ When you receive tool results, use them to formulate your final response to the 
                         "step_number": step_num,
                         "action": "tool_calls",
                         "tool_count": len(tool_calls),
+                        "tool_names": tool_names,
+                        "max_steps": self.config.max_steps,
                     })
 
                 should_retry_step = False  # Flag to break out of tool loop for retry
@@ -372,6 +378,27 @@ When you receive tool results, use them to formulate your final response to the 
                     tool_name = tool_call.get("function", {}).get("name")
                     tool_args = tool_call.get("function", {}).get("arguments", {})
                     tool_id = tool_call.get("id", "unknown")
+
+                    # Emit tool_executing event BEFORE execution
+                    if self.config.stream_callback:
+                        await self.config.stream_callback({
+                            "type": "tool_executing",
+                            "tool_name": tool_name,
+                            "tool_index": tool_calls.index(tool_call) + 1,
+                            "tool_total": len(tool_calls),
+                            "step_number": step_num,
+                            "arguments": {k: (str(v)[:100] + "..." if len(str(v)) > 100 else v) for k, v in tool_args.items()} if tool_args else {},
+                        })
+
+                    logger.debug(
+                        f"Executing tool: {tool_name}",
+                        extra={
+                            "tool_name": tool_name,
+                            "tool_id": tool_id,
+                            "step": step_num,
+                            "args_keys": list(tool_args.keys()) if tool_args else [],
+                        }
+                    )
 
                     # Check if approval needed for write operations
                     if self.config.require_approval_for_write and await self._requires_approval(tool_name, tool_args):
@@ -464,6 +491,9 @@ When you receive tool results, use them to formulate your final response to the 
                     # Execute tool via MCP registry with error handling
                     retry_key = f"{step_num}:{tool_name}"
                     current_retries = retry_count.get(retry_key, 0)
+
+                    # Track tool execution time
+                    tool_start_time = time.time()
 
                     try:
                         # Record tool call for rate limiting
@@ -571,29 +601,74 @@ When you receive tool results, use them to formulate your final response to the 
                             success=result.success,
                         )
 
+                        # Calculate execution duration
+                        tool_duration_ms = int((time.time() - tool_start_time) * 1000)
+
                         tool_executions.append({
                             "tool_call_id": tool_id,
                             "tool_name": tool_name,
                             "arguments": tool_args,
                             "result": result,
+                            "duration_ms": tool_duration_ms,
                         })
 
+                        logger.info(
+                            f"Tool completed: {tool_name} (success={result.success}, duration={tool_duration_ms}ms)",
+                            extra={
+                                "tool_name": tool_name,
+                                "success": result.success,
+                                "duration_ms": tool_duration_ms,
+                                "step": step_num,
+                            }
+                        )
+
                         if self.config.stream_callback:
+                            # Prepare a safe preview of the result
+                            result_preview = None
+                            if result.result:
+                                result_str = str(result.result)
+                                result_preview = result_str[:200] + "..." if len(result_str) > 200 else result_str
+
                             await self.config.stream_callback({
                                 "type": "tool_result",
                                 "tool_name": tool_name,
                                 "success": result.success,
+                                "duration_ms": tool_duration_ms,
+                                "step_number": step_num,
+                                "error": result.error if not result.success else None,
+                                "result_preview": result_preview,
                             })
 
                     except Exception as e:
-                        logger.error(f"Tool execution exception: {e}")
+                        tool_duration_ms = int((time.time() - tool_start_time) * 1000)
+                        logger.error(
+                            f"Tool execution exception: {tool_name} - {e}",
+                            extra={
+                                "tool_name": tool_name,
+                                "error": str(e),
+                                "duration_ms": tool_duration_ms,
+                                "step": step_num,
+                            },
+                            exc_info=True
+                        )
                         tool_executions.append({
                             "tool_call_id": tool_id,
                             "tool_name": tool_name,
                             "arguments": tool_args,
                             "result": None,
                             "error": str(e),
+                            "duration_ms": tool_duration_ms,
                         })
+
+                        # Emit error event for tool execution failure
+                        if self.config.stream_callback:
+                            await self.config.stream_callback({
+                                "type": "tool_error",
+                                "tool_name": tool_name,
+                                "error": str(e),
+                                "duration_ms": tool_duration_ms,
+                                "step_number": step_num,
+                            })
 
                 # If retry flag set, repeat this step without recording
                 if should_retry_step:
