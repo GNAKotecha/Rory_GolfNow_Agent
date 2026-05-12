@@ -2,6 +2,8 @@
 import httpx
 import json
 import logging
+import re
+import time
 from typing import List, Dict, Optional, Any
 from app.core.config import settings
 
@@ -177,6 +179,27 @@ class OllamaClient:
                 # Extract the assistant's message
                 message = data.get("message", {})
 
+                def _normalize_arguments(arguments: Any) -> Any:
+                    """Best-effort normalization of tool arguments."""
+                    if isinstance(arguments, str):
+                        try:
+                            parsed = json.loads(arguments)
+                            return parsed if isinstance(parsed, dict) else arguments
+                        except json.JSONDecodeError:
+                            return arguments
+                    return arguments
+
+                def _build_tool_call(name: str, arguments: Any, call_id: Optional[str] = None) -> Dict[str, Any]:
+                    """Convert tool call data to OpenAI-compatible format."""
+                    return {
+                        "id": call_id or f"call_{int(time.time() * 1000)}",
+                        "type": "function",
+                        "function": {
+                            "name": name,
+                            "arguments": _normalize_arguments(arguments),
+                        }
+                    }
+
                 # Check if response contains tool calls
                 if "tool_calls" in message and message["tool_calls"]:
                     return {
@@ -188,6 +211,61 @@ class OllamaClient:
                     content = message.get("content", "")
                     if not content:
                         raise OllamaError("Empty response from Ollama")
+
+                    # Some Qwen templates may emit tool calls as tagged text blocks.
+                    tagged_tool_calls = []
+                    for pattern in [
+                        r"<tool_call>\s*(\{.*?\})\s*</tool_call>",
+                        r"<\|tool_call_start\|>\s*(\{.*?\})\s*<\|tool_call_end\|>",
+                    ]:
+                        for match in re.finditer(pattern, content, flags=re.DOTALL):
+                            try:
+                                parsed = json.loads(match.group(1))
+                                if "name" in parsed and "arguments" in parsed:
+                                    tagged_tool_calls.append(
+                                        _build_tool_call(
+                                            name=parsed["name"],
+                                            arguments=parsed["arguments"],
+                                        )
+                                    )
+                            except json.JSONDecodeError:
+                                continue
+
+                    if tagged_tool_calls:
+                        logger.info(
+                            "Detected tagged tool calls in text content",
+                            extra={"count": len(tagged_tool_calls)},
+                        )
+                        return {"type": "tool_calls", "tool_calls": tagged_tool_calls}
+
+                    # Some model responses are raw JSON in content.
+                    try:
+                        parsed_content = json.loads(content)
+                        if isinstance(parsed_content, dict):
+                            if "tool_calls" in parsed_content and isinstance(parsed_content["tool_calls"], list):
+                                normalized = []
+                                for tc in parsed_content["tool_calls"]:
+                                    if isinstance(tc, dict) and "name" in tc and "arguments" in tc:
+                                        normalized.append(_build_tool_call(tc["name"], tc["arguments"]))
+                                if normalized:
+                                    logger.info(
+                                        "Detected tool_calls array in JSON text content",
+                                        extra={"count": len(normalized)},
+                                    )
+                                    return {"type": "tool_calls", "tool_calls": normalized}
+                            elif "name" in parsed_content and "arguments" in parsed_content:
+                                logger.info(
+                                    "Detected single JSON tool call in text content",
+                                    extra={"tool_name": parsed_content.get("name")},
+                                )
+                                return {
+                                    "type": "tool_calls",
+                                    "tool_calls": [
+                                        _build_tool_call(parsed_content["name"], parsed_content["arguments"])
+                                    ],
+                                }
+                    except json.JSONDecodeError:
+                        pass
 
                     # Try to detect and parse JSON tool calls from content
                     # Some models (like qwen2.5-coder) may return tool calls as JSON text
@@ -215,24 +293,17 @@ class OllamaClient:
 
                                             # Ensure arguments is a dict (might be string or dict)
                                             arguments = tool_call_data["arguments"]
-                                            if isinstance(arguments, str):
-                                                try:
-                                                    arguments = json.loads(arguments)
-                                                except json.JSONDecodeError:
-                                                    # Keep as string if not valid JSON
-                                                    pass
 
                                             # Convert to OpenAI-compatible format
                                             return {
                                                 "type": "tool_calls",
-                                                "tool_calls": [{
-                                                    "id": f"call_{id(tool_call_data)}",  # Generate unique ID
-                                                    "type": "function",
-                                                    "function": {
-                                                        "name": tool_call_data["name"],
-                                                        "arguments": arguments
-                                                    }
-                                                }]
+                                                "tool_calls": [
+                                                    _build_tool_call(
+                                                        tool_call_data["name"],
+                                                        arguments,
+                                                        call_id=f"call_{id(tool_call_data)}",
+                                                    )
+                                                ]
                                             }
                                     except json.JSONDecodeError:
                                         # Try next position

@@ -390,6 +390,25 @@ To use a tool, respond with a function call in the format expected by the API.""
                     tool_args = tool_call.get("function", {}).get("arguments", {})
                     tool_id = tool_call.get("id", "unknown")
 
+                    # Normalize tool arguments across model variants.
+                    # Some models return arguments as a JSON string instead of an object.
+                    if isinstance(tool_args, str):
+                        try:
+                            parsed_args = json.loads(tool_args)
+                            tool_args = parsed_args if isinstance(parsed_args, dict) else {}
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                f"Tool arguments were non-JSON string for {tool_name}; defaulting to empty args",
+                                extra={"tool_name": tool_name, "tool_id": tool_id, "raw_args": tool_args[:200]},
+                            )
+                            tool_args = {}
+                    elif not isinstance(tool_args, dict):
+                        logger.warning(
+                            f"Tool arguments were not an object for {tool_name}; defaulting to empty args",
+                            extra={"tool_name": tool_name, "tool_id": tool_id, "args_type": type(tool_args).__name__},
+                        )
+                        tool_args = {}
+
                     # Emit tool_executing event BEFORE execution
                     if self.config.stream_callback:
                         await self.config.stream_callback({
@@ -961,6 +980,9 @@ To use a tool, respond with a function call in the format expected by the API.""
 
                     current_messages.append({
                         "role": "tool",
+                        # Ollama's tool protocol expects tool_name on tool-result messages.
+                        # Keep tool_call_id too for compatibility with OpenAI-style tracing/validation.
+                        "tool_name": execution["tool_name"],
                         "tool_call_id": execution["tool_call_id"],
                         "content": tool_content,
                     })
