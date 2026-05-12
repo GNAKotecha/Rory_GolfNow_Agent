@@ -8,14 +8,30 @@ export interface StreamEvent {
     | 'authenticated'
     | 'workflow_start'
     | 'step'
+    | 'tool_executing'
     | 'tool_call'
     | 'tool_result'
+    | 'tool_error'
     | 'plan_created'
     | 'plan_progress'
     | 'loop_detected'
+    | 'low_confidence'
+    | 'max_steps_reached'
+    | 'workflow_complete'
     | 'approval_request'
     | 'final_response'
     | 'error';
+  // Common fields
+  step_number?: number;
+  tool_name?: string;
+  tool_names?: string[];
+  tool_count?: number;
+  max_steps?: number;
+  success?: boolean;
+  duration_ms?: number;
+  error?: string;
+  result_preview?: string;
+  progress?: number;
   [key: string]: any;
 }
 

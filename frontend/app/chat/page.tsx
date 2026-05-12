@@ -39,17 +39,31 @@ export default function ChatPage() {
           console.log('Stream event:', event);
 
           if (event.type === 'workflow_start') {
-            setStreamingStatus(`Starting workflow (${event.available_tools} tools available)...`);
+            setStreamingStatus(`Starting workflow (${event.available_tools} tools available, max ${event.max_steps} steps)...`);
           } else if (event.type === 'step') {
-            setStreamingStatus(`Step ${event.step_number}: ${event.action}...`);
+            const toolList = event.tool_names?.join(', ') || `${event.tool_count} tools`;
+            setStreamingStatus(`Step ${event.step_number}/${event.max_steps}: Executing ${toolList}...`);
+          } else if (event.type === 'tool_executing') {
+            const argsPreview = event.arguments ? Object.keys(event.arguments).join(', ') : '';
+            setStreamingStatus(`🔧 ${event.tool_name} [${event.tool_index}/${event.tool_total}]${argsPreview ? ` (${argsPreview})` : ''}...`);
           } else if (event.type === 'tool_call') {
             setStreamingStatus(`Calling tool: ${event.tool_name}...`);
           } else if (event.type === 'tool_result') {
-            setStreamingStatus(`Tool ${event.tool_name} completed`);
+            const duration = event.duration_ms ? ` (${event.duration_ms}ms)` : '';
+            const status = event.success ? '✓' : '✗';
+            setStreamingStatus(`${status} ${event.tool_name}${duration}${event.error ? `: ${event.error}` : ''}`);
+          } else if (event.type === 'tool_error') {
+            setStreamingStatus(`❌ ${event.tool_name} failed: ${event.error}`);
           } else if (event.type === 'plan_created') {
-            setStreamingStatus(`Created plan with ${event.steps?.length || 0} steps`);
+            setStreamingStatus(`📋 Created plan with ${event.steps?.length || 0} steps`);
           } else if (event.type === 'plan_progress') {
-            setStreamingStatus(`Progress: ${Math.round(event.progress * 100)}%`);
+            setStreamingStatus(`📊 Progress: ${Math.round(event.progress * 100)}%`);
+          } else if (event.type === 'max_steps_reached') {
+            setStreamingStatus(`⚠️ Max steps (${event.max_steps}) reached - workflow incomplete`);
+          } else if (event.type === 'loop_detected') {
+            setStreamingStatus(`🔄 Loop detected at step ${event.step}`);
+          } else if (event.type === 'workflow_complete') {
+            setStreamingStatus(`✅ Workflow completed in ${event.total_steps} steps`);
           } else if (event.type === 'final_response') {
             setStreamingStatus('');
             // Add assistant message
