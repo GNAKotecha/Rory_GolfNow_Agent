@@ -224,6 +224,38 @@ class VerifyClubSetupOutput(BaseModel):
     )
 
 
+# --- authenticate_club (replaces get_superuser_api_key) ---
+
+class AuthenticateClubInput(BaseModel):
+    """
+    Input for authenticate_club tool.
+    
+    SECURITY: This tool handles credential retrieval and OAuth token exchange
+    internally. No credentials are exposed to the agent.
+    """
+    
+    club_id: int | str = Field(
+        ...,
+        description="Club ID to authenticate for BRS API access",
+    )
+
+
+class AuthenticateClubOutput(BaseModel):
+    """
+    Output for authenticate_club tool.
+    
+    SECURITY: Does NOT include any credentials. Only returns success status.
+    The OAuth token is cached internally for automatic use in subsequent API calls.
+    """
+    
+    club_id: int | str = Field(..., description="Club ID that was authenticated")
+    authenticated: bool = Field(..., description="Whether authentication was successful")
+    message: str = Field(
+        ..., 
+        description="Status message (success confirmation or error details - never credentials)"
+    )
+
+
 # ============================================================================
 # Atlassian Tool Schemas (3 tools)
 # ============================================================================
@@ -382,6 +414,7 @@ __all__ = [
     "CreateAdminUserInput",
     "CallInternalApiInput",
     "VerifyClubSetupInput",
+    "AuthenticateClubInput",  # Replaces GetSuperuserApiKeyInput (secure)
     # BRS Output schemas
     "CreateClubOutput",
     "GetClubByNameOutput",
@@ -389,6 +422,7 @@ __all__ = [
     "CreateAdminUserOutput",
     "CallInternalApiOutput",
     "VerifyClubSetupOutput",
+    "AuthenticateClubOutput",  # Replaces GetSuperuserApiKeyOutput (secure)
     # Atlassian Input schemas
     "CreateTicketInput",
     "GetTicketStatusInput",
