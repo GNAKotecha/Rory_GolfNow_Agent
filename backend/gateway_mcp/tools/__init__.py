@@ -178,12 +178,13 @@ def create_brs_registry() -> ToolRegistry:
     """
     Create a registry with all BRS tools registered.
     
-    BRS Tools (6):
+    BRS Tools (7):
     - create_club
     - get_club_by_name
     - verify_club_setup
     - get_club_config
     - create_admin_user
+    - authenticate_club (secure credential handling - replaces get_superuser_api_key)
     - call_internal_api
     
     Returns:
@@ -205,12 +206,13 @@ def create_full_registry() -> ToolRegistry:
     """
     Create a registry with all Gateway tools registered.
     
-    BRS Tools (6):
+    BRS Tools (7):
     - create_club
     - get_club_by_name
     - verify_club_setup
     - get_club_config
     - create_admin_user
+    - authenticate_club (secure credential handling)
     - call_internal_api
     
     Atlassian Tools (3):
@@ -219,7 +221,7 @@ def create_full_registry() -> ToolRegistry:
     - add_comment
     
     Returns:
-        ToolRegistry with all 9 tools
+        ToolRegistry with all 10 tools
     """
     registry = create_brs_registry()
     registry.register_all(JIRA_TOOLS)

@@ -373,7 +373,7 @@ class TestCreateAdminUser:
         
         result = await create_admin_user_handler(input, context)
         
-        assert result.club_id == 42
+        assert result.club_id == "42"  # club_id is string after validation
         assert result.role == AdminRole.ADMIN
         assert result.already_existed is False
         
@@ -398,7 +398,7 @@ class TestCreateAdminUser:
         result = await create_admin_user_handler(input, context)
         
         # Even if already synced, the command succeeds
-        assert result.club_id == 42
+        assert result.club_id == "42"  # club_id is string after validation
     
     @pytest.mark.asyncio
     async def test_create_superuser(self, context, mock_executor):
@@ -505,18 +505,19 @@ class TestBRSToolRegistration:
     """Tests for BRS tool registration."""
     
     def test_all_brs_tools_registered(self):
-        """Test that all 6 BRS tools are registered."""
+        """Test that all 7 BRS tools are registered."""
         from gateway_mcp.tools import create_brs_registry
         
         registry = create_brs_registry()
         
-        assert len(registry) == 6
+        assert len(registry) == 7
         assert "create_club" in registry
         assert "get_club_by_name" in registry
         assert "verify_club_setup" in registry
         assert "get_club_config" in registry
         assert "create_admin_user" in registry
         assert "call_internal_api" in registry
+        assert "authenticate_club" in registry
     
     def test_brs_tools_have_handlers(self):
         """Test that all BRS tools have handlers set."""
@@ -542,3 +543,91 @@ class TestBRSToolRegistration:
         assert registry.get("create_club").risk_level == RiskLevel.LOW_WRITE
         assert registry.get("create_admin_user").risk_level == RiskLevel.MEDIUM_WRITE
         assert registry.get("call_internal_api").risk_level == RiskLevel.MEDIUM_WRITE
+
+
+# --------------------
+# Club ID propagation tests
+# --------------------
+
+class TestClubIdPropagation:
+    """Tests that club-scoped HTTP calls pass club_id for auth token usage."""
+    
+    @pytest.mark.asyncio
+    async def test_verify_club_setup_passes_club_id_to_config_api(self, context, mock_executor):
+        """verify_club_setup passes club_id when calling club-scoped config API."""
+        # Setup multi-endpoint response
+        def multi_endpoint_response(method: str, service: str, args: dict) -> MockResponse:
+            path = args.get("path", "")
+            if "/api/admin/v1/clubs" in path:
+                # Global admin API - no club_id needed
+                return MockResponse(
+                    status_code=200,
+                    body={"data": [{"clubId": "test_club_42", "name": "Test Club"}], "total": 1},
+                )
+            elif "/api/v3/" in path:
+                # Club-scoped API - should have club_id passed
+                return MockResponse(
+                    status_code=200,
+                    body={"configurations": {"member_booking_feature_supported": "yes"}},
+                )
+            return MockResponse()
+        
+        mock_executor.set_response_callback(multi_endpoint_response)
+        
+        input = VerifyClubSetupInput(club_id="test_club_42")
+        await verify_club_setup_handler(input, context)
+        
+        # Find the call to the club-scoped config endpoint
+        config_api_calls = [c for c in mock_executor.calls if "/api/v3/" in c.args.get("path", "")]
+        assert len(config_api_calls) == 1
+        
+        # Verify club_id was passed for the club-scoped call
+        assert config_api_calls[0].args.get("club_id") == "test_club_42"
+        
+        # Verify admin API call does NOT have club_id (it's global)
+        admin_api_calls = [c for c in mock_executor.calls if "/api/admin/" in c.args.get("path", "")]
+        assert len(admin_api_calls) == 1
+        assert admin_api_calls[0].args.get("club_id") is None
+    
+    @pytest.mark.asyncio
+    async def test_call_internal_api_passes_club_id(self, context, mock_executor):
+        """call_internal_api passes club_id for club-scoped HTTP calls."""
+        mock_executor.set_response("teesheet", MockResponse(
+            status_code=200,
+            body={
+                "configurations": {
+                    "member_booking_feature_supported": "yes",
+                },
+            },
+        ))
+        
+        input = CallInternalApiInput(
+            club_id=99,
+            operation=InternalApiOperation.ENABLE_REQUIRED_FEATURES,
+        )
+        
+        await call_internal_api_handler(input, context)
+        
+        # Verify club_id was passed
+        assert len(mock_executor.calls) == 1
+        call = mock_executor.calls[0]
+        assert call.method == "call_http"
+        assert call.args.get("club_id") == "99"  # String form of club_id
+    
+    @pytest.mark.asyncio
+    async def test_get_club_by_name_no_club_id_for_global_api(self, context, mock_executor):
+        """get_club_by_name uses global admin API - no club_id needed."""
+        mock_executor.set_response("teesheet", MockResponse(
+            status_code=200,
+            body={"data": [{"clubId": "augusta", "name": "Augusta National"}], "total": 1},
+        ))
+        
+        input = GetClubByNameInput(name="Augusta National")
+        await get_club_by_name_handler(input, context)
+        
+        # Global admin API should not have club_id
+        assert len(mock_executor.calls) == 1
+        call = mock_executor.calls[0]
+        assert call.method == "call_http"
+        assert "/api/admin/v1/clubs" in call.args.get("path", "")
+        assert call.args.get("club_id") is None

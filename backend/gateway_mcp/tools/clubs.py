@@ -315,6 +315,7 @@ async def verify_club_setup_handler(
             service="teesheet",
             method="GET",
             path=f"/{club_id}/api/v3/",  # ClubConfigurationController
+            club_id=str(club_id),  # Use cached per-club auth token
         )
         if result.status_code == 200:
             config_valid = True

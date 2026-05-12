@@ -100,6 +100,7 @@ async def call_internal_api_handler(
             service="teesheet",
             method=method,
             path=endpoint,
+            club_id=str(input.club_id),  # Use cached per-club auth token
         )
     except Exception as e:
         logger.error(

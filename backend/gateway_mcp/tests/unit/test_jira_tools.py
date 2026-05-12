@@ -546,4 +546,4 @@ class TestJiraToolRegistration:
         assert registry.get("create_ticket") is not None
         assert registry.get("get_ticket_status") is not None
         assert registry.get("add_comment") is not None
-        assert len(registry) == 9  # 6 BRS + 3 Jira
+        assert len(registry) == 10  # 7 BRS + 3 Jira
