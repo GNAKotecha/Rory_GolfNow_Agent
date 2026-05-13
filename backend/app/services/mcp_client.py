@@ -6,9 +6,11 @@ Provides a unified interface for calling remote MCP servers with:
 - Automatic retries
 - Graceful error handling
 - Request/response logging
+
+Task C2: MCP error envelope enrichment - structured fields for precise error classification.
 """
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
 import asyncio
@@ -44,17 +46,70 @@ class MCPToolResult:
       Semantic errors should NOT be transport-retried; only agent-level recovery applies.
     - transport_retries_exhausted: True if MCP client exhausted its transport retry budget.
       Agent layer can use this to avoid retry amplification.
+    
+    Task C2: Error envelope enrichment
+    - error_category: Machine-readable error category (e.g., "container_unavailable")
+    - upstream_status: HTTP status from the upstream service (distinct from MCP layer status)
+    - terminal_hint: True if this error is definitively terminal (no recovery possible)
+    - error_metadata: Additional structured error context
     """
     success: bool
     result: Optional[Any] = None
     error: Optional[str] = None
     execution_time_ms: Optional[float] = None
     retry_count: int = 0
-    http_status: Optional[int] = None  # P1-2: HTTP status for error classification
-    error_category: Optional[str] = None  # Machine-readable error category (e.g., "container_unavailable")
+    http_status: Optional[int] = None  # HTTP status from MCP server response
+    error_category: Optional[str] = None  # Machine-readable error category
     # Task A2: Retry ownership fields
     is_semantic_error: bool = False  # True for isError/validation/auth - agent handles recovery
     transport_retries_exhausted: bool = False  # True if MCP client exhausted transport retries
+    # Task C2: Enhanced error envelope
+    upstream_status: Optional[int] = None  # HTTP status from upstream service (e.g., BRS API)
+    terminal_hint: bool = False  # True if error is definitively terminal
+    error_metadata: Dict[str, Any] = field(default_factory=dict)  # Additional error context
+    
+    def is_terminal_error(self) -> bool:
+        """
+        Determine if this error should terminate the workflow.
+        
+        Task C2: Use structured fields over message parsing.
+        """
+        if self.terminal_hint:
+            return True
+        
+        terminal_categories = {
+            "auth_failure", "permission_denied", "rbac_denied",
+            "tool_not_found", "catalog_miss", "catalog_stale",
+            "validation_error", "invalid_arguments",
+        }
+        if self.error_category in terminal_categories:
+            return True
+        
+        terminal_statuses = {401, 403, 404, 422}
+        if self.http_status in terminal_statuses:
+            return True
+        
+        return False
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serialize to dictionary for logging/tracing.
+        
+        Task C2: Include all structured fields.
+        """
+        return {
+            "success": self.success,
+            "error": self.error,
+            "execution_time_ms": self.execution_time_ms,
+            "retry_count": self.retry_count,
+            "http_status": self.http_status,
+            "error_category": self.error_category,
+            "is_semantic_error": self.is_semantic_error,
+            "transport_retries_exhausted": self.transport_retries_exhausted,
+            "upstream_status": self.upstream_status,
+            "terminal_hint": self.terminal_hint,
+            "error_metadata": self.error_metadata,
+        }
 
 
 class MCPErrorType(Enum):
@@ -279,20 +334,22 @@ class MCPClient:
                         if "isError" in data:
                             if data.get("isError", False):
                                 # MCP semantic error: HTTP transport succeeded but tool reported error.
-                                # Do NOT set http_status=200 - this allows the error classifier
-                                # to parse the error message for auth/validation/etc classification
-                                # instead of being overridden by the 200 status code.
                                 # Task A2: Mark as semantic error - agent handles recovery, no transport retry
+                                # Task C2: Parse structured error envelope for precise classification
                                 error_text = self._extract_error_text(data)
-                                error_category = self._classify_error_category(error_text)
+                                error_envelope = self._parse_error_envelope(data, error_text)
+                                
                                 return MCPToolResult(
                                     success=False,
                                     error=error_text,
                                     execution_time_ms=elapsed_ms,
                                     retry_count=retry_count,
                                     http_status=None,  # Let classifier parse error text
-                                    error_category=error_category,
+                                    error_category=error_envelope["error_category"],
                                     is_semantic_error=True,  # A2: Agent handles recovery
+                                    upstream_status=error_envelope["upstream_status"],
+                                    terminal_hint=error_envelope["terminal_hint"],
+                                    error_metadata=error_envelope["error_metadata"],
                                 )
 
                             parsed_result = self._extract_success_result(data)
@@ -503,6 +560,69 @@ class MCPClient:
                     if isinstance(text, str) and text.strip():
                         return text
         return "Tool execution failed"
+    
+    def _parse_error_envelope(self, data: Dict[str, Any], error_text: str) -> Dict[str, Any]:
+        """
+        Parse MCP error response into structured error envelope.
+        
+        Task C2: Extract all available structured fields for precise classification.
+        
+        Returns:
+            Dict with keys:
+            - error_category: Machine-readable category
+            - upstream_status: HTTP status from upstream service (if present)
+            - terminal_hint: True if definitively terminal
+            - error_metadata: Additional context
+        """
+        result = {
+            "error_category": None,
+            "upstream_status": None,
+            "terminal_hint": False,
+            "error_metadata": {},
+        }
+        
+        # Check for structured error fields in the MCP response
+        # Some gateways provide these directly
+        if "error_category" in data:
+            result["error_category"] = data["error_category"]
+        if "upstream_status" in data:
+            result["upstream_status"] = data["upstream_status"]
+        if "terminal" in data:
+            result["terminal_hint"] = bool(data["terminal"])
+        
+        # Check content blocks for structured error info
+        content = data.get("content", [])
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    # Check for structured error block
+                    if block.get("type") == "error":
+                        if "category" in block:
+                            result["error_category"] = block["category"]
+                        if "upstream_status" in block:
+                            result["upstream_status"] = block["upstream_status"]
+                        if "terminal" in block:
+                            result["terminal_hint"] = bool(block["terminal"])
+                        if "metadata" in block:
+                            result["error_metadata"].update(block["metadata"])
+        
+        # If no structured category found, classify from error text
+        if not result["error_category"]:
+            result["error_category"] = self._classify_error_category(error_text)
+        
+        # If still no category but have upstream_status, derive terminal hint
+        if result["upstream_status"] in {401, 403, 404, 422}:
+            result["terminal_hint"] = True
+        
+        # Set terminal hint for known terminal categories
+        terminal_categories = {
+            "auth_failure", "permission_denied", "rbac_denied",
+            "tool_not_found", "catalog_miss", "validation_error",
+        }
+        if result["error_category"] in terminal_categories:
+            result["terminal_hint"] = True
+        
+        return result
     
     def _classify_error_category(self, error_text: str) -> Optional[str]:
         """

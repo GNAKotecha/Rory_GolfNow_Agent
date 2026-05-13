@@ -46,9 +46,23 @@ app.include_router(credentials_router, prefix="/api")  # Credential management
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup."""
+    """Initialize database and HTTP client pools on startup."""
     from app.db.init_db import init_db
+    from app.services.ollama import startup_ollama_client_pool
+    
     init_db()
+    
+    # Task C1: Start shared HTTP client pool for Ollama
+    await startup_ollama_client_pool()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup HTTP client pools on shutdown."""
+    from app.services.ollama import shutdown_ollama_client_pool
+    
+    # Task C1: Shutdown shared HTTP client pool
+    await shutdown_ollama_client_pool()
 
 
 @app.get("/")

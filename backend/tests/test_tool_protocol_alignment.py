@@ -96,8 +96,7 @@ async def test_agentic_service_sends_tool_name_on_tool_result_messages(
 @pytest.mark.asyncio
 async def test_ollama_parses_prefixed_tool_call_text_shape():
     """Qwen-style 'tool_name {json}' text should be converted into tool_calls."""
-    ollama = OllamaClient()
-
+    # Create a mock HTTP client that returns the expected response
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.raise_for_status = MagicMock(return_value=None)
@@ -110,23 +109,24 @@ async def test_ollama_parses_prefixed_tool_call_text_shape():
         }
     }
 
-    mock_client = AsyncMock()
-    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_http_client = AsyncMock()
+    mock_http_client.post = AsyncMock(return_value=mock_response)
+    mock_http_client.is_closed = False
 
-    with patch("app.services.ollama.httpx.AsyncClient") as mock_async_client_cls:
-        mock_async_client_cls.return_value.__aenter__.return_value = mock_client
+    # Task C1: Use explicit http_client parameter instead of patching global
+    ollama = OllamaClient(http_client=mock_http_client)
 
-        result = await ollama.generate_chat_completion_with_tools(
-            messages=[{"role": "user", "content": "Create the club"}],
-            tools=[{
-                "type": "function",
-                "function": {
-                    "name": "create_club",
-                    "description": "Create a club",
-                    "parameters": {"type": "object", "properties": {}},
-                },
-            }],
-        )
+    result = await ollama.generate_chat_completion_with_tools(
+        messages=[{"role": "user", "content": "Create the club"}],
+        tools=[{
+            "type": "function",
+            "function": {
+                "name": "create_club",
+                "description": "Create a club",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }],
+    )
 
     assert result["type"] == "tool_calls"
     assert len(result["tool_calls"]) == 1

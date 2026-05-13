@@ -2,7 +2,157 @@
 
 **Last Updated:** 2026-05-13  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Agent Runtime Hardening Phase B complete — ready for review
+**Status:** Agent Runtime Hardening Phase C complete — ready for review
+
+---
+
+## Agent Runtime Hardening: Phase C (2026-05-13)
+
+**Spec:** `docs/superpowers/specs/2026-05-12-agent-runtime-hardening-and-scale-spec.md`
+
+### Task C1: Reuse HTTP Clients (Ollama and MCP) ✅
+
+**What was implemented:**
+- Added `OllamaHTTPClientPool` singleton class for shared HTTP client management:
+  - Connection reuse via HTTP keep-alive
+  - Configurable connection limits (max 10 connections, 5 keep-alive)
+  - Request/connection metrics tracking
+  - Proper lifecycle management with `startup()` and `shutdown()`
+- Updated `OllamaClient` to use shared pool:
+  - `_get_client()` method returns pool client or explicit client
+  - Constructor accepts optional `http_client` parameter for testing
+  - Backward compatible - auto-initializes pool if not started
+- Added lifecycle hooks in `app/main.py`:
+  - `startup_event()` calls `startup_ollama_client_pool()`
+  - `shutdown_event()` calls `shutdown_ollama_client_pool()`
+
+**Files changed:**
+- `backend/app/services/ollama.py` - Added OllamaHTTPClientPool, refactored client methods
+- `backend/app/main.py` - Added startup/shutdown lifecycle hooks
+- `backend/tests/test_http_client_pool.py` - Added 12 new tests
+- `backend/tests/test_tool_protocol_alignment.py` - Fixed test to use explicit client
+
+**Environment variables:**
+- `OLLAMA_TIMEOUT_SECONDS` - Default: 60
+
+### Task C2: MCP Error Envelope Enrichment ✅
+
+**What was implemented:**
+- Extended `MCPToolResult` contract with new fields:
+  - `upstream_status: Optional[int]` - HTTP status from upstream service
+  - `terminal_hint: bool` - True if definitively terminal
+  - `error_metadata: Dict[str, Any]` - Additional error context
+- Added `is_terminal_error()` method to `MCPToolResult`:
+  - Uses terminal_hint first
+  - Falls back to error_category and http_status checks
+- Added `to_dict()` method for logging/tracing serialization
+- Added `_parse_error_envelope()` to MCPClient:
+  - Extracts structured fields from MCP response
+  - Supports error info in content blocks
+  - Falls back to text classification
+- Extended error handler with result-based classification:
+  - `classify_from_mcp_result()` function
+  - `classify_from_result()` method on AgentErrorHandler
+  - `is_terminal_from_result()` method
+- Extended category mapping with new categories:
+  - `auth_failure`, `docker_unavailable`, `connection_refused`
+  - `upstream_unavailable`, `rate_limited`, `timeout`
+
+**Files changed:**
+- `backend/app/services/mcp_client.py` - Extended MCPToolResult, added envelope parsing
+- `backend/app/services/error_handler.py` - Added result-based classification
+- `backend/tests/test_mcp_error_envelope.py` - Added 23 new tests
+
+### Task C3: Tool-Call Protocol Normalizer Hardening ✅
+
+**What was implemented:**
+- Added `ToolCallParserMetrics` dataclass for telemetry:
+  - Tracks native tool_calls usage (preferred)
+  - Tracks fallback parser usage (tagged_xml, prefixed_json, raw_json, embedded_json)
+  - Tracks validation rejections and parse failures
+  - Tracks text responses (no tool call detected)
+- Added module-level metrics functions:
+  - `get_parser_metrics()` - Get global metrics instance
+  - `reset_parser_metrics()` - Reset for testing
+- Implemented strict schema validation:
+  - `_validate_tool_call_schema()` validates tool name exists in provided tools
+  - Rejects unknown tool names to reduce false positives
+  - Logs rejections for debugging
+- Refactored parsing with clear priority order:
+  1. Native tool_calls field (preferred, no fallback)
+  2. Tagged XML tool calls (`<tool_call>...</tool_call>`)
+  3. Prefixed JSON (`tool_name {...}`)
+  4. Raw JSON object (`{"name": ..., "arguments": ...}`)
+  5. Raw JSON tool_calls array
+  6. Embedded JSON in text (last resort)
+- Each parser path increments appropriate telemetry counter
+
+**Files changed:**
+- `backend/app/services/ollama.py` - Added telemetry, validation, refactored parsing
+- `backend/tests/test_tool_call_parser.py` - Added 12 new tests
+
+### Phase C Post-Review Fixes (Round 1, 2026-05-13)
+
+**P1: C2 structured envelope not consumed in runtime classification**
+- `agentic_service.py:739` - Changed `classify_error()` → `classify_from_result(result)`
+- Now uses `upstream_status` and `terminal_hint` fields for classification
+
+**P2: Native tool_calls bypass strict schema gating**
+- `ollama.py:429-438` - Added validation loop for native tool_calls
+- Extracts `function.name` and validates against known tools
+- Rejects unknown tools with warning log, falls through to content parsing
+
+**P3: Race-prone concurrent initialization**
+- `ollama.py:143-145` - Added `asyncio.Lock` for double-check locking
+- `get_client()` now thread-safe under bursty first-use
+
+### Phase C Post-Review Fixes (Round 2, 2026-05-13)
+
+**P1: Native tool_calls validation can crash on non-dict entries**
+- `ollama.py:446-463` - Added type checks before calling `.get()` on tool_call entries
+- Handles string/null/malformed entries gracefully with warning log
+- Also checks that `function` field is a dict before extracting name/arguments
+
+**P1: terminal_hint still not honored in classification flow**
+- `error_handler.py:314-370` - Added terminal_hint as Priority 1 in classification
+- If `terminal_hint=True`, returns `CONTRACT_ERROR` (non-retryable) when no specific category
+- Prevents repeated retries on explicitly terminal errors from MCP servers
+
+**New tests added (Round 2):**
+- `test_native_tool_calls_malformed_entries_skipped` - String/null entries handled gracefully
+- `test_native_tool_calls_malformed_function_field_skipped` - Non-dict function field handled
+- `test_terminal_hint_makes_error_non_retryable` - terminal_hint=True → non-retryable
+- `test_terminal_hint_with_category_uses_category` - terminal_hint + category uses specific type
+- `test_terminal_hint_false_does_not_force_non_retryable` - terminal_hint=False allows retry
+
+### Phase C Post-Review Fixes (Round 3, 2026-05-13)
+
+**P1: terminal_hint can still be downgraded to retryable via category path**
+- `error_handler.py:339-354` - When `terminal_hint=True` and category maps to retryable type, override to `CONTRACT_ERROR`
+- Only uses category type if it's already non-retryable
+- Logs warning when overriding retryable category due to terminal_hint
+
+**New tests added (Round 3):**
+- `test_terminal_hint_overrides_retryable_category` - docker_unavailable + terminal_hint → non-retryable
+
+### Phase C Test Summary
+
+```
+New tests: 56 (13 + 28 + 15)
+Existing tests: 42 (error_handling, tool_protocol_alignment)
+Total passed: 98
+```
+
+### Remaining Risk / Follow-up
+
+1. The strict tool name validation may reject tool calls from models that hallucinate tool names. Monitor logs for `schema_validation_rejected` counter.
+2. HTTP client pool metrics are not yet exposed via health endpoint - consider adding `/health/metrics` in future.
+
+### Suggested Next Steps
+
+1. Code review Phase C changes
+2. Merge after approval
+3. Start Phase D (Task D1: Tool Catalog abstraction)
 
 ---
 

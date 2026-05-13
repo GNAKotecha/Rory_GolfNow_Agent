@@ -2,14 +2,20 @@
 
 Provides error classification, recovery strategies, and telemetry for tool failures.
 Implements MCP-aligned error handling with fast-fail for auth errors and HITL-safe recovery.
+
+Task C2: Enhanced error classification using MCPToolResult structured fields.
 """
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from dataclasses import dataclass, field
 import logging
 import os
 import json
 import re
+
+# Type checking import to avoid circular dependency
+if TYPE_CHECKING:
+    from app.services.mcp_client import MCPToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -175,16 +181,26 @@ def classify_error_from_category(error_category: Optional[str], http_status: Opt
         # Server/infrastructure issues
         "server_unavailable": ErrorType.RESOURCE_EXHAUSTED,
         "container_unavailable": ErrorType.RESOURCE_EXHAUSTED,
+        "docker_unavailable": ErrorType.RESOURCE_EXHAUSTED,
+        "connection_refused": ErrorType.RESOURCE_EXHAUSTED,
+        "upstream_unavailable": ErrorType.RESOURCE_EXHAUSTED,
         
         # RBAC denial (policy, not credentials)
         "rbac_denied": ErrorType.RBAC_DENIED,
         
-        # Credential/auth issues (different from RBAC)
+        # Credential/auth issues
+        "auth_failure": ErrorType.AUTH_FAILURE,
         "permission_denied": ErrorType.AUTH_FAILURE,  # Legacy category
         
         # Validation issues
         "validation_error": ErrorType.VALIDATION_ERROR,
         "invalid_arguments": ErrorType.VALIDATION_ERROR,
+        
+        # Rate limiting
+        "rate_limited": ErrorType.RATE_LIMIT,
+        
+        # Timeout
+        "timeout": ErrorType.TIMEOUT,
         
         # Internal errors
         "internal_error": ErrorType.TOOL_FAILURE,
@@ -295,6 +311,79 @@ def is_error_retryable(error_type: ErrorType) -> bool:
     return error_type not in NON_RETRYABLE_ERRORS
 
 
+def classify_from_mcp_result(
+    result: "MCPToolResult",  # Forward reference to avoid circular import
+) -> ErrorType:
+    """
+    Classify error from MCPToolResult using all structured fields.
+    
+    Task C2: Use structured fields over string parsing.
+    
+    Priority:
+    1. terminal_hint (if True, return non-retryable immediately)
+    2. error_category (most specific classification)
+    3. upstream_status (actual service response)
+    4. http_status (MCP layer status)
+    5. error message parsing (fallback)
+    
+    Args:
+        result: MCPToolResult with error information
+        
+    Returns:
+        Classified ErrorType
+    """
+    if result.success:
+        return ErrorType.TOOL_FAILURE  # Should not classify success as error
+    
+    # Priority 1: Honor terminal_hint from upstream
+    # P1 fix: If server explicitly marks as terminal, don't retry
+    if getattr(result, 'terminal_hint', False):
+        # Try to get a more specific classification, but MUST be non-retryable
+        if result.error_category:
+            category_type = classify_error_from_category(result.error_category, result.http_status)
+            if category_type and category_type not in NON_RETRYABLE_ERRORS:
+                # P1 fix round 3: Category would be retryable, but terminal_hint overrides
+                logger.info(
+                    "MCP result has terminal_hint=True but category is retryable, forcing non-retryable",
+                    extra={
+                        "error": result.error,
+                        "error_category": result.error_category,
+                        "original_type": category_type.value,
+                    },
+                )
+                return ErrorType.CONTRACT_ERROR
+            elif category_type:
+                # Category is already non-retryable, use it for specificity
+                return category_type
+        # Default to CONTRACT_ERROR (non-retryable) when terminal but no specific category
+        logger.info(
+            "MCP result has terminal_hint=True, treating as non-retryable",
+            extra={"error": result.error, "error_category": result.error_category},
+        )
+        return ErrorType.CONTRACT_ERROR
+    
+    # Priority 2: Structured error category
+    if result.error_category:
+        category_type = classify_error_from_category(result.error_category, result.http_status)
+        if category_type:
+            return category_type
+    
+    # Priority 3: Upstream status (actual service response)
+    if result.upstream_status:
+        return classify_error_from_http_status(result.upstream_status)
+    
+    # Priority 4: HTTP status (MCP layer)
+    if result.http_status:
+        return classify_error_from_http_status(result.http_status)
+    
+    # Priority 5: Parse error message (fallback)
+    return classify_error_from_message(
+        result.error or "",
+        result.http_status,
+        result.error_category,
+    )
+
+
 class AgentErrorHandler:
     """Handles errors during agent execution with deterministic recovery."""
 
@@ -333,6 +422,36 @@ class AgentErrorHandler:
             Classified ErrorType
         """
         return classify_error_from_message(error_message, http_status, error_category)
+    
+    def classify_from_result(self, result: "MCPToolResult") -> ErrorType:
+        """
+        Classify error from MCPToolResult using all available fields.
+        
+        Task C2: Preferred method when MCPToolResult is available.
+        Uses structured fields over string parsing.
+        
+        Args:
+            result: MCPToolResult from tool execution
+            
+        Returns:
+            Classified ErrorType
+        """
+        return classify_from_mcp_result(result)
+    
+    def is_terminal_from_result(self, result: "MCPToolResult") -> bool:
+        """
+        Check if error is terminal using MCPToolResult's structured fields.
+        
+        Task C2: Use terminal_hint for definitive terminal errors.
+        
+        Args:
+            result: MCPToolResult from tool execution
+            
+        Returns:
+            True if error should terminate workflow
+        """
+        # Use the result's built-in method which checks terminal_hint
+        return result.is_terminal_error()
 
     def decide_recovery(self, context: ErrorContext) -> ErrorRecoveryAction:
         """

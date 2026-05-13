@@ -138,7 +138,7 @@ By completion:
 
 ### Phase C: Performance + protocol alignment
 
-- [ ] **Task C1: Reuse HTTP clients (Ollama and MCP)**
+- [x] **Task C1: Reuse HTTP clients (Ollama and MCP)**
   - Replace per-call `httpx.AsyncClient()` creation with long-lived pooled client(s) + proper shutdown.
   - Keep timeout controls and ensure no session leaks.
   - **Files likely:**
@@ -149,7 +149,7 @@ By completion:
   - **Checks:**
     - Unit test for client reuse behavior.
 
-- [ ] **Task C2: MCP error envelope enrichment**
+- [x] **Task C2: MCP error envelope enrichment**
   - Extend `MCPToolResult` contract with structured fields (`error_category`, `upstream_status`, `terminal_hint`).
   - Update classifier to prefer structured fields over fragile string parsing.
   - **Files likely:**
@@ -161,7 +161,7 @@ By completion:
   - **Checks:**
     - Contract tests on `MCPToolResult` serialization/consumption.
 
-- [ ] **Task C3: Tool-call protocol normalizer hardening (Qwen/Ollama variants)**
+- [x] **Task C3: Tool-call protocol normalizer hardening (Qwen/Ollama variants)**
   - Keep native `tool_calls` as source of truth.
   - Maintain fallback parsers but gate by strict schema validation to reduce false positives.
   - Add telemetry counters for fallback parser usage.

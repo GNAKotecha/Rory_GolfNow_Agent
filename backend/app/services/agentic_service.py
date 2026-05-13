@@ -733,14 +733,12 @@ To use a tool, respond with a function call in the format expected by the API.""
                         # Handle tool failure with recovery strategy
                         if not result.success:
                             # Classify the error type
-                            # Task B2: Use structured error_category when available
+                            # Task C2: Use structured envelope fields (upstream_status, terminal_hint)
+                            error_type = self.error_handler.classify_from_result(result)
+                            
+                            # Extract envelope fields for context and telemetry
                             http_status = getattr(result, 'http_status', None)
                             error_category = getattr(result, 'error_category', None)
-                            error_type = self.error_handler.classify_error(
-                                result.error or "Unknown error",
-                                http_status=http_status,
-                                error_category=error_category,
-                            )
                             
                             # Check if error is retryable
                             retryable = is_error_retryable(error_type)
