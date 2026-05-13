@@ -7,7 +7,7 @@ executor_backend: docker_exec
 services:
   # brs-teesheet: prefer API calls, docker exec for console commands only
   teesheet:
-    container: php  # Container name in brs-teesheet docker-compose (usually 'php')
+    container: brs-teesheet-php-1  # Container name in brs-teesheet docker-compose (usually 'php')
     url: http://localhost:8056  # Symfony app with REST APIs
   admin_api:
     url: http://localhost:8056  # Same app, different routes /{clubId}/api/admin/...

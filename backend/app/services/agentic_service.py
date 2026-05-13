@@ -159,7 +159,8 @@ class AgenticService:
         """
         steps: List[AgenticStep] = []
         current_messages = messages.copy()
-        retry_count: Dict[str, int] = {}  # Track retries per tool
+        # Retry tracking is now run-scoped via AgentState._fingerprint_retry_counts
+        # (removed step-scoped retry_count dict per Task A1)
 
         # Initialize state management
         state = AgentState(session_id=session_id, current_step=0)
@@ -576,9 +577,10 @@ To use a tool, respond with a function call in the format expected by the API.""
                             error="Maximum total tool attempts exceeded",
                         )
 
-                    # Execute tool via MCP registry with error handling
-                    retry_key = f"{step_num}:{tool_name}"
-                    current_retries = retry_count.get(retry_key, 0)
+                    # Task A1: Use run-scoped retry tracking via canonical fingerprint
+                    # The fingerprint is based on {tool_name, tool_args} so same call
+                    # across different steps shares retry budget
+                    current_retries = state.get_fingerprint_retry_count(tool_name, tool_args)
                     attempt_budget = min(AGENT_RETRY_BUDGET, self.error_handler.max_retries)
 
                     # Track tool execution time
@@ -684,7 +686,107 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     "step_number": step_num,
                                 })
 
+                            # Task A2: Check retry ownership before proceeding
+                            # If MCP client exhausted transport retries, don't retry at agent level
+                            transport_exhausted = getattr(result, 'transport_retries_exhausted', False)
+                            is_semantic = getattr(result, 'is_semantic_error', False)
+
                             if action.strategy == ErrorRecoveryStrategy.RETRY:
+                                # Task A2: Semantic errors should never be retried as transient failures.
+                                # If classifier mapped a semantic error to TOOL_FAILURE, escalate to ASK_USER.
+                                if is_semantic:
+                                    logger.warning(
+                                        f"Semantic error for {tool_name} cannot be retried; escalating to ASK_USER",
+                                        extra={
+                                            "tool_name": tool_name,
+                                            "reason": "semantic_retry_guard",
+                                            "error_type": error_type.value,
+                                        }
+                                    )
+                                    state.record_action(
+                                        action_type="tool_call",
+                                        action_data=action_data,
+                                        result=result.error,
+                                        success=False,
+                                        outcome=ActionOutcome.NON_RETRYABLE_FAILURE,
+                                        error_type=error_type.value,
+                                        http_status=http_status,
+                                        duration_ms=tool_duration_ms,
+                                    )
+
+                                    if self.config.stream_callback:
+                                        await self.config.stream_callback({
+                                            "type": "ask_user",
+                                            "tool_name": tool_name,
+                                            "reason": "Semantic tool failure requires user or model correction guidance",
+                                            "remediation_prompt": (
+                                                f"Tool '{tool_name}' returned a semantic error and cannot be retried automatically.\n"
+                                                f"Error: {result.error}"
+                                            ),
+                                            "error_type": error_type.value,
+                                        })
+
+                                    return AgenticResult(
+                                        final_response=(
+                                            f"Tool '{tool_name}' failed with a non-transient semantic error. "
+                                            f"Please review and provide corrected input. Error: {result.error}"
+                                        ),
+                                        steps=steps,
+                                        total_steps=step_num,
+                                        stopped_reason="ask_user",
+                                        error=f"Semantic error for {tool_name}",
+                                        metadata={
+                                            "tool_name": tool_name,
+                                            "error_type": error_type.value,
+                                            "semantic_error": True,
+                                        },
+                                    )
+
+                                # Task A2: Guard against retry amplification
+                                if transport_exhausted:
+                                    logger.warning(
+                                        f"Transport retries exhausted for {tool_name}, escalating to ASK_USER",
+                                        extra={
+                                            "tool_name": tool_name,
+                                            "transport_retries": result.retry_count,
+                                            "reason": "retry_ownership_guard",
+                                        }
+                                    )
+                                    # Record the failure and escalate
+                                    state.record_action(
+                                        action_type="tool_call",
+                                        action_data=action_data,
+                                        result=result.error,
+                                        success=False,
+                                        outcome=ActionOutcome.NON_RETRYABLE_FAILURE,
+                                        error_type=error_type.value,
+                                        http_status=http_status,
+                                        duration_ms=tool_duration_ms,
+                                    )
+                                    
+                                    # Emit event and return ASK_USER
+                                    if self.config.stream_callback:
+                                        await self.config.stream_callback({
+                                            "type": "ask_user",
+                                            "tool_name": tool_name,
+                                            "reason": "Transport retries exhausted",
+                                            "remediation_prompt": f"Tool '{tool_name}' failed after {result.retry_count} transport retries. Error: {result.error}",
+                                            "error_type": error_type.value,
+                                        })
+                                    
+                                    return AgenticResult(
+                                        final_response=f"Tool '{tool_name}' failed after exhausting transport retries. Error: {result.error}",
+                                        steps=steps,
+                                        total_steps=step_num,
+                                        stopped_reason="ask_user",
+                                        error=f"Transport retries exhausted for {tool_name}",
+                                        metadata={
+                                            "tool_name": tool_name,
+                                            "error_type": error_type.value,
+                                            "transport_retries": result.retry_count,
+                                        },
+                                    )
+                                
                                 # Record retry attempt
                                 state.record_action(
                                     action_type="tool_call",
@@ -707,7 +809,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 else:
                                     logger.info(f"Retrying tool: {tool_name} (attempt {current_retries + 1}/{attempt_budget})")
 
-                                retry_count[retry_key] = current_retries + 1
+                                # Task A1: Use run-scoped fingerprint retry tracking
+                                state.increment_fingerprint_retry(tool_name, tool_args)
 
                                 # Set flag to retry entire step (break out of tool loop)
                                 should_retry_step = True
@@ -735,6 +838,76 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 )
 
                             elif action.strategy == ErrorRecoveryStrategy.ASK_USER:
+                                # Task A3: Check if model should get a reflection turn first
+                                # For recoverable errors (validation, missing args), allow one corrective turn
+                                recoverable_for_reflection = error_type in {
+                                    ErrorType.VALIDATION_ERROR,
+                                    ErrorType.MALFORMED_OUTPUT,
+                                }
+                                
+                                if recoverable_for_reflection and state.can_reflect(tool_name, tool_args):
+                                    # Allow model one corrective turn
+                                    logger.info(
+                                        f"Allowing reflection turn for {tool_name} ({error_type.value})",
+                                        extra={
+                                            "tool_name": tool_name,
+                                            "error_type": error_type.value,
+                                            "reflection_attempt": state.get_reflection_attempts(tool_name, tool_args) + 1,
+                                        }
+                                    )
+                                    
+                                    # Record the error for tracking
+                                    state.record_action(
+                                        action_type="tool_call",
+                                        action_data=action_data,
+                                        result=result.error,
+                                        success=False,
+                                        outcome=ActionOutcome.RETRYABLE_FAILURE,
+                                        error_type=error_type.value,
+                                        http_status=http_status,
+                                        duration_ms=tool_duration_ms,
+                                    )
+                                    
+                                    # Increment reflection counter
+                                    state.increment_reflection_attempt(tool_name, tool_args)
+                                    
+                                    # Inject error into conversation for model correction
+                                    # Add the tool call and its error result to messages
+                                    current_messages.append({
+                                        "role": "assistant",
+                                        "content": "",
+                                        "tool_calls": [{
+                                            "id": tool_id,
+                                            "type": "function",
+                                            "function": {
+                                                "name": tool_name,
+                                                "arguments": json.dumps(tool_args) if tool_args else "{}",
+                                            },
+                                        }],
+                                    })
+                                    current_messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tool_id,
+                                        "tool_name": tool_name,
+                                        "content": f"Error: {result.error}\n\nPlease correct the parameters and try again.",
+                                    })
+                                    
+                                    # Emit reflection event
+                                    if self.config.stream_callback:
+                                        await self.config.stream_callback({
+                                            "type": "reflection_turn",
+                                            "tool_name": tool_name,
+                                            "error_type": error_type.value,
+                                            "error": result.error,
+                                            "step_number": step_num,
+                                        })
+                                    
+                                    # Continue to next iteration of main loop (model will see error and try again)
+                                    # Break out of this step so we don't append duplicate synthetic tool result entries.
+                                    should_retry_step = True
+                                    break
+                                
+                                # No reflection available - escalate to user
                                 # Record the failure
                                 state.record_action(
                                     action_type="tool_call",

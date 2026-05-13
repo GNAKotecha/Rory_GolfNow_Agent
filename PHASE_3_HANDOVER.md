@@ -2,7 +2,84 @@
 
 **Last Updated:** 2026-05-12  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Task 7 complete — ready for Task 8 (Documentation)
+**Status:** Agent Runtime Hardening Phase A complete — ready for review
+
+---
+
+## Agent Runtime Hardening: Phase A (2026-05-12)
+
+**Spec:** `docs/superpowers/specs/2026-05-12-agent-runtime-hardening-and-scale-spec.md`
+
+### Task A1: Canonical Action Fingerprint and Run-Scoped Retry Budget ✅
+
+**What was implemented:**
+- Replaced step-scoped `retry_key = f"{step_num}:{tool_name}"` with fingerprint based on normalized `{tool_name, tool_args}`.
+- Added `_fingerprint_retry_counts` tracking to `AgentState` that survives step increments.
+- New methods: `_generate_fingerprint()`, `get_fingerprint_retry_count()`, `increment_fingerprint_retry()`, `can_retry_fingerprint()`, `get_fingerprint_retry_summary()`.
+
+**Files changed:**
+- `backend/app/services/agent_state.py` - Added fingerprint-based retry tracking
+- `backend/app/services/agentic_service.py` - Updated to use fingerprint-based tracking
+- `backend/tests/test_agent_state.py` - Added 11 new tests for fingerprint behavior
+
+**Tests:** 11 new tests added, all passing
+
+### Task A2: Single Retry-Owner Policy ✅
+
+**What was implemented:**
+- Defined retry ownership matrix:
+  - Transport errors (timeout/connection): MCP client retries
+  - Semantic errors (isError, validation/auth/404): agent layer recovery, no transport replays
+- Added `is_semantic_error` and `transport_retries_exhausted` flags to `MCPToolResult`.
+- MCP client now explicitly marks:
+  - `is_semantic_error=True` for isError responses, 404, 400/422, 401/403
+  - `transport_retries_exhausted=True` when transport retries are exhausted
+- Agent layer guards against retry amplification when `transport_retries_exhausted=True`.
+
+**Files changed:**
+- `backend/app/services/mcp_client.py` - Added retry ownership flags
+- `backend/app/services/agentic_service.py` - Added transport exhaustion guard
+- `backend/tests/test_error_handling_integration.py` - Added 2 new tests
+
+**Tests:** 2 new integration tests, all passing
+
+### Task A3: Error Reflection Turn Before Terminal Stop ✅
+
+**What was implemented:**
+- For recoverable errors (VALIDATION_ERROR, MALFORMED_OUTPUT), model gets one reflection turn before escalating to user.
+- Added `_fingerprint_reflection_attempts` tracking to `AgentState`.
+- New methods: `get_reflection_attempts()`, `increment_reflection_attempt()`, `can_reflect()`.
+- On first recoverable error: inject error into conversation, allow model to try corrective action.
+- If same fingerprint fails again: escalate to `ask_user`.
+- New `reflection_turn` event type for streaming.
+
+**Files changed:**
+- `backend/app/services/agent_state.py` - Added reflection attempt tracking
+- `backend/app/services/agentic_service.py` - Added reflection turn logic
+- `backend/tests/test_agent_state.py` - Added 5 new tests
+- `backend/tests/test_error_handling_integration.py` - Added 2 new tests
+- `backend/tests/test_error_handling.py` - Fixed pre-existing test pattern
+
+**Tests:** 7 new tests, all passing
+
+### Phase A Test Summary
+
+```
+Tests run: 87 passed
+Files: test_agent_state.py, test_error_handling.py, test_error_handling_integration.py, test_tool_protocol_alignment.py
+```
+
+### Remaining Risk / Follow-up
+
+1. The reflection turn feature uses fingerprint tracking - if model changes args slightly, it gets a new reflection budget. This is by design (new params = new attempt).
+2. Consider adding config flag `ENABLE_REFLECTION_TURNS` if you want to disable this feature.
+3. Next phase (Phase B) should implement deterministic tool catalog caching.
+
+### Suggested Next Steps
+
+1. Code review Phase A changes
+2. Merge after approval
+3. Clear context and start Phase B (Task B1: Deterministic tool catalog cache)
 
 ---
 

@@ -76,6 +76,14 @@ class AgentState:
     # Global attempt budget tracking
     _total_attempts: int = 0
     _max_total_attempts: int = 50  # Hard cap on total tool attempts
+    
+    # Run-scoped retry tracking per canonical fingerprint (tool_name + tool_args)
+    # This survives step increments and prevents retry budget reset across steps
+    _fingerprint_retry_counts: Dict[str, int] = field(default_factory=dict)
+    
+    # Task A3: Track reflection attempts per fingerprint
+    # Allows model one corrective turn before escalating to user
+    _fingerprint_reflection_attempts: Dict[str, int] = field(default_factory=dict)
 
     def has_action_been_completed(self, action_type: str, action_data: Dict[str, Any]) -> bool:
         """
@@ -232,3 +240,151 @@ class AgentState:
             "outcomes": outcomes,
             "unique_actions": len(self.action_keys_seen),
         }
+    
+    # =========================================================================
+    # Run-scoped retry budget tracking (Task A1)
+    # =========================================================================
+    
+    def _generate_fingerprint(self, tool_name: str, tool_args: Dict[str, Any]) -> str:
+        """
+        Generate canonical fingerprint for a tool call.
+        
+        The fingerprint is based on normalized {tool_name, tool_args} so that:
+        - Same tool+args across different steps share retry budget
+        - Different args create different fingerprints
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments (will be normalized via sorted JSON)
+            
+        Returns:
+            SHA256 hash fingerprint
+        """
+        # Normalize args for consistent hashing
+        normalized_args = json.dumps(tool_args, sort_keys=True, default=str)
+        fingerprint_data = f"{tool_name}:{normalized_args}"
+        return hashlib.sha256(fingerprint_data.encode()).hexdigest()
+    
+    def get_fingerprint_retry_count(self, tool_name: str, tool_args: Dict[str, Any]) -> int:
+        """
+        Get current retry count for a specific tool+args fingerprint.
+        
+        This count survives step increments and represents the run-scoped
+        retry budget consumption.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            
+        Returns:
+            Number of retry attempts already made for this fingerprint
+        """
+        fingerprint = self._generate_fingerprint(tool_name, tool_args)
+        return self._fingerprint_retry_counts.get(fingerprint, 0)
+    
+    def increment_fingerprint_retry(self, tool_name: str, tool_args: Dict[str, Any]) -> int:
+        """
+        Increment retry count for a specific tool+args fingerprint.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            
+        Returns:
+            New retry count after increment
+        """
+        fingerprint = self._generate_fingerprint(tool_name, tool_args)
+        current = self._fingerprint_retry_counts.get(fingerprint, 0)
+        self._fingerprint_retry_counts[fingerprint] = current + 1
+        return current + 1
+    
+    def can_retry_fingerprint(
+        self, 
+        tool_name: str, 
+        tool_args: Dict[str, Any], 
+        budget: int
+    ) -> bool:
+        """
+        Check if a tool+args fingerprint can still be retried within budget.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            budget: Maximum allowed retry attempts
+            
+        Returns:
+            True if retry is allowed, False if budget exhausted
+        """
+        current = self.get_fingerprint_retry_count(tool_name, tool_args)
+        return current < budget
+    
+    def get_fingerprint_retry_summary(self) -> Dict[str, int]:
+        """
+        Get summary of retry counts per fingerprint (for telemetry).
+        
+        Returns:
+            Dict mapping fingerprint prefixes to retry counts
+        """
+        return {
+            fp[:16] + "...": count 
+            for fp, count in self._fingerprint_retry_counts.items()
+        }
+    
+    # =========================================================================
+    # Task A3: Error reflection turn tracking
+    # =========================================================================
+    
+    def get_reflection_attempts(self, tool_name: str, tool_args: Dict[str, Any]) -> int:
+        """
+        Get the number of reflection attempts for a fingerprint.
+        
+        Reflection attempts represent times the model was given error context
+        and allowed to try a corrective action.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            
+        Returns:
+            Number of reflection attempts for this fingerprint
+        """
+        fingerprint = self._generate_fingerprint(tool_name, tool_args)
+        return self._fingerprint_reflection_attempts.get(fingerprint, 0)
+    
+    def increment_reflection_attempt(self, tool_name: str, tool_args: Dict[str, Any]) -> int:
+        """
+        Increment reflection attempt count for a fingerprint.
+        
+        Call this when injecting error context into conversation for model correction.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            
+        Returns:
+            New reflection attempt count after increment
+        """
+        fingerprint = self._generate_fingerprint(tool_name, tool_args)
+        current = self._fingerprint_reflection_attempts.get(fingerprint, 0)
+        self._fingerprint_reflection_attempts[fingerprint] = current + 1
+        return current + 1
+    
+    def can_reflect(
+        self,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        max_reflections: int = 1
+    ) -> bool:
+        """
+        Check if model can have another reflection turn for this fingerprint.
+        
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments
+            max_reflections: Maximum allowed reflection attempts (default 1)
+            
+        Returns:
+            True if reflection is allowed, False if should escalate to user
+        """
+        current = self.get_reflection_attempts(tool_name, tool_args)
+        return current < max_reflections

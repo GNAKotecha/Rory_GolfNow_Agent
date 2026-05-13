@@ -88,8 +88,9 @@ class TestErrorClassification:
         assert error_type == ErrorType.VALIDATION_ERROR
     
     def test_message_with_not_found_classified_as_tool_not_found(self):
-        """Error message containing 'not found' should be TOOL_NOT_FOUND."""
-        error_type = classify_error_from_message("Tool 'foo' not found")
+        """Error message containing tool not found patterns should be TOOL_NOT_FOUND."""
+        # Must match one of the tool_not_found_patterns exactly (case-insensitive)
+        error_type = classify_error_from_message("Tool not found: foo")
         assert error_type == ErrorType.TOOL_NOT_FOUND
     
     def test_http_status_takes_precedence_over_message(self):

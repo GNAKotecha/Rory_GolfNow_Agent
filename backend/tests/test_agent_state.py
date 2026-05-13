@@ -314,3 +314,212 @@ def test_generate_action_key_different_type():
     key2 = state._generate_action_key("plan_step", {"data": "same"})
 
     assert key1 != key2
+
+
+# ==============================================================================
+# Run-Scoped Fingerprint Retry Budget Tests (Task A1)
+# ==============================================================================
+
+def test_fingerprint_generation_consistency():
+    """Test fingerprint generation is consistent for same tool+args."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    fp1 = state._generate_fingerprint("create_club", {"name": "Test Club", "email": "test@test.com"})
+    fp2 = state._generate_fingerprint("create_club", {"name": "Test Club", "email": "test@test.com"})
+    
+    assert fp1 == fp2
+
+
+def test_fingerprint_generation_order_independence():
+    """Test fingerprint is same regardless of argument order."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    fp1 = state._generate_fingerprint("create_club", {"name": "Test", "email": "a@b.com", "type": "golf"})
+    fp2 = state._generate_fingerprint("create_club", {"type": "golf", "name": "Test", "email": "a@b.com"})
+    
+    assert fp1 == fp2
+
+
+def test_fingerprint_different_args_different_fingerprint():
+    """Test different args produce different fingerprints."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    fp1 = state._generate_fingerprint("create_club", {"name": "Club A"})
+    fp2 = state._generate_fingerprint("create_club", {"name": "Club B"})
+    
+    assert fp1 != fp2
+
+
+def test_fingerprint_different_tools_different_fingerprint():
+    """Test different tools produce different fingerprints even with same args."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    fp1 = state._generate_fingerprint("create_club", {"name": "Test"})
+    fp2 = state._generate_fingerprint("update_club", {"name": "Test"})
+    
+    assert fp1 != fp2
+
+
+def test_get_fingerprint_retry_count_initial():
+    """Test initial retry count is zero."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    count = state.get_fingerprint_retry_count("create_club", {"name": "Test"})
+    
+    assert count == 0
+
+
+def test_increment_fingerprint_retry():
+    """Test incrementing fingerprint retry count."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    new_count = state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    assert new_count == 1
+    
+    new_count = state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    assert new_count == 2
+    
+    # Verify via get
+    count = state.get_fingerprint_retry_count("create_club", {"name": "Test"})
+    assert count == 2
+
+
+def test_fingerprint_retry_count_survives_step_increment():
+    """Test retry count persists when step number changes (run-scoped)."""
+    state = AgentState(session_id=1, current_step=1)
+    
+    # Increment retry in step 1
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    
+    # Simulate moving to step 2
+    state.current_step = 2
+    
+    # Count should persist
+    count = state.get_fingerprint_retry_count("create_club", {"name": "Test"})
+    assert count == 1
+    
+    # Increment again in step 2
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    
+    # Count should be cumulative
+    count = state.get_fingerprint_retry_count("create_club", {"name": "Test"})
+    assert count == 2
+
+
+def test_can_retry_fingerprint_within_budget():
+    """Test can_retry returns True when within budget."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    assert state.can_retry_fingerprint("create_club", {"name": "Test"}, budget=3) is True
+    
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    assert state.can_retry_fingerprint("create_club", {"name": "Test"}, budget=3) is True
+    
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    assert state.can_retry_fingerprint("create_club", {"name": "Test"}, budget=3) is True
+
+
+def test_can_retry_fingerprint_budget_exhausted():
+    """Test can_retry returns False when budget exhausted."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    # Exhaust budget of 3
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    
+    assert state.can_retry_fingerprint("create_club", {"name": "Test"}, budget=3) is False
+
+
+def test_fingerprint_retry_isolation():
+    """Test retry counts are isolated per fingerprint."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    # Exhaust budget for one fingerprint
+    state.increment_fingerprint_retry("create_club", {"name": "Club A"})
+    state.increment_fingerprint_retry("create_club", {"name": "Club A"})
+    state.increment_fingerprint_retry("create_club", {"name": "Club A"})
+    
+    # Different args should have fresh budget
+    assert state.can_retry_fingerprint("create_club", {"name": "Club B"}, budget=3) is True
+    assert state.get_fingerprint_retry_count("create_club", {"name": "Club B"}) == 0
+
+
+def test_get_fingerprint_retry_summary():
+    """Test fingerprint retry summary for telemetry."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    state.increment_fingerprint_retry("create_club", {"name": "Test"})
+    state.increment_fingerprint_retry("update_club", {"id": 1})
+    
+    summary = state.get_fingerprint_retry_summary()
+    
+    assert len(summary) == 2
+    # Keys are truncated fingerprints
+    assert all("..." in key for key in summary.keys())
+    # Values should be the counts
+    assert 2 in summary.values()
+    assert 1 in summary.values()
+
+
+# ==============================================================================
+# Task A3: Reflection Turn Tracking Tests
+# ==============================================================================
+
+def test_get_reflection_attempts_initial():
+    """Test initial reflection attempts is zero."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    count = state.get_reflection_attempts("test_tool", {"param": "value"})
+    
+    assert count == 0
+
+
+def test_increment_reflection_attempt():
+    """Test incrementing reflection attempts."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    new_count = state.increment_reflection_attempt("test_tool", {"param": "value"})
+    assert new_count == 1
+    
+    new_count = state.increment_reflection_attempt("test_tool", {"param": "value"})
+    assert new_count == 2
+
+
+def test_can_reflect_within_limit():
+    """Test can_reflect returns True when within limit."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    # Should be able to reflect initially
+    assert state.can_reflect("test_tool", {"param": "value"}) is True
+    
+    # After one reflection, should not be able to reflect again (default max is 1)
+    state.increment_reflection_attempt("test_tool", {"param": "value"})
+    assert state.can_reflect("test_tool", {"param": "value"}) is False
+
+
+def test_can_reflect_custom_limit():
+    """Test can_reflect with custom max_reflections."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    # With max_reflections=2, should allow 2 reflections
+    assert state.can_reflect("test_tool", {"param": "value"}, max_reflections=2) is True
+    
+    state.increment_reflection_attempt("test_tool", {"param": "value"})
+    assert state.can_reflect("test_tool", {"param": "value"}, max_reflections=2) is True
+    
+    state.increment_reflection_attempt("test_tool", {"param": "value"})
+    assert state.can_reflect("test_tool", {"param": "value"}, max_reflections=2) is False
+
+
+def test_reflection_attempts_isolated_per_fingerprint():
+    """Test reflection attempts are isolated per fingerprint."""
+    state = AgentState(session_id=1, current_step=0)
+    
+    # Exhaust reflection for one fingerprint
+    state.increment_reflection_attempt("test_tool", {"param": "A"})
+    assert state.can_reflect("test_tool", {"param": "A"}) is False
+    
+    # Different fingerprint should have fresh budget
+    assert state.can_reflect("test_tool", {"param": "B"}) is True

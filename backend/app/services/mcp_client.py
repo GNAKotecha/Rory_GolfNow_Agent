@@ -37,7 +37,14 @@ class MCPTool:
 
 @dataclass
 class MCPToolResult:
-    """Result from MCP tool execution."""
+    """Result from MCP tool execution.
+    
+    Task A2: Retry ownership clarification
+    - is_semantic_error: True if this was a semantic error (isError response, validation, auth)
+      Semantic errors should NOT be transport-retried; only agent-level recovery applies.
+    - transport_retries_exhausted: True if MCP client exhausted its transport retry budget.
+      Agent layer can use this to avoid retry amplification.
+    """
     success: bool
     result: Optional[Any] = None
     error: Optional[str] = None
@@ -45,6 +52,9 @@ class MCPToolResult:
     retry_count: int = 0
     http_status: Optional[int] = None  # P1-2: HTTP status for error classification
     error_category: Optional[str] = None  # Machine-readable error category (e.g., "container_unavailable")
+    # Task A2: Retry ownership fields
+    is_semantic_error: bool = False  # True for isError/validation/auth - agent handles recovery
+    transport_retries_exhausted: bool = False  # True if MCP client exhausted transport retries
 
 
 class MCPErrorType(Enum):
@@ -272,6 +282,7 @@ class MCPClient:
                                 # Do NOT set http_status=200 - this allows the error classifier
                                 # to parse the error message for auth/validation/etc classification
                                 # instead of being overridden by the 200 status code.
+                                # Task A2: Mark as semantic error - agent handles recovery, no transport retry
                                 error_text = self._extract_error_text(data)
                                 error_category = self._classify_error_category(error_text)
                                 return MCPToolResult(
@@ -281,6 +292,7 @@ class MCPClient:
                                     retry_count=retry_count,
                                     http_status=None,  # Let classifier parse error text
                                     error_category=error_category,
+                                    is_semantic_error=True,  # A2: Agent handles recovery
                                 )
 
                             parsed_result = self._extract_success_result(data)
@@ -311,7 +323,7 @@ class MCPClient:
                         )
 
                     elif response.status == 404:
-                        # Tool not found - don't retry
+                        # Task A2: Tool not found is a semantic error - don't retry at transport level
                         error_msg = f"Tool not found: {tool_name}"
                         logger.error(
                             f"Tool not found: {self.config.name}.{tool_name}",
@@ -323,10 +335,51 @@ class MCPClient:
                             execution_time_ms=elapsed_ms,
                             retry_count=retry_count,
                             http_status=404,
+                            is_semantic_error=True,  # A2: Agent handles not-found recovery
+                        )
+
+                    elif response.status in (401, 403):
+                        # Task A2: Auth errors are semantic - agent handles recovery
+                        error_text = await response.text()
+                        logger.error(
+                            f"Auth error calling {self.config.name}.{tool_name}: HTTP {response.status}",
+                            extra={
+                                "server": self.config.name,
+                                "tool": tool_name,
+                                "status": response.status,
+                            },
+                        )
+                        return MCPToolResult(
+                            success=False,
+                            error=f"Auth error: HTTP {response.status} - {error_text[:200]}",
+                            execution_time_ms=elapsed_ms,
+                            retry_count=retry_count,
+                            http_status=response.status,
+                            is_semantic_error=True,  # A2: Agent handles auth recovery
+                        )
+
+                    elif response.status in (400, 422):
+                        # Task A2: Validation errors are semantic - agent handles recovery
+                        error_text = await response.text()
+                        logger.warning(
+                            f"Validation error calling {self.config.name}.{tool_name}: HTTP {response.status}",
+                            extra={
+                                "server": self.config.name,
+                                "tool": tool_name,
+                                "status": response.status,
+                            },
+                        )
+                        return MCPToolResult(
+                            success=False,
+                            error=f"Validation error: {error_text[:500]}",
+                            execution_time_ms=elapsed_ms,
+                            retry_count=retry_count,
+                            http_status=response.status,
+                            is_semantic_error=True,  # A2: Agent handles validation recovery
                         )
 
                     else:
-                        # Server error - retry if attempts remaining
+                        # Server error (5xx) - transport retry if attempts remaining
                         error_text = await response.text()
                         logger.warning(
                             f"Tool call failed (attempt {attempt + 1}): {self.config.name}.{tool_name} - HTTP {response.status}",
@@ -343,12 +396,14 @@ class MCPClient:
                             await asyncio.sleep(2 ** attempt)  # Exponential backoff
                             continue
 
+                        # Task A2: Transport retries exhausted - agent should NOT retry this
                         return MCPToolResult(
                             success=False,
                             error=f"Server error: HTTP {response.status}",
                             execution_time_ms=elapsed_ms,
                             retry_count=retry_count,
                             http_status=response.status,
+                            transport_retries_exhausted=True,  # A2: Don't retry at agent level
                         )
 
             except asyncio.TimeoutError:
@@ -370,11 +425,13 @@ class MCPClient:
                     datetime.now(timezone.utc) - start_time
                 ).total_seconds() * 1000
 
+                # Task A2: Transport retries exhausted - agent should NOT retry
                 return MCPToolResult(
                     success=False,
                     error=f"Timeout after {self.config.timeout_seconds}s",
                     execution_time_ms=elapsed_ms,
                     retry_count=retry_count,
+                    transport_retries_exhausted=True,  # A2: Don't retry at agent level
                 )
 
             except Exception as e:
@@ -397,20 +454,23 @@ class MCPClient:
                     datetime.now(timezone.utc) - start_time
                 ).total_seconds() * 1000
 
+                # Task A2: Transport retries exhausted - agent should NOT retry
                 return MCPToolResult(
                     success=False,
                     error=f"Connection error: {str(e)}",
                     execution_time_ms=elapsed_ms,
                     retry_count=retry_count,
+                    transport_retries_exhausted=True,  # A2: Don't retry at agent level
                 )
 
-        # Should never reach here
+        # Should never reach here, but mark as exhausted if it does
         elapsed_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         return MCPToolResult(
             success=False,
             error="Max retries exceeded",
             execution_time_ms=elapsed_ms,
             retry_count=retry_count,
+            transport_retries_exhausted=True,  # A2: Don't retry at agent level
         )
 
     def _build_auth_headers(self, user_id: Optional[int]) -> Dict[str, str]:
