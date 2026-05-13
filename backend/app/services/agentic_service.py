@@ -9,8 +9,8 @@ import time
 import os
 
 from app.services.ollama import OllamaClient, OllamaError
-from app.services.mcp_registry import MCPToolRegistry
-from app.services.mcp_client import MCPTool
+from app.services.mcp_registry import MCPToolRegistry, ToolCatalog
+from app.services.mcp_client import MCPTool, MCPToolResult
 from app.services.agent_state import AgentState, ActionOutcome
 from app.services.error_handler import (
     AgentErrorHandler,
@@ -46,6 +46,9 @@ class AgenticConfig:
     enable_planning: bool = False  # Simplified for MVP
     verify_plan_steps: bool = False
     stream_callback: Optional[Callable[[Dict[str, Any]], Any]] = None
+    # Task B1: Enable run-scoped tool catalog for deterministic routing
+    use_tool_catalog: bool = True
+    tool_catalog_ttl_seconds: Optional[int] = None  # None = use default
 
 
 @dataclass
@@ -69,7 +72,10 @@ class AgenticResult:
 
 
 class AgenticService:
-    """Orchestrates agentic workflow with full harness."""
+    """Orchestrates agentic workflow with full harness.
+    
+    Task B1: Supports run-scoped tool catalog for deterministic routing.
+    """
 
     def __init__(
         self,
@@ -100,6 +106,68 @@ class AgenticService:
         self.error_handler = AgentErrorHandler(max_retries=3)
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
         self.simple_tools = SimpleTool()  # Initialize simple built-in tools
+        
+        # Task B1: Run-scoped tool catalog (created fresh for each run)
+        self._run_catalog: Optional[ToolCatalog] = None
+        self._catalog_initialized: bool = False  # Track if catalog was ever set
+
+    def _is_catalog_valid(self) -> bool:
+        """Check if run catalog is valid with proper type checking.
+        
+        Guards against mocked/malformed catalog objects that would derail control flow.
+        """
+        if self._run_catalog is None:
+            return False
+        # Type guard: ensure is_valid() returns an actual bool, not a coroutine/mock
+        if not isinstance(self._run_catalog, ToolCatalog):
+            logger.warning(
+                f"_run_catalog is not a ToolCatalog instance: {type(self._run_catalog)}",
+                extra={"catalog_type": str(type(self._run_catalog))}
+            )
+            return False
+        result = self._run_catalog.is_valid()
+        if not isinstance(result, bool):
+            logger.warning(
+                f"is_valid() returned non-bool: {type(result)}",
+                extra={"result_type": str(type(result))}
+            )
+            return False
+        return result
+
+    async def ensure_run_catalog_initialized(self, user: User) -> bool:
+        """
+        Ensure run catalog is initialized (lazy initialization).
+        
+        Returns True if catalog is valid, False if initialization failed.
+        
+        Contract:
+        - If catalog was never initialized, initializes it once.
+        - If catalog was initialized but expired, returns False (catalog_stale).
+        """
+        if not self.config.use_tool_catalog:
+            return True  # Legacy mode, no catalog needed
+        
+        # If already initialized and valid, we're good
+        if self._catalog_initialized and self._is_catalog_valid():
+            return True
+        
+        # If was initialized but now invalid, that's catalog_stale
+        if self._catalog_initialized and not self._is_catalog_valid():
+            return False  # Caller should emit CATALOG_STALE error
+        
+        # Never initialized - initialize now
+        self._run_catalog = await self.mcp.create_run_catalog(
+            ttl_seconds=self.config.tool_catalog_ttl_seconds,
+        )
+        # Validate that we got a proper ToolCatalog
+        if not isinstance(self._run_catalog, ToolCatalog):
+            logger.error(
+                f"create_run_catalog returned invalid type: {type(self._run_catalog)}",
+                extra={"catalog_type": str(type(self._run_catalog))}
+            )
+            return False
+        self._catalog_initialized = True
+        return True
 
     async def execute(
         self,
@@ -610,11 +678,47 @@ To use a tool, respond with a function call in the format expected by the API.""
                             )
                         # Handle MCP tools
                         else:
-                            result = await self.mcp.execute_tool(
-                                tool_name=tool_name,
-                                arguments=tool_args,
-                                user=user,
-                            )
+                            # Refactor: When use_tool_catalog=true, catalog is authoritative.
+                            # No fallback to legacy discovery path mid-run.
+                            if self.config.use_tool_catalog:
+                                # Ensure catalog is initialized (lazy init on first tool call)
+                                catalog_ready = await self.ensure_run_catalog_initialized(user)
+                                
+                                if catalog_ready and self._is_catalog_valid():
+                                    result = await self.mcp.execute_tool_with_catalog(
+                                        tool_name=tool_name,
+                                        arguments=tool_args,
+                                        user=user,
+                                        catalog=self._run_catalog,
+                                    )
+                                else:
+                                    # catalog_stale: was initialized then expired (not "never initialized")
+                                    result = MCPToolResult(
+                                        success=False,
+                                        error="Tool catalog expired during run. Please retry the operation.",
+                                        error_category="catalog_stale",
+                                        is_semantic_error=True,
+                                    )
+                            else:
+                                # Legacy mode: direct tool execution
+                                result = await self.mcp.execute_tool(
+                                    tool_name=tool_name,
+                                    arguments=tool_args,
+                                    user=user,
+                                )
+                            
+                            # Contract validation: ensure result is MCPToolResult-like
+                            if not hasattr(result, 'success') or not isinstance(result.success, bool):
+                                logger.error(
+                                    f"Tool execution returned malformed result: {type(result)}",
+                                    extra={"tool": tool_name, "result_type": str(type(result))}
+                                )
+                                result = MCPToolResult(
+                                    success=False,
+                                    error=f"Internal error: malformed tool result from {tool_name}",
+                                    error_category="internal_error",
+                                    is_semantic_error=True,
+                                )
 
                         # Calculate execution duration
                         tool_duration_ms = int((time.time() - tool_start_time) * 1000)
@@ -629,10 +733,13 @@ To use a tool, respond with a function call in the format expected by the API.""
                         # Handle tool failure with recovery strategy
                         if not result.success:
                             # Classify the error type
+                            # Task B2: Use structured error_category when available
                             http_status = getattr(result, 'http_status', None)
+                            error_category = getattr(result, 'error_category', None)
                             error_type = self.error_handler.classify_error(
                                 result.error or "Unknown error",
                                 http_status=http_status,
+                                error_category=error_category,
                             )
                             
                             # Check if error is retryable
@@ -644,7 +751,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 tool_name=tool_name,
                                 error_message=result.error or "Unknown error",
                                 retry_count=current_retries,
-                                metadata={"tool_args": tool_args},
+                                metadata={"tool_args": tool_args, "error_category": error_category},
                                 http_status=http_status,
                                 attempt_budget=attempt_budget,
                             )
@@ -830,12 +937,30 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     duration_ms=tool_duration_ms,
                                 )
 
-                                # Execute fallback tool
-                                result = await self.mcp.execute_tool(
-                                    tool_name=action.fallback_tool,
-                                    arguments=tool_args,
-                                    user=user,
-                                )
+                                # Execute fallback tool (same routing logic as primary)
+                                if self.config.use_tool_catalog:
+                                    catalog_ready = await self.ensure_run_catalog_initialized(user)
+                                    if catalog_ready and self._is_catalog_valid():
+                                        result = await self.mcp.execute_tool_with_catalog(
+                                            tool_name=action.fallback_tool,
+                                            arguments=tool_args,
+                                            user=user,
+                                            catalog=self._run_catalog,
+                                        )
+                                    else:
+                                        from app.services.mcp_client import MCPToolResult
+                                        result = MCPToolResult(
+                                            success=False,
+                                            error="Tool catalog expired during run. Please retry the operation.",
+                                            error_category="catalog_stale",
+                                            is_semantic_error=True,
+                                        )
+                                else:
+                                    result = await self.mcp.execute_tool(
+                                        tool_name=action.fallback_tool,
+                                        arguments=tool_args,
+                                        user=user,
+                                    )
 
                             elif action.strategy == ErrorRecoveryStrategy.ASK_USER:
                                 # Task A3: Check if model should get a reflection turn first
@@ -1189,6 +1314,11 @@ To use a tool, respond with a function call in the format expected by the API.""
     async def _get_tool_definitions(self, user: User) -> List[Dict[str, Any]]:
         """
         Get tool definitions for user's role in Ollama format.
+        
+        Task B1: If use_tool_catalog is enabled, creates a run-scoped catalog
+        for deterministic tool routing throughout the workflow.
+        
+        Refactor: Each run gets its own immutable catalog copy.
 
         Args:
             user: Current user
@@ -1196,17 +1326,41 @@ To use a tool, respond with a function call in the format expected by the API.""
         Returns:
             List of tool definitions in OpenAI/Ollama format
         """
-        # Discover all tools (cached)
-        tools_by_server = await self.mcp.discover_all_tools()
+        # Task B1: Use catalog for deterministic tool routing
+        if self.config.use_tool_catalog:
+            # Create fresh immutable catalog for this run
+            self._run_catalog = await self.mcp.create_run_catalog(
+                ttl_seconds=self.config.tool_catalog_ttl_seconds,
+            )
+            self._catalog_initialized = True  # Mark as initialized
+            
+            # Filter tools by role from catalog
+            all_tools = self._run_catalog.tools
+            allowed_tool_names = self.mcp.get_available_tools(user.role.value)
+            allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
+            
+            logger.info(
+                f"Created run-scoped catalog: {len(allowed_tools)}/{len(all_tools)} tools for role {user.role.value}",
+                extra={
+                    "total_tools": len(all_tools),
+                    "allowed_tools": len(allowed_tools),
+                    "user_role": user.role.value,
+                    "catalog_id": id(self._run_catalog),
+                    "catalog_metrics": self.mcp.get_catalog_metrics(),
+                }
+            )
+        else:
+            # Legacy: Discover all tools (per-call)
+            tools_by_server = await self.mcp.discover_all_tools()
 
-        # Flatten and filter by user role
-        all_tools: List[MCPTool] = []
-        for tools in tools_by_server.values():
-            all_tools.extend(tools)
+            # Flatten and filter by user role
+            all_tools: List[MCPTool] = []
+            for tools in tools_by_server.values():
+                all_tools.extend(tools)
 
-        # Filter by role
-        allowed_tool_names = self.mcp.get_available_tools(user.role.value)
-        allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
+            # Filter by role
+            allowed_tool_names = self.mcp.get_available_tools(user.role.value)
+            allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
 
         # Convert to Ollama format (OpenAI function calling format)
         tool_definitions = []

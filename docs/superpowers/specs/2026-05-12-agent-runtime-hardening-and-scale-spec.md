@@ -109,7 +109,7 @@ By completion:
 
 ### Phase B: Make tool routing deterministic and fast
 
-- [ ] **Task B1: Deterministic tool catalog cache for run lifecycle**
+- [x] **Task B1: Deterministic tool catalog cache for run lifecycle**
   - Build run-scoped tool catalog snapshot at workflow start.
   - Avoid repeated full discovery during same run unless explicit invalidation.
   - Add optional TTL refresh and forced refresh path.
@@ -121,7 +121,7 @@ By completion:
   - **Checks:**
     - Unit test ensuring one discovery call per run path unless invalidated.
 
-- [ ] **Task B2: Structured tool-not-found semantics**
+- [x] **Task B2: Structured tool-not-found semantics**
   - Distinguish:
     - Catalog-miss (tool never exposed)
     - Transient-server-unavailable

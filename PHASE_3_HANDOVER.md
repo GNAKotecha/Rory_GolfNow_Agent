@@ -1,8 +1,87 @@
 # Phase 3 Handover: Onboarding Workflow + Testing + Analytics
 
-**Last Updated:** 2026-05-12  
+**Last Updated:** 2026-05-13  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Agent Runtime Hardening Phase A complete — ready for review
+**Status:** Agent Runtime Hardening Phase B complete — ready for review
+
+---
+
+## Agent Runtime Hardening: Phase B (2026-05-13)
+
+**Spec:** `docs/superpowers/specs/2026-05-12-agent-runtime-hardening-and-scale-spec.md`
+
+### Task B1: Deterministic Tool Catalog Cache for Run Lifecycle ✅
+
+**What was implemented:**
+- Added `ToolCatalog` dataclass for run-scoped tool snapshots with:
+  - Tool list, tool-to-server mapping, server health status
+  - TTL-based validity checking with configurable timeout
+  - Manual invalidation support
+  - O(1) tool lookup via dictionary
+- Added `create_catalog()` method to `MCPToolRegistry` that:
+  - Caches catalog and reuses for subsequent calls
+  - Supports force refresh and custom TTL
+  - Records metrics (creation count, hit count, miss count)
+  - Handles unhealthy servers gracefully
+- Added `execute_tool_with_catalog()` method for catalog-based tool execution
+- Updated `AgenticService` to:
+  - Create catalog at workflow start via `_get_tool_definitions()`
+  - Use `execute_tool_with_catalog()` when catalog is available
+  - Added `use_tool_catalog` config flag (default: True)
+  - Added `tool_catalog_ttl_seconds` config option
+
+**Files changed:**
+- `backend/app/services/mcp_registry.py` - Added ToolCatalog, catalog management methods
+- `backend/app/services/agentic_service.py` - Updated to use run-scoped catalog
+- `backend/tests/test_tool_catalog.py` - Added 17 new tests for catalog functionality
+
+**Environment variables:**
+- `TOOL_CATALOG_TTL_SECONDS` - Default: 600 (10 minutes)
+
+### Task B2: Structured Tool-Not-Found Semantics ✅
+
+**What was implemented:**
+- Added `ToolNotFoundReason` enum with values:
+  - `CATALOG_MISS` - Tool never exposed in any server
+  - `SERVER_UNAVAILABLE` - Server transient failure at catalog creation
+  - `PERMISSION_DENIED` - Role not allowed to use tool
+  - `STALE_CATALOG` - Tool removed after catalog snapshot
+- Added `ToolLookupResult` dataclass with:
+  - `found`, `server_name`, `not_found_reason`, `error_message`
+- Added `lookup_tool()` method to `ToolCatalog` for structured lookup
+- Updated `execute_tool_with_catalog()` to return structured errors:
+  - Sets `error_category` field (e.g., "tool_not_found", "server_unavailable")
+  - Sets appropriate `http_status` codes (404, 403, 503)
+  - Marks all lookup failures as `is_semantic_error=True`
+- Added `classify_error_from_category()` function for category-based classification
+- Updated `classify_error_from_message()` to prefer structured category
+- Updated `AgentErrorHandler.classify_error()` to accept `error_category` parameter
+- Updated error handling in `agentic_service.py` to pass `error_category`
+
+**Files changed:**
+- `backend/app/services/mcp_registry.py` - Added structured lookup with reasons
+- `backend/app/services/error_handler.py` - Added category-based classification
+- `backend/app/services/agentic_service.py` - Pass error_category to classifier
+- `backend/tests/test_tool_catalog.py` - Added 14 new tests for not-found semantics
+
+### Phase B Test Summary
+
+```
+Tests run: 31 passed (new) + 69 passed (existing) = 100 passed
+New test file: test_tool_catalog.py
+```
+
+### Remaining Risk / Follow-up
+
+1. The catalog TTL default is 10 minutes - may need tuning based on how often tools change in production.
+2. If a tool is added to a server mid-run, the catalog won't see it until refresh. This is by design for determinism.
+3. Consider adding a "catalog stale" event to notify the frontend when catalog expires.
+
+### Suggested Next Steps
+
+1. Code review Phase B changes
+2. Merge after approval
+3. Clear context and start Phase C (Task C1: HTTP client reuse)
 
 ---
 

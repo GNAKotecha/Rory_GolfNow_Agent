@@ -42,12 +42,17 @@ def mock_mcp_registry():
 
 @pytest.fixture
 def agentic_config():
-    """Create agentic config for testing."""
+    """Create agentic config for testing.
+    
+    Note: use_tool_catalog=False to test legacy execute_tool path.
+    Catalog-specific tests are in test_tool_catalog.py.
+    """
     return AgenticConfig(
         max_steps=10,
         timeout_seconds=60,
         enable_loop_detection=True,
         loop_window_size=3,
+        use_tool_catalog=False,  # Use legacy path for these error handling tests
     )
 
 

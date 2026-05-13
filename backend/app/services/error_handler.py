@@ -29,10 +29,12 @@ class ErrorType(Enum):
     RESOURCE_EXHAUSTED = "resource_exhausted"
     
     # Non-retryable errors (fast-fail)
-    AUTH_FAILURE = "auth_failure"  # 401/403 - requires user intervention
+    AUTH_FAILURE = "auth_failure"  # 401/403 credential issues
+    RBAC_DENIED = "rbac_denied"  # Role policy denial (not credential issue)
     VALIDATION_ERROR = "validation_error"  # 400/schema mismatch
     TOOL_NOT_FOUND = "tool_not_found"  # 404 - tool doesn't exist
     CONTRACT_ERROR = "contract_error"  # Tool response doesn't match schema
+    CATALOG_STALE = "catalog_stale"  # Catalog expired mid-run
     
     # Workflow errors
     MALFORMED_OUTPUT = "malformed_output"
@@ -65,10 +67,12 @@ HTTP_ERROR_CLASSIFICATION: Dict[int, ErrorType] = {
 # Non-retryable error types (fast-fail immediately)
 NON_RETRYABLE_ERRORS = {
     ErrorType.AUTH_FAILURE,
+    ErrorType.RBAC_DENIED,
     ErrorType.VALIDATION_ERROR,
     ErrorType.TOOL_NOT_FOUND,
     ErrorType.CONTRACT_ERROR,
     ErrorType.LOOP_DETECTED,
+    ErrorType.CATALOG_STALE,
 }
 
 
@@ -146,18 +150,70 @@ def classify_error_from_http_status(status_code: int) -> ErrorType:
     return HTTP_ERROR_CLASSIFICATION.get(status_code, ErrorType.TOOL_FAILURE)
 
 
-def classify_error_from_message(error_message: str, http_status: Optional[int] = None) -> ErrorType:
+def classify_error_from_category(error_category: Optional[str], http_status: Optional[int] = None) -> Optional[ErrorType]:
     """
-    Classify error type from error message and optional HTTP status.
+    Classify error type from structured error category (Task B2).
+    
+    Args:
+        error_category: Structured error category from MCPToolResult
+        http_status: Optional HTTP status for fallback
+        
+    Returns:
+        ErrorType if category is recognized, None otherwise
+    """
+    if not error_category:
+        return None
+    
+    category_mapping = {
+        # Task B2: Tool-not-found variants
+        "tool_not_found": ErrorType.TOOL_NOT_FOUND,
+        "catalog_miss": ErrorType.TOOL_NOT_FOUND,
+        
+        # Catalog stale - separate terminal error
+        "catalog_stale": ErrorType.CATALOG_STALE,
+        
+        # Server/infrastructure issues
+        "server_unavailable": ErrorType.RESOURCE_EXHAUSTED,
+        "container_unavailable": ErrorType.RESOURCE_EXHAUSTED,
+        
+        # RBAC denial (policy, not credentials)
+        "rbac_denied": ErrorType.RBAC_DENIED,
+        
+        # Credential/auth issues (different from RBAC)
+        "permission_denied": ErrorType.AUTH_FAILURE,  # Legacy category
+        
+        # Validation issues
+        "validation_error": ErrorType.VALIDATION_ERROR,
+        "invalid_arguments": ErrorType.VALIDATION_ERROR,
+        
+        # Internal errors
+        "internal_error": ErrorType.TOOL_FAILURE,
+    }
+    
+    return category_mapping.get(error_category)
+
+
+def classify_error_from_message(error_message: str, http_status: Optional[int] = None, error_category: Optional[str] = None) -> ErrorType:
+    """
+    Classify error type from error message, HTTP status, and optional category.
+    
+    Task B2: Prefers structured error_category when available.
     
     Args:
         error_message: Error message string
         http_status: Optional HTTP status code
+        error_category: Optional structured error category (Task B2)
         
     Returns:
         Appropriate ErrorType
     """
-    # Check HTTP status first if available
+    # Task B2: Prefer structured error category if available
+    if error_category:
+        category_type = classify_error_from_category(error_category, http_status)
+        if category_type:
+            return category_type
+    
+    # Check HTTP status if available
     if http_status:
         return classify_error_from_http_status(http_status)
     
@@ -261,18 +317,22 @@ class AgentErrorHandler:
         self,
         error_message: str,
         http_status: Optional[int] = None,
+        error_category: Optional[str] = None,
     ) -> ErrorType:
         """
         Classify an error into an ErrorType.
         
+        Task B2: Now accepts structured error_category for precise classification.
+        
         Args:
             error_message: The error message
             http_status: Optional HTTP status code
+            error_category: Optional structured error category from MCPToolResult
             
         Returns:
             Classified ErrorType
         """
-        return classify_error_from_message(error_message, http_status)
+        return classify_error_from_message(error_message, http_status, error_category)
 
     def decide_recovery(self, context: ErrorContext) -> ErrorRecoveryAction:
         """
@@ -288,13 +348,31 @@ class AgentErrorHandler:
         # NON-RETRYABLE ERRORS - Fast fail immediately
         # =====================================================================
         
-        # Auth failure - requires user intervention
+        # Auth failure - requires credential intervention
         if context.error_type == ErrorType.AUTH_FAILURE:
             remediation = self._build_auth_remediation_prompt(context)
             return ErrorRecoveryAction(
                 strategy=ErrorRecoveryStrategy.ASK_USER,
                 reason="Authentication/authorization failed. User action required.",
                 remediation_prompt=remediation,
+                terminal=True,
+            )
+        
+        # RBAC denial - policy issue, not credentials (different remediation)
+        if context.error_type == ErrorType.RBAC_DENIED:
+            remediation = self._build_rbac_remediation_prompt(context)
+            return ErrorRecoveryAction(
+                strategy=ErrorRecoveryStrategy.ASK_USER,
+                reason="Role policy denies access to this tool.",
+                remediation_prompt=remediation,
+                terminal=True,
+            )
+        
+        # Catalog stale - run catalog expired, terminal signal
+        if context.error_type == ErrorType.CATALOG_STALE:
+            return ErrorRecoveryAction(
+                strategy=ErrorRecoveryStrategy.ABORT,
+                reason="Tool catalog expired during run. Please retry the operation.",
                 terminal=True,
             )
         
@@ -478,6 +556,24 @@ class AgentErrorHandler:
             "2. Verify you have the required permissions/scopes\n"
             "3. Try refreshing your credentials\n"
             "4. Contact your administrator if the issue persists"
+        )
+
+    def _build_rbac_remediation_prompt(self, context: ErrorContext) -> str:
+        """Build a structured remediation prompt for RBAC/policy denial.
+        
+        Refactor: Distinct from auth failure - this is role policy, not credentials.
+        """
+        tool_name = context.tool_name or "unknown"
+        error_category = context.metadata.get("error_category", "rbac_denied") if context.metadata else "rbac_denied"
+        
+        return (
+            f"Access to tool '{tool_name}' is not allowed for your current role.\n\n"
+            f"Error: {context.error_message}\n\n"
+            "This is a role-based access control (RBAC) restriction, not a credential issue.\n\n"
+            "To resolve:\n"
+            "1. Contact your administrator to request access to this tool\n"
+            "2. Use an alternative tool that your role has access to\n"
+            "3. If you believe this is an error, report the issue to support"
         )
 
     def _build_validation_remediation_prompt(self, context: ErrorContext) -> str:
