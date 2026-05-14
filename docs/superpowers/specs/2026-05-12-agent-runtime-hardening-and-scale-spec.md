@@ -175,7 +175,7 @@ By completion:
 
 ### Phase D: Scalable architecture for many integrations
 
-- [ ] **Task D1: Introduce Tool Catalog abstraction (Gateway-facing)**
+- [x] **Task D1: Introduce Tool Catalog abstraction (Gateway-facing)**
   - Add a dedicated abstraction that represents tool metadata, risk, scopes, provider, and health state.
   - Agent consumes filtered catalog instead of ad-hoc flattened lists.
   - **Files likely:**
@@ -186,7 +186,7 @@ By completion:
   - **Checks:**
     - Unit tests for catalog filtering by role/risk/provider/availability.
 
-- [ ] **Task D2: Workflow-scoped tool exposure policy**
+- [x] **Task D2: Workflow-scoped tool exposure policy**
   - Implement a policy function that exposes only relevant tools per run/workflow type.
   - Include safe defaults and override hook.
   - **Files likely:**
@@ -197,7 +197,7 @@ By completion:
   - **Checks:**
     - Integration test showing reduced tool surface for club-setup workflow.
 
-- [ ] **Task D3: Gateway/Backend boundary hardening doc + checks**
+- [x] **Task D3: Gateway/Backend boundary hardening doc + checks**
   - Create architecture tests or lint checks ensuring:
     - Backend does not directly use external provider secrets.
     - Gateway remains policy/credential boundary.

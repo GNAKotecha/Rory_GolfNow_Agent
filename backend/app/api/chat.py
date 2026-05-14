@@ -35,6 +35,7 @@ from app.services.run_state import (
 from app.services.message_validator import (
     get_message_validator, MessageValidationError,
 )
+from app.services.tool_catalog import WorkflowType
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -133,6 +134,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., max_length=50000)  # Limit message size
     model: Optional[str] = None
     require_approval: Optional[bool] = None  # Override to make stricter (fail-safe)
+    workflow_type: Optional[str] = None  # Task D2: Workflow-scoped tool exposure (club_setup, ticket_management, admin, general)
 
 
 class ChatResponse(BaseModel):
@@ -422,6 +424,17 @@ async def chat(
             }
         )
 
+        # Parse workflow type if provided (Task D2)
+        workflow_type_enum = None
+        if request.workflow_type:
+            try:
+                workflow_type_enum = WorkflowType(request.workflow_type.lower())
+            except ValueError:
+                logger.warning(
+                    f"Invalid workflow_type '{request.workflow_type}', using default GENERAL",
+                    extra={"requested_workflow": request.workflow_type}
+                )
+        
         ollama_client = OllamaClient()
         agentic_service = AgenticService(
             ollama_client=ollama_client,
@@ -434,6 +447,7 @@ async def chat(
                 loop_window_size=3,
                 enable_planning=False,  # Simplified for MVP
                 verify_plan_steps=False,
+                workflow_type=workflow_type_enum,  # Task D2: Workflow-scoped exposure
             ),
             rate_limiter=rate_limiter,
             health_checker=health_checker,

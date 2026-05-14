@@ -1,4 +1,8 @@
-"""Agentic workflow orchestration with tool calling and full harness."""
+"""Agentic workflow orchestration with tool calling and full harness.
+
+Task D1: Integrates EnhancedToolCatalog for workflow-aware filtering.
+Task D2: Uses ToolExposurePolicy for workflow-scoped tool exposure.
+"""
 from typing import List, Dict, Any, Optional, Callable, TYPE_CHECKING
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -23,6 +27,14 @@ from app.services.error_handler import (
 from app.services.agent_planner import AgentPlanner, TaskPlan
 from app.services.bash_tool import BashTool
 from app.services.simple_tools import SimpleTool
+from app.services.tool_catalog import (
+    EnhancedToolCatalog,
+    ToolMetadata,
+    WorkflowType,
+    ToolExposurePolicy,
+    get_default_metadata_registry,
+    get_policy_for_workflow,
+)
 from app.models.models import User
 
 if TYPE_CHECKING:
@@ -37,7 +49,11 @@ AGENT_RETRY_BUDGET = int(os.environ.get("AGENT_RETRY_BUDGET", "3"))
 
 @dataclass
 class AgenticConfig:
-    """Configuration for agentic loop."""
+    """Configuration for agentic loop.
+    
+    Task D1: Adds enhanced_catalog flag for EnhancedToolCatalog usage.
+    Task D2: Adds workflow_type for workflow-scoped tool filtering.
+    """
     max_steps: int = 10
     require_approval_for_write: bool = False
     timeout_seconds: int = 120
@@ -49,6 +65,10 @@ class AgenticConfig:
     # Task B1: Enable run-scoped tool catalog for deterministic routing
     use_tool_catalog: bool = True
     tool_catalog_ttl_seconds: Optional[int] = None  # None = use default
+    # Task D1: Enable enhanced catalog with metadata filtering
+    use_enhanced_catalog: bool = True
+    # Task D2: Workflow type for scoped tool exposure
+    workflow_type: Optional[WorkflowType] = None  # None = GENERAL
 
 
 @dataclass
@@ -75,6 +95,8 @@ class AgenticService:
     """Orchestrates agentic workflow with full harness.
     
     Task B1: Supports run-scoped tool catalog for deterministic routing.
+    Task D1: Supports EnhancedToolCatalog with metadata filtering.
+    Task D2: Supports workflow-scoped tool exposure policy.
     """
 
     def __init__(
@@ -110,6 +132,9 @@ class AgenticService:
         # Task B1: Run-scoped tool catalog (created fresh for each run)
         self._run_catalog: Optional[ToolCatalog] = None
         self._catalog_initialized: bool = False  # Track if catalog was ever set
+        
+        # Task D1: Enhanced tool catalog with metadata
+        self._enhanced_catalog: Optional[EnhancedToolCatalog] = None
 
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
@@ -1316,6 +1341,11 @@ To use a tool, respond with a function call in the format expected by the API.""
         Task B1: If use_tool_catalog is enabled, creates a run-scoped catalog
         for deterministic tool routing throughout the workflow.
         
+        Task D1: If use_enhanced_catalog is enabled, uses EnhancedToolCatalog
+        for workflow-aware filtering with rich metadata.
+        
+        Task D2: Applies workflow_type filter to reduce context overload.
+        
         Refactor: Each run gets its own immutable catalog copy.
 
         Args:
@@ -1324,8 +1354,48 @@ To use a tool, respond with a function call in the format expected by the API.""
         Returns:
             List of tool definitions in OpenAI/Ollama format
         """
-        # Task B1: Use catalog for deterministic tool routing
-        if self.config.use_tool_catalog:
+        # Task D1 + D2: Use enhanced catalog with workflow filtering
+        if self.config.use_enhanced_catalog and self.config.use_tool_catalog:
+            # Create fresh immutable catalog for this run
+            self._run_catalog = await self.mcp.create_run_catalog(
+                ttl_seconds=self.config.tool_catalog_ttl_seconds,
+            )
+            self._catalog_initialized = True
+            
+            # Create enhanced catalog from MCP tools with metadata enrichment
+            self._enhanced_catalog = EnhancedToolCatalog.from_mcp_tools(
+                self._run_catalog.tools,
+                metadata_registry=get_default_metadata_registry(),
+            )
+            
+            # Apply workflow exposure policy (Task D2)
+            workflow = self.config.workflow_type or WorkflowType.GENERAL
+            policy = get_policy_for_workflow(workflow)
+            policy_filtered = policy.apply(self._enhanced_catalog)
+            
+            # Filter by role permissions (RBAC layer)
+            allowed_tool_names = self.mcp.get_available_tools(user.role.value)
+            role_filtered = policy_filtered.include_only(allowed_tool_names)
+            
+            # Convert to Ollama format
+            tool_definitions = role_filtered.to_ollama_format()
+            
+            logger.info(
+                f"Created enhanced catalog: {role_filtered.tool_count}/{self._enhanced_catalog.tool_count} tools "
+                f"for role={user.role.value} workflow={workflow.value}",
+                extra={
+                    "total_tools": self._enhanced_catalog.tool_count,
+                    "policy_filtered": policy_filtered.tool_count,
+                    "role_filtered": role_filtered.tool_count,
+                    "user_role": user.role.value,
+                    "workflow_type": workflow.value,
+                    "policy": policy.to_dict(),
+                    "catalog_summary": role_filtered.to_summary_dict(),
+                }
+            )
+        
+        # Task B1: Use basic catalog (legacy path)
+        elif self.config.use_tool_catalog:
             # Create fresh immutable catalog for this run
             self._run_catalog = await self.mcp.create_run_catalog(
                 ttl_seconds=self.config.tool_catalog_ttl_seconds,
@@ -1347,6 +1417,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                     "catalog_metrics": self.mcp.get_catalog_metrics(),
                 }
             )
+            
+            # Convert to Ollama format
+            tool_definitions = []
+            for tool in allowed_tools:
+                tool_definitions.append({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    }
+                })
         else:
             # Legacy: Discover all tools (per-call)
             tools_by_server = await self.mcp.discover_all_tools()
@@ -1359,18 +1441,18 @@ To use a tool, respond with a function call in the format expected by the API.""
             # Filter by role
             allowed_tool_names = self.mcp.get_available_tools(user.role.value)
             allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
-
-        # Convert to Ollama format (OpenAI function calling format)
-        tool_definitions = []
-        for tool in allowed_tools:
-            tool_definitions.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.input_schema,
-                }
-            })
+            
+            # Convert to Ollama format
+            tool_definitions = []
+            for tool in allowed_tools:
+                tool_definitions.append({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    }
+                })
 
         # Add bash escape hatch tool only when explicitly enabled.
         # In native/Runpod modes without a worker service, probing worker DNS can

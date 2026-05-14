@@ -2,7 +2,121 @@
 
 **Last Updated:** 2026-05-13  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Agent Runtime Hardening Phase C complete — ready for review
+**Status:** Agent Runtime Hardening Phase D complete — ready for review
+
+---
+
+## Agent Runtime Hardening: Phase D (2026-05-13)
+
+**Spec:** `docs/superpowers/specs/2026-05-12-agent-runtime-hardening-and-scale-spec.md`
+
+### Task D1: Introduce Tool Catalog Abstraction ✅
+
+**What was implemented:**
+- Created new `backend/app/services/tool_catalog.py` module with:
+  - `ToolMetadata` dataclass: Rich metadata per tool (risk level, provider, scopes, workflow tags)
+  - `ToolRiskLevel` enum: READ, LOW_WRITE, MEDIUM_WRITE, HIGH_WRITE
+  - `ToolProvider` enum: BRS, ATLASSIAN, INTERNAL, BUILTIN, EXTERNAL
+  - `WorkflowType` enum: CLUB_SETUP, TICKET_MANAGEMENT, GENERAL, ADMIN
+  - `EnhancedToolCatalog` class with filtering methods:
+    - `filter_by_workflow()` - Filter tools by workflow type
+    - `filter_by_risk()` - Filter by maximum risk level
+    - `filter_by_provider()` - Filter by tool provider
+    - `filter_healthy()` - Only healthy/available tools
+    - `exclude_tools()` / `include_only()` - Explicit tool filtering
+- Added metadata inference from tool names (get_* → READ, create_* → LOW_WRITE, delete_* → HIGH_WRITE)
+- Added `DEFAULT_TOOL_METADATA_REGISTRY` for known BRS and Atlassian tools
+- Integrated with `AgenticService._get_tool_definitions()`:
+  - New config flags: `use_enhanced_catalog`, `workflow_type`
+  - Catalog creates filtered tool list for LLM context
+
+**Files changed:**
+- `backend/app/services/tool_catalog.py` - New module (450+ lines)
+- `backend/app/services/agentic_service.py` - Added imports, config, integration
+- `backend/tests/test_tool_catalog_abstraction.py` - 51 new tests
+
+### Task D2: Workflow-Scoped Tool Exposure Policy ✅
+
+**What was implemented:**
+- Added `ToolExposurePolicyConfig` dataclass:
+  - `max_risk_level` - Maximum allowed risk level
+  - `allowed_providers` - List of allowed providers
+  - `allowed_tools` / `blocked_tools` - Explicit allowlist/blocklist
+  - `include_general_tools` / `include_builtin_tools` - Inclusion flags
+- Added `ToolExposurePolicy` class:
+  - `apply(catalog)` - Apply policy to a catalog, return filtered catalog
+  - `is_tool_allowed(tool)` - Check if individual tool passes policy
+  - `to_dict()` - Serialize for logging
+- Added `DEFAULT_WORKFLOW_POLICIES` with pre-configured policies:
+  - GENERAL: LOW_WRITE max, all providers
+  - CLUB_SETUP: MEDIUM_WRITE max, BRS + BUILTIN only
+  - TICKET_MANAGEMENT: LOW_WRITE max, ATLASSIAN + BUILTIN only
+  - ADMIN: HIGH_WRITE max, all providers
+- Added `get_policy_for_workflow()` convenience function
+- Updated `AgenticService._get_tool_definitions()` to use policies:
+  - Gets policy for workflow type
+  - Applies policy before role filtering
+  - Logs policy configuration
+
+**Files changed:**
+- `backend/app/services/tool_catalog.py` - Added policy classes (200+ lines)
+- `backend/app/services/agentic_service.py` - Updated to use policies
+- `backend/tests/test_tool_catalog_abstraction.py` - 15 additional policy tests
+
+### Task D3: Gateway/Backend Boundary Hardening ✅
+
+**What was implemented:**
+- Created `backend/tests/test_architecture_boundaries.py` with 9 tests:
+  - `TestBackendDoesNotAccessExternalSecrets`:
+    - `test_no_forbidden_env_var_access` - Backend services don't access credential env vars
+    - `test_no_hardcoded_credential_patterns` - No hardcoded tokens in source
+  - `TestBackendDoesNotImportGatewayCredentials`:
+    - `test_no_forbidden_gateway_imports` - Backend doesn't import gateway auth modules
+  - `TestGatewayOwnsCredentials`:
+    - `test_gateway_has_credential_module` - Gateway has auth modules
+    - `test_tool_context_has_credential_fetcher` - ToolContext provides credential abstraction
+  - `TestBackendMCPClientBoundary`:
+    - `test_mcp_client_does_not_pass_raw_tokens` - MCP client doesn't leak tokens
+  - `TestArchitectureBoundaryConfiguration` - Config validation tests
+- Created `backend/docs/architecture-boundaries.md` documentation:
+  - Architecture diagram showing Backend/Gateway separation
+  - Credential flow diagram
+  - Boundary rules and responsibilities
+  - Enforcement mechanisms (CI tests, code review checklist)
+  - Guide for adding new external integrations
+
+**Files changed:**
+- `backend/tests/test_architecture_boundaries.py` - New test module (9 tests)
+- `backend/docs/architecture-boundaries.md` - New documentation
+
+### Phase D Test Summary
+
+```
+Tool Catalog Abstraction tests: 51
+Architecture Boundary tests: 9
+Total new tests: 60
+All tests passed
+```
+
+### Key Design Decisions
+
+1. **Immutable Filtering**: All catalog filter operations return new catalogs, preserving original
+2. **Layered Filtering**: Policy → Role → Workflow provides defense in depth
+3. **Metadata Inference**: Tools without explicit metadata get sensible defaults from naming patterns
+4. **Safe Defaults**: GENERAL workflow allows LOW_WRITE max, not HIGH_WRITE
+5. **Blocklist Precedence**: Explicit blocklist always takes precedence over other filters
+
+### Remaining Risk / Follow-up
+
+1. Metadata inference may misclassify tools with unconventional names - explicit registry is preferred
+2. Architecture boundary tests use AST parsing which may miss complex patterns - periodic manual review recommended
+3. Policy config is code-defined - future: consider config file or database for dynamic policies
+
+### Suggested Next Steps
+
+1. Code review Phase D changes
+2. Merge after approval
+3. Start Phase E (Task E1: Headless run contract)
 
 ---
 

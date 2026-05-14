@@ -16,6 +16,7 @@ from app.services.agentic_service import AgenticService, AgenticConfig
 from app.services.agent_memory import AgentMemory
 from app.config.mcp_config import Environment
 from app.api.chat import get_mcp_registry
+from app.services.tool_catalog import WorkflowType
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket"])
@@ -282,6 +283,18 @@ async def chat_websocket(websocket: WebSocket):
                 }
             )
 
+            # Parse workflow type if provided (Task D2)
+            workflow_type_enum = None
+            workflow_type_raw = data.get("workflow_type")
+            if workflow_type_raw:
+                try:
+                    workflow_type_enum = WorkflowType(workflow_type_raw.lower())
+                except ValueError:
+                    logger.warning(
+                        f"Invalid workflow_type '{workflow_type_raw}', using default GENERAL",
+                        extra={"requested_workflow": workflow_type_raw, "session_id": session_id}
+                    )
+            
             # Execute agentic workflow with streaming
             try:
                 agentic_service = AgenticService(
@@ -296,6 +309,7 @@ async def chat_websocket(websocket: WebSocket):
                         enable_planning=False,
                         verify_plan_steps=False,
                         stream_callback=stream_callback,
+                        workflow_type=workflow_type_enum,  # Task D2: Workflow-scoped exposure
                     ),
                     run_id=run_id,  # Pass run_id for workspace isolation
                 )
