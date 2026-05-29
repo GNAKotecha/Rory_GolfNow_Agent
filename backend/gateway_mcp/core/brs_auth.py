@@ -2,12 +2,12 @@
 BRS OAuth Token Provider
 
 Handles OAuth token exchange with BRS teesheet API.
-Uses client_credentials/api_key flow:
-  POST /oauth/v2/token
+Uses custom grant type flow:
+  POST /{club_id}/oauth/v2/token
   {
     "client_id": "...",
     "client_secret": "...",
-    "grant_type": "api_key",
+    "grant_type": "http://www.brsgolf.com/grants/api_key",
     "api_key": "..."
   }
 
@@ -45,7 +45,8 @@ class BRSToken:
     
     def as_bearer(self) -> str:
         """Return token formatted for Authorization header."""
-        return f"{self.token_type} {self.access_token}"
+        # Always use proper 'Bearer' capitalization per OAuth spec
+        return f"Bearer {self.access_token}"
 
 
 class BRSAuthProvider:
@@ -100,7 +101,7 @@ class BRSAuthProvider:
         self.client_id = client_id or os.environ.get("BRS_CLIENT_ID", "")
         self.client_secret = client_secret or os.environ.get("BRS_CLIENT_SECRET", "")
         self.static_api_key = api_key or os.environ.get("BRS_API_KEY", "")
-        self.grant_type = grant_type or os.environ.get("BRS_GRANT_TYPE", "api_key")
+        self.grant_type = grant_type or os.environ.get("BRS_GRANT_TYPE", "http://www.brsgolf.com/grants/api_key")
         
         # Token cache: key is club_id (or "static" for env-var API key)
         self._tokens: Dict[str, BRSToken] = {}
@@ -197,13 +198,123 @@ class BRSAuthProvider:
             self._tokens[cache_key] = token
             return token
     
+    async def get_token_with_credentials(
+        self,
+        club_id: str,
+        api_key: str,
+        client_id: str,
+        client_secret: str,
+        force_refresh: bool = False,
+    ) -> BRSToken:
+        """
+        Get OAuth token using dynamically provided credentials.
+        
+        Use this when credentials are fetched from the database rather than env vars.
+        
+        Args:
+            club_id: Club identifier
+            api_key: API key from fe_users table
+            client_id: OAuth client ID (format: "{id}_{random_id}")
+            client_secret: OAuth client secret
+            force_refresh: Force token refresh
+            
+        Returns:
+            Valid BRSToken
+        """
+        cache_key = club_id
+        
+        # Check cache first
+        if not force_refresh:
+            cached = self._tokens.get(cache_key)
+            if cached and not cached.is_expired:
+                return cached
+        
+        async with self._lock:
+            if not force_refresh:
+                cached = self._tokens.get(cache_key)
+                if cached and not cached.is_expired:
+                    return cached
+            
+            # Exchange using provided credentials
+            token = await self._exchange_token_with_credentials(
+                api_key=api_key,
+                client_id=client_id,
+                client_secret=client_secret,
+                club_id=club_id,
+            )
+            self._tokens[cache_key] = token
+            return token
+    
+    async def _exchange_token_with_credentials(
+        self,
+        api_key: str,
+        client_id: str,
+        client_secret: str,
+        club_id: str,
+    ) -> BRSToken:
+        """
+        Exchange credentials for OAuth token using provided credentials.
+        """
+        url = f"{self.teesheet_url}/{club_id}/oauth/v2/token"
+        
+        payload = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "http://www.brsgolf.com/grants/api_key",
+            "api_key": api_key,
+        }
+        
+        logger.info(f"Exchanging BRS OAuth token for club: {club_id}")
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                access_token = data.get("access_token")
+                if not access_token:
+                    raise ValueError(f"No access_token in response: {data}")
+                
+                expires_in = data.get("expires_in", 3600)
+                expires_at = time.time() + expires_in
+                token_type = data.get("token_type", "Bearer")
+                
+                logger.info(
+                    f"BRS OAuth token obtained for club {club_id}, expires in {expires_in}s",
+                    extra={"expires_in": expires_in, "token_type": token_type, "club_id": club_id}
+                )
+                
+                return BRSToken(
+                    access_token=access_token,
+                    expires_at=expires_at,
+                    token_type=token_type,
+                    club_id=club_id,
+                )
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"BRS OAuth token exchange failed for club {club_id}: {e.response.status_code}",
+                extra={"status_code": e.response.status_code, "body": e.response.text[:500], "club_id": club_id}
+            )
+            raise
+        except Exception as e:
+            logger.error(f"BRS OAuth token exchange error for club {club_id}: {e}", exc_info=True)
+            raise
+
     async def _exchange_token(self, api_key: str, club_id: str = "unknown") -> BRSToken:
         """
         Exchange credentials for OAuth token.
         
-        Calls POST /oauth/v2/token with client credentials.
+        Calls POST /{clubId}/oauth/v2/token with client credentials.
         """
-        url = f"{self.teesheet_url}/oauth/v2/token"
+        # BRS OAuth endpoint requires club ID in the URL path
+        url = f"{self.teesheet_url}/{club_id}/oauth/v2/token"
         
         payload = {
             "client_id": self.client_id,

@@ -178,32 +178,35 @@ class CredentialStore:
     def get_credential(
         self,
         user_id: int,
+        tenant_id: int,
         provider: str,
         audit_id: Optional[str] = None,
     ) -> Credential:
         """
-        Get decrypted credential for user and provider.
-        
+        Get decrypted credential for user and provider within tenant.
+
         For OAuth credentials, automatically refreshes if expired.
-        
+
         Args:
             user_id: ID of the user.
+            tenant_id: Tenant ID for isolation (from JWT).
             provider: Provider name (e.g., "atlassian", "github").
             audit_id: Correlation ID for errors.
-            
+
         Returns:
             Decrypted Credential object.
-            
+
         Raises:
             CredentialMissingError: No credential found for this user/provider.
             TokenRefreshFailedError: OAuth refresh failed.
         """
-        # Query for credential
+        # Query for credential (scoped to tenant)
         record = (
             self._db.query(ExternalCredential)
             .filter(
                 and_(
                     ExternalCredential.user_id == user_id,
+                    ExternalCredential.tenant_id == tenant_id,
                     ExternalCredential.provider == provider,
                     ExternalCredential.revoked_at.is_(None),
                 )
@@ -377,6 +380,7 @@ class CredentialStore:
     def store_oauth_credential(
         self,
         user_id: int,
+        tenant_id: int,
         provider: str,
         access_token: str,
         refresh_token: Optional[str],
@@ -386,25 +390,27 @@ class CredentialStore:
     ) -> ExternalCredential:
         """
         Store a new OAuth credential or update existing.
-        
+
         Args:
             user_id: ID of the user.
+            tenant_id: Tenant ID for isolation (from JWT).
             provider: Provider name.
             access_token: The access token.
             refresh_token: The refresh token (optional).
             scope: Space-separated scope string.
             expires_in: Token lifetime in seconds.
             metadata: Provider-specific metadata.
-            
+
         Returns:
             The created or updated ExternalCredential record.
         """
-        # Check for existing credential
+        # Check for existing credential (scoped to tenant)
         record = (
             self._db.query(ExternalCredential)
             .filter(
                 and_(
                     ExternalCredential.user_id == user_id,
+                    ExternalCredential.tenant_id == tenant_id,
                     ExternalCredential.provider == provider,
                 )
             )
@@ -429,6 +435,7 @@ class CredentialStore:
             # Create new
             record = ExternalCredential(
                 user_id=user_id,
+                tenant_id=tenant_id,
                 provider=provider,
                 credential_type=CredentialType.OAUTH,
                 secret_enc=self._encryption.encrypt(access_token),
@@ -450,28 +457,31 @@ class CredentialStore:
     def store_pat_credential(
         self,
         user_id: int,
+        tenant_id: int,
         provider: str,
         pat: str,
         metadata: Optional[dict] = None,
     ) -> ExternalCredential:
         """
         Store a new PAT credential or update existing.
-        
+
         Args:
             user_id: ID of the user.
+            tenant_id: Tenant ID for isolation (from JWT).
             provider: Provider name (e.g., "github").
             pat: The personal access token.
             metadata: Provider-specific metadata (e.g., user_login, scopes).
-            
+
         Returns:
             The created or updated ExternalCredential record.
         """
-        # Check for existing credential
+        # Check for existing credential (scoped to tenant)
         record = (
             self._db.query(ExternalCredential)
             .filter(
                 and_(
                     ExternalCredential.user_id == user_id,
+                    ExternalCredential.tenant_id == tenant_id,
                     ExternalCredential.provider == provider,
                 )
             )
@@ -494,6 +504,7 @@ class CredentialStore:
             # Create new
             record = ExternalCredential(
                 user_id=user_id,
+                tenant_id=tenant_id,
                 provider=provider,
                 credential_type=CredentialType.PAT,
                 secret_enc=self._encryption.encrypt(pat),
@@ -513,15 +524,17 @@ class CredentialStore:
     def revoke_credential(
         self,
         user_id: int,
+        tenant_id: int,
         provider: str,
     ) -> bool:
         """
         Revoke a credential (soft delete).
-        
+
         Args:
             user_id: ID of the user.
+            tenant_id: Tenant ID for isolation (from JWT).
             provider: Provider name.
-            
+
         Returns:
             True if credential was found and revoked, False otherwise.
         """
@@ -530,6 +543,7 @@ class CredentialStore:
             .filter(
                 and_(
                     ExternalCredential.user_id == user_id,
+                    ExternalCredential.tenant_id == tenant_id,
                     ExternalCredential.provider == provider,
                     ExternalCredential.revoked_at.is_(None),
                 )
@@ -547,22 +561,27 @@ class CredentialStore:
     def list_credentials(
         self,
         user_id: int,
+        tenant_id: int,
         include_revoked: bool = False,
     ) -> list[dict]:
         """
-        List user's credentials (without secrets).
-        
+        List user's credentials within tenant (without secrets).
+
         Args:
             user_id: ID of the user.
+            tenant_id: Tenant ID for isolation (from JWT).
             include_revoked: Whether to include revoked credentials.
-            
+
         Returns:
             List of credential metadata dicts (no secrets).
         """
         query = self._db.query(ExternalCredential).filter(
-            ExternalCredential.user_id == user_id
+            and_(
+                ExternalCredential.user_id == user_id,
+                ExternalCredential.tenant_id == tenant_id
+            )
         )
-        
+
         if not include_revoked:
             query = query.filter(ExternalCredential.revoked_at.is_(None))
         

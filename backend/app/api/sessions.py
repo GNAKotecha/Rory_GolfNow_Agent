@@ -12,7 +12,7 @@ from app.api.schemas import (
     MessageCreate,
     MessageResponse,
 )
-from app.api.auth_deps import get_approved_user
+from app.api.auth_deps import get_approved_user, get_current_user_tenant_id
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -21,11 +21,13 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 def create_session(
     session_data: SessionCreate,
     current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
 ):
     """Create a new conversation session for the authenticated user."""
     session = SessionModel(
         user_id=current_user.id,
+        tenant_id=tenant_id,
         title=session_data.title,
     )
     db.add(session)
@@ -38,11 +40,13 @@ def create_session(
 def get_session(
     session_id: int,
     current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
 ):
-    """Get session with all messages (must belong to current user)."""
+    """Get session with all messages (must belong to current user and tenant)."""
     session = db.query(SessionModel).filter(
         SessionModel.id == session_id,
+        SessionModel.tenant_id == tenant_id,
         SessionModel.user_id == current_user.id
     ).first()
     if not session:
@@ -53,13 +57,17 @@ def get_session(
 @router.get("", response_model=List[SessionResponse])
 def list_sessions(
     current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
     limit: int = 50,
     db: Session = Depends(get_db),
 ):
-    """List authenticated user's sessions."""
+    """List authenticated user's sessions within their tenant."""
     sessions = (
         db.query(SessionModel)
-        .filter(SessionModel.user_id == current_user.id)
+        .filter(
+            SessionModel.tenant_id == tenant_id,
+            SessionModel.user_id == current_user.id
+        )
         .order_by(SessionModel.updated_at.desc())
         .limit(limit)
         .all()
@@ -72,12 +80,14 @@ def add_message(
     session_id: int,
     message_data: MessageCreate,
     current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
 ):
-    """Add a message to a session (must belong to current user)."""
-    # Verify session exists and belongs to current user
+    """Add a message to a session (must belong to current user and tenant)."""
+    # Verify session exists and belongs to current user and tenant
     session = db.query(SessionModel).filter(
         SessionModel.id == session_id,
+        SessionModel.tenant_id == tenant_id,
         SessionModel.user_id == current_user.id
     ).first()
     if not session:
@@ -103,11 +113,13 @@ def add_message(
 def get_messages(
     session_id: int,
     current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
 ):
-    """Get all messages for a session (must belong to current user)."""
+    """Get all messages for a session (must belong to current user and tenant)."""
     session = db.query(SessionModel).filter(
         SessionModel.id == session_id,
+        SessionModel.tenant_id == tenant_id,
         SessionModel.user_id == current_user.id
     ).first()
     if not session:
@@ -120,3 +132,26 @@ def get_messages(
         .all()
     )
     return messages
+
+
+@router.patch("/{session_id}", response_model=SessionResponse)
+def update_session(
+    session_id: int,
+    session_data: SessionCreate,
+    current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """Update session title (must belong to current user and tenant)."""
+    session = db.query(SessionModel).filter(
+        SessionModel.id == session_id,
+        SessionModel.tenant_id == tenant_id,
+        SessionModel.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.title = session_data.title
+    db.commit()
+    db.refresh(session)
+    return session

@@ -481,18 +481,35 @@ class MCPHealthChecker:
         )
         
         # Validate required servers with startup timeout
+        # At startup, ONE successful probe is enough (bypass normal threshold)
+        failed_servers = []
         if required_probes:
-            try:
-                await asyncio.wait_for(
-                    self.check_all_servers(required_probes, force=True),
-                    timeout=self.config.required_server_startup_timeout
-                )
-            except asyncio.TimeoutError:
-                failed = list(required_probes.keys())
-                logger.error(
-                    f"Required servers failed startup validation (timeout): {failed}"
-                )
-                return False, failed
+            for server_name, probe_func in required_probes.items():
+                try:
+                    success, tools, error = await asyncio.wait_for(
+                        probe_func(),
+                        timeout=self.config.required_server_startup_timeout
+                    )
+                    if success:
+                        # Directly mark as HEALTHY on first successful startup probe
+                        state = self._server_states.get(server_name)
+                        if state:
+                            state.status = HealthStatus.HEALTHY
+                            state.discovered_tools = tools
+                            state.last_success_time = datetime.now(timezone.utc)
+                            logger.info(f"MCP server {server_name} startup probe succeeded: {len(tools)} tools")
+                    else:
+                        failed_servers.append(server_name)
+                        logger.error(f"MCP server {server_name} startup probe failed: {error}")
+                except asyncio.TimeoutError:
+                    failed_servers.append(server_name)
+                    logger.error(f"MCP server {server_name} startup probe timed out")
+                except Exception as e:
+                    failed_servers.append(server_name)
+                    logger.error(f"MCP server {server_name} startup probe error: {e}")
+        
+        if failed_servers:
+            return False, failed_servers
         
         # Check results
         all_healthy, unhealthy = self.check_required_servers()

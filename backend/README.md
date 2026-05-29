@@ -116,8 +116,12 @@ pytest tests/ --cov=app --cov-report=html
 
 **Core**:
 - `DATABASE_URL` - PostgreSQL connection string
-- `OLLAMA_URL` - Ollama API endpoint
-- `OLLAMA_MODEL` - Default model name
+- `USE_API_KEY` - `false` = Ollama backend, `true` = API-key backend
+- `OLLAMA_URL` - Ollama API endpoint (required when `USE_API_KEY=false`)
+- `OLLAMA_MODEL` - Default Ollama model name
+- `ANTHROPIC_BASE_URL` - Anthropic-compatible API base URL (required when `USE_API_KEY=true`)
+- `ANTHROPIC_AUTH_TOKEN` - API auth token (required when `USE_API_KEY=true`)
+- `ANTHROPIC_MODEL` - Optional default model for API-key mode
 
 **Langfuse** (optional):
 - `LANGFUSE_ENABLED` - Enable tracing (true/false)

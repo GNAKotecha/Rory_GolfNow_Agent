@@ -220,6 +220,18 @@ OPERATOR_ALLOWLIST = [
     "create_club",
     "create_admin_user",
     "call_internal_api",
+    # Gateway MCP Teesheet tools (Phase 4) - Read
+    "authenticate_club",
+    "call_api",
+    "list_routes",
+    "run_sql",
+    "get_config",
+    "get_schema",  # Database structure discovery
+    # Gateway MCP Teesheet tools (Phase 5) - Write
+    "update_casual_booking_rule",  # SQL-based casual booking rules
+    "update_configuration",  # API-based system config
+    "create_visitor_green_fee",  # API-based green fee creation
+    "create_booking",  # API-based booking creation
     # Gateway MCP Atlassian tools (write operations)
     "create_ticket",
     "add_comment",

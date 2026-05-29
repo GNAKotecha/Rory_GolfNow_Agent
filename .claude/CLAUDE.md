@@ -1,20 +1,31 @@
 Build a lightweight MVP for a hosted internal agent using this architecture:
 
-- Frontend: Open WebUI as the chat shell
+- Frontend: Next.js frontend in /frontend
 - Backend: custom service that owns product logic
-- Model runtime: Ollama on a GPU VM
+- Model runtime: Anthropic chat endpoint
 - Tools: remote MCP servers + company docs
 - Storage: database for users, conversations, workflow analytics
+
+## BRS API Documentation
+
+When API calls fail during testing, consult the BRS Swagger docs:
+- **Main API**: http://localhost:8056/api/documentation/
+- **Admin API**: http://localhost:8056/api/admin/documentation/
+- **GolfNow G1 API**: http://localhost:8056/api/g1/documentation/
+
+See `.claude/rules/brs-api-reference.md` for detailed endpoint reference.
 
 ## Prior Context (Reference Only)
 - Phase 1 completed: See `backend/PHASE_1_HANDOVER.md` for workflow engine foundation
 - Phase 2 completed: See `backend/PHASE_2_HANDOVER.md` for BRS tools + observability
+- Phase 3 completed: See `backend/PHASE_3_HANDOVER.md` for Onboarding Workflow + Testing + Analytics
+- Phase 4 completed: See `backend/PHASE_4_HANDOVER.md` for Gateway MCP implementation
 
 ## Execution rule
 
 Each task must be handled in this order:
 
-1. Read `PHASE_3_HANDOVER.md` using `ctx_index` or `ctx_execute_file`
+1. Read `PHASE_5_HANDOVER.md` using `ctx_index` or `ctx_execute_file`
    - Understand current project state
    - Check completed work
    - Check blockers, assumptions, and previous decisions
@@ -35,7 +46,7 @@ Each task must be handled in this order:
    - Keep implementation minimal and clean
 
 5. Update project tracking
-   - Add a clear entry to `PHASE_3_HANDOVER.md` explaining:
+   - Add a clear entry to `PHASE_5_HANDOVER.md` explaining:
      - what was changed
      - files touched
      - tests run
@@ -76,17 +87,3 @@ This is not a full platform yet. The MVP should prove:
 2. The backend can enforce tool/rule/prompt layers
 3. Conversations and workflow data can be stored and analyzed
 4. The system can be extended later with more roles, skills, and tools
-
-## Paths
-
-Working Directory:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend`
-
-Plan File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/docs/superpowers/plans/2026-05-01-phase-3-onboarding-testing-analytics.md`
-
-Handover File:
-`/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/PHASE_3_HANDOVER.md`
-
-Branch:
-`phase-3-onboarding-testing-analytics`

@@ -34,6 +34,23 @@ class RiskLevel(str, Enum):
     HIGH_WRITE = "high_write"
 
 
+class ApprovalPolicy(str, Enum):
+    """
+    Approval policy for tools.
+    
+    Determines when user approval is required before tool execution.
+    
+    - SAFE: No approval needed (read-only operations)
+    - SENSITIVE: First use requires approval, then cached per session
+    - DANGEROUS: Always requires approval (destructive operations)
+    - CONTEXTUAL: Depends on arguments (e.g., call_api method)
+    """
+    SAFE = "safe"
+    SENSITIVE = "sensitive"
+    DANGEROUS = "dangerous"
+    CONTEXTUAL = "contextual"
+
+
 class Environment(str, Enum):
     """Deployment environments."""
     LOCAL = "local"
@@ -138,6 +155,14 @@ class Tool:
         default_factory=lambda: list(Environment)
     )
     requires_approval: bool = False
+    
+    # Approval policy for session-scoped caching
+    # Overrides requires_approval when set
+    approval_policy: ApprovalPolicy = ApprovalPolicy.SAFE
+    
+    # For CONTEXTUAL policy: function to evaluate arguments and return effective policy
+    # Signature: (arguments: dict) -> ApprovalPolicy
+    approval_evaluator: Optional[Callable[[dict], ApprovalPolicy]] = None
     
     # Execution
     timeout_seconds: int = 30

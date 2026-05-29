@@ -30,12 +30,29 @@ interface Message {
 interface ChatRequest {
   session_id?: number;
   message: string;
+  model?: string;
+  allow_opus?: boolean;
+  opus_justification?: string;
 }
 
 interface ChatResponse {
   session_id: number;
   message: Message;
   response: Message;
+}
+
+interface ModelOption {
+  id: string;
+  label: string;
+  provider: string;
+  tier: string;
+}
+
+interface ModelListResponse {
+  options: ModelOption[];
+  default_model: string;
+  provider: string;
+  policy_note?: string;
 }
 
 class ApiClient {
@@ -135,6 +152,13 @@ class ApiClient {
     return this.request<Message[]>(`/api/sessions/${sessionId}/messages`);
   }
 
+  async updateSession(sessionId: number, title: string): Promise<Session> {
+    return this.request<Session>(`/api/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    });
+  }
+
   // Chat endpoint
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     return this.request<ChatResponse>('/api/chat', {
@@ -142,7 +166,20 @@ class ApiClient {
       body: JSON.stringify(request),
     });
   }
+
+  async getChatModels(): Promise<ModelListResponse> {
+    return this.request<ModelListResponse>('/api/chat/models');
+  }
 }
 
 export const apiClient = new ApiClient();
-export type { LoginResponse, User, Session, Message, ChatRequest, ChatResponse };
+export type {
+  LoginResponse,
+  User,
+  Session,
+  Message,
+  ChatRequest,
+  ChatResponse,
+  ModelOption,
+  ModelListResponse,
+};

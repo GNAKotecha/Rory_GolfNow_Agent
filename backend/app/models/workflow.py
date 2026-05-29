@@ -55,6 +55,7 @@ class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     template_id = Column(Integer, ForeignKey("workflow_templates.id"), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
     status = Column(SQLEnum(WorkflowRunStatus), default=WorkflowRunStatus.PENDING, nullable=False, index=True)
@@ -79,6 +80,7 @@ class WorkflowRun(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
+    tenant = relationship("Tenant", back_populates="workflow_runs")
     template = relationship("WorkflowTemplate", back_populates="workflow_runs")
     session = relationship("Session")
     step_executions = relationship("WorkflowStepExecution", back_populates="workflow_run", cascade="all, delete-orphan")

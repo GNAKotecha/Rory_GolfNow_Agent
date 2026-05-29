@@ -36,6 +36,13 @@ wait_for_url() {
   return 1
 }
 
+is_true() {
+  case "${1:-}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 require_env() {
   local var_name="$1"
   if [ -z "${!var_name:-}" ]; then
@@ -90,17 +97,20 @@ export GATEWAY_PORT="${GATEWAY_PORT:-8090}"
 export GATEWAY_HOST="${GATEWAY_HOST:-0.0.0.0}"
 export OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5-coder:32b}"
 export VENV_DIR="${VENV_DIR:-venv}"
+export USE_API_KEY="${USE_API_KEY:-false}"
 
 # Runpod/native defaults: disable auxiliary MCP servers and bash tool
 # (test-mcp and mock-search are not deployed in Runpod native mode)
 export ENABLE_AUX_MCP_SERVERS="${ENABLE_AUX_MCP_SERVERS:-false}"
 export ENABLE_BASH_TOOL="${ENABLE_BASH_TOOL:-false}"
 
-# Native mode runs ollama locally, so normalize docker-compose URL if present.
-if [ "${OLLAMA_URL:-}" = "http://ollama:11434" ]; then
-  export OLLAMA_URL="http://localhost:11434"
+# Native mode runs ollama locally when USE_API_KEY=false.
+if ! is_true "${USE_API_KEY}"; then
+  if [ "${OLLAMA_URL:-}" = "http://ollama:11434" ]; then
+    export OLLAMA_URL="http://localhost:11434"
+  fi
+  export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 fi
-export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 
 # Decide whether this script should start a local gateway.
 # If MCP_GATEWAY_URL points to ngrok/remote, default to skipping local gateway startup.
@@ -128,38 +138,47 @@ fi
 require_env "DATABASE_URL"
 require_env "SECRET_KEY"
 require_env "GATEWAY_SERVICE_TOKEN"
+if is_true "${USE_API_KEY}"; then
+  require_env "ANTHROPIC_BASE_URL"
+  require_env "ANTHROPIC_AUTH_TOKEN"
+else
+  require_env "OLLAMA_URL"
+fi
 echo "✅ Required environment variables are set"
 echo "   MCP_GATEWAY_URL: ${MCP_GATEWAY_URL:-http://localhost:8090}"
 echo "   ENABLE_AUX_MCP_SERVERS: ${ENABLE_AUX_MCP_SERVERS}"
+echo "   USE_API_KEY: ${USE_API_KEY}"
 echo ""
 
-# Install Ollama if not present
-if ! command -v ollama >/dev/null 2>&1; then
-  echo "📦 Installing Ollama..."
-  curl -fsSL https://ollama.com/install.sh | sh
+# Install/start Ollama only when needed.
+OLLAMA_PID=""
+if ! is_true "${USE_API_KEY}"; then
+  if ! command -v ollama >/dev/null 2>&1; then
+    echo "📦 Installing Ollama..."
+    curl -fsSL https://ollama.com/install.sh | sh
+    echo ""
+  fi
+
+  if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+    echo "ℹ️  Ollama is already running"
+  else
+    echo "🔧 Starting Ollama service..."
+    ollama serve >/tmp/ollama.log 2>&1 &
+    OLLAMA_PID="$!"
+    echo "   Ollama PID: ${OLLAMA_PID}"
+  fi
+  echo "⏳ Waiting for Ollama to be ready..."
+  if ! wait_for_url "http://localhost:11434/api/tags" "Ollama"; then
+    echo "   ❌ Ollama failed to start"
+    exit 1
+  fi
+  echo ""
+
+  echo "📦 Pulling ${OLLAMA_MODEL} model (this can take several minutes)..."
+  ollama pull "${OLLAMA_MODEL}"
+  echo "✅ Model ready"
   echo ""
 fi
-
-OLLAMA_PID=""
-if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
-  echo "ℹ️  Ollama is already running"
-else
-  echo "🔧 Starting Ollama service..."
-  ollama serve >/tmp/ollama.log 2>&1 &
-  OLLAMA_PID="$!"
-  echo "   Ollama PID: ${OLLAMA_PID}"
-fi
-echo "⏳ Waiting for Ollama to be ready..."
-if ! wait_for_url "http://localhost:11434/api/tags" "Ollama"; then
-  echo "   ❌ Ollama failed to start"
-  exit 1
-fi
-echo ""
-
-echo "📦 Pulling ${OLLAMA_MODEL} model (this can take several minutes)..."
-ollama pull "${OLLAMA_MODEL}"
-echo "✅ Model ready"
-echo ""
 
 if [ ! -x "${VENV_DIR}/bin/python" ]; then
   echo "🔧 Creating Python virtual environment..."
@@ -215,7 +234,11 @@ if [ "${START_GATEWAY_LOCAL}" = "true" ]; then
 else
   echo "  - Gateway MCP:  ${MCP_GATEWAY_URL} (remote)"
 fi
-echo "  - Ollama:       http://localhost:11434"
+if is_true "${USE_API_KEY}"; then
+  echo "  - LLM API:      ${ANTHROPIC_BASE_URL}"
+else
+  echo "  - Ollama:       http://localhost:11434"
+fi
 echo ""
 echo "Public URL (via RunPod):"
 echo "  - Use your RunPod proxy URL for port ${PORT}"
@@ -228,16 +251,20 @@ fi
 echo ""
 echo "View logs:"
 echo "  tail -f /tmp/backend.log"
-echo "  tail -f /tmp/ollama.log"
+if ! is_true "${USE_API_KEY}"; then
+  echo "  tail -f /tmp/ollama.log"
+fi
 if [ "${START_GATEWAY_LOCAL}" = "true" ]; then
   echo "  tail -f /tmp/gateway.log"
 fi
 echo ""
 echo "PIDs:"
-if [ -n "${OLLAMA_PID}" ]; then
-  echo "  Ollama:  ${OLLAMA_PID}"
-else
-  echo "  Ollama:  (already running)"
+if ! is_true "${USE_API_KEY}"; then
+  if [ -n "${OLLAMA_PID}" ]; then
+    echo "  Ollama:  ${OLLAMA_PID}"
+  else
+    echo "  Ollama:  (already running)"
+  fi
 fi
 if [ -n "${GATEWAY_PID}" ]; then
   echo "  Gateway: ${GATEWAY_PID}"

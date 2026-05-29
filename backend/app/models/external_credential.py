@@ -46,37 +46,39 @@ class CredentialType(str, enum.Enum):
 class ExternalCredential(Base):
     """
     External service credentials (OAuth tokens or PATs).
-    
+
     Credentials are encrypted at rest using AES-GCM via Fernet.
     One credential per (user_id, provider) pair.
     """
     __tablename__ = "external_credentials"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String(50), nullable=False)  # "atlassian", "github", etc.
     credential_type = Column(SQLEnum(CredentialType), nullable=False)
-    
+
     # Encrypted secrets (AES-GCM via Fernet)
     secret_enc = Column(LargeBinary, nullable=False)  # access_token (OAuth) or PAT
     refresh_token_enc = Column(LargeBinary, nullable=True)  # OAuth only
-    
+
     # OAuth metadata
     scope = Column(String(1000), nullable=True)  # space-separated scope list
     expires_at = Column(DateTime(timezone=True), nullable=True)  # OAuth only
-    
+
     # Provider-specific metadata (e.g., Atlassian cloud_id, GitHub user_login)
     # Uses JSON for SQLite compatibility, JSONB for PostgreSQL
     provider_metadata = Column(JSON, nullable=True)
-    
+
     # Revocation tracking
     revoked_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Relationship
+    # Relationships
+    tenant = relationship("Tenant", back_populates="external_credentials")
     user = relationship("User", backref="external_credentials")
 
     def __repr__(self) -> str:

@@ -27,8 +27,11 @@ class Settings(BaseSettings):
     # Database
     database_url: str = Field(..., env="DATABASE_URL")
 
-    # Ollama
-    ollama_url: str = Field(..., env="OLLAMA_URL")
+    # LLM provider toggle + configs
+    use_api_key: bool = Field(default=False, env="USE_API_KEY")
+    ollama_url: str = Field(default="", env="OLLAMA_URL")
+    anthropic_base_url: str = Field(default="", env="ANTHROPIC_BASE_URL")
+    anthropic_auth_token: str = Field(default="", env="ANTHROPIC_AUTH_TOKEN")
 
     # Backend
     backend_port: int = 8000
@@ -46,7 +49,13 @@ class Settings(BaseSettings):
 
 def validate_settings():
     """Validate that all required settings are present."""
-    required_vars = ["DATABASE_URL", "OLLAMA_URL", "SECRET_KEY"]
+    use_api_key = str(os.environ.get("USE_API_KEY", "false")).lower() in {"1", "true", "yes", "on"}
+
+    required_vars = ["DATABASE_URL", "SECRET_KEY"]
+    if use_api_key:
+        required_vars.extend(["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"])
+    else:
+        required_vars.append("OLLAMA_URL")
     missing = [var for var in required_vars if not os.environ.get(var)]
 
     if missing:
@@ -66,7 +75,12 @@ try:
     settings = Settings()
     print(f"✅ Configuration loaded successfully")
     print(f"  - Database: {settings.database_url.split('://')[0]}://...")
-    print(f"  - Ollama: {settings.ollama_url}")
+    if settings.use_api_key:
+        print(f"  - LLM Provider: API key backend")
+        print(f"  - Base URL: {settings.anthropic_base_url}")
+    else:
+        print(f"  - LLM Provider: Ollama")
+        print(f"  - Ollama: {settings.ollama_url}")
 except ValidationError as e:
     print(f"\n❌ Configuration error: {e}\n")
     sys.exit(1)

@@ -2,8 +2,10 @@
 
 Task D1: Integrates EnhancedToolCatalog for workflow-aware filtering.
 Task D2: Uses ToolExposurePolicy for workflow-scoped tool exposure.
+Task E1: Uses HeadlessEventBuilder for stable event contract with run_id correlation.
+Task E2: Integrates AskUserReason for structured HITL payloads.
 """
-from typing import List, Dict, Any, Optional, Callable, TYPE_CHECKING
+from typing import List, Dict, Any, Optional, Callable, TYPE_CHECKING, Awaitable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import logging
@@ -35,7 +37,92 @@ from app.services.tool_catalog import (
     get_default_metadata_registry,
     get_policy_for_workflow,
 )
+from app.services.headless_events import (
+    HeadlessEventBuilder,
+    AskUserReason,
+    RemediationOption,
+    InputField,
+    InputFieldType,
+    create_auth_remediation_options,
+    create_validation_remediation_options,
+    create_semantic_error_remediation_options,
+    create_rbac_remediation_options,
+    create_approval_remediation_options,
+    get_ask_user_reason_for_error_type,
+    get_remediation_options_for_error_type,
+    get_default_token_store,
+)
 from app.models.models import User
+import re
+
+
+def _format_semantic_error_message(tool_name: str, error: str) -> tuple[str, str, list]:
+    """
+    Format a semantic error into a user-friendly message.
+    
+    Returns: (title, message, remediation_options)
+    """
+    error_lower = error.lower()
+    
+    # Approval required errors
+    if "requires approval" in error_lower or "approval_required" in error_lower:
+        # Extract request ID if present
+        request_id_match = re.search(r'request_id:\s*([a-f0-9-]+)', error)
+        request_id = request_id_match.group(1) if request_id_match else None
+        
+        title = f"Approval Required: {tool_name}"
+        message = (
+            f"The **{tool_name}** tool requires approval before it can execute. "
+            f"This is a security measure for operations that modify data.\n\n"
+        )
+        if request_id:
+            message += f"**Request ID:** `{request_id}`\n\n"
+        message += (
+            "**What you can do:**\n"
+            "- Ask an administrator to approve this request\n"
+            "- Use a different approach that doesn't require this tool\n"
+            "- Check if you have the required permissions for this operation"
+        )
+        return title, message, create_approval_remediation_options(tool_name)
+    
+    # Validation errors
+    if "validation" in error_lower or "invalid" in error_lower:
+        title = f"Invalid Input: {tool_name}"
+        message = (
+            f"The **{tool_name}** tool received invalid input.\n\n"
+            f"**Error:** {error}\n\n"
+            "Please check your parameters and try again with corrected values."
+        )
+        return title, message, create_validation_remediation_options()
+    
+    # Permission/authorization errors
+    if "permission" in error_lower or "unauthorized" in error_lower or "forbidden" in error_lower:
+        title = f"Permission Denied: {tool_name}"
+        message = (
+            f"You don't have permission to use **{tool_name}**.\n\n"
+            f"**Error:** {error}\n\n"
+            "Contact your administrator if you believe you should have access."
+        )
+        return title, message, create_rbac_remediation_options()
+    
+    # Not found errors
+    if "not found" in error_lower:
+        title = f"Not Found: {tool_name}"
+        message = (
+            f"The requested resource was not found.\n\n"
+            f"**Error:** {error}\n\n"
+            "Please verify the identifiers and try again."
+        )
+        return title, message, create_semantic_error_remediation_options()
+    
+    # Generic semantic error
+    title = f"Tool Error: {tool_name}"
+    message = (
+        f"The **{tool_name}** tool encountered an error.\n\n"
+        f"**Error:** {error}\n\n"
+        "Please review the error message and try again with corrected input."
+    )
+    return title, message, create_semantic_error_remediation_options()
 
 if TYPE_CHECKING:
     from app.services.rate_limiter import RateLimiter
@@ -67,6 +154,13 @@ class AgenticConfig:
     tool_catalog_ttl_seconds: Optional[int] = None  # None = use default
     # Task D1: Enable enhanced catalog with metadata filtering
     use_enhanced_catalog: bool = True
+    # Session-scoped approval cache checker
+    # Signature: (session_id: int, tool_name: str, arguments: dict) -> bool
+    # Returns True if already approved for this session
+    session_approval_checker: Optional[Callable[[int, str, Dict[str, Any]], Awaitable[bool]]] = None
+    # Tool approval policy lookup
+    # Signature: (tool_name: str) -> Optional[str]  # Returns policy string or None
+    tool_approval_policy_lookup: Optional[Callable[[str], Optional[str]]] = None
     # Task D2: Workflow type for scoped tool exposure
     workflow_type: Optional[WorkflowType] = None  # None = GENERAL
 
@@ -97,6 +191,8 @@ class AgenticService:
     Task B1: Supports run-scoped tool catalog for deterministic routing.
     Task D1: Supports EnhancedToolCatalog with metadata filtering.
     Task D2: Supports workflow-scoped tool exposure policy.
+    Task E1: Uses HeadlessEventBuilder for stable event contract with run_id correlation.
+    Task E2: Supports structured HITL payloads for ask_user scenarios.
     """
 
     def __init__(
@@ -129,12 +225,22 @@ class AgenticService:
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
         self.simple_tools = SimpleTool()  # Initialize simple built-in tools
         
+        # Session context (set during execute)
+        self._session_id: Optional[int] = None
+        
         # Task B1: Run-scoped tool catalog (created fresh for each run)
         self._run_catalog: Optional[ToolCatalog] = None
         self._catalog_initialized: bool = False  # Track if catalog was ever set
         
         # Task D1: Enhanced tool catalog with metadata
         self._enhanced_catalog: Optional[EnhancedToolCatalog] = None
+        
+        # Task E1: Headless event builder for run-correlated events
+        # Wire in the default token store for durable resume token persistence
+        self._event_builder: HeadlessEventBuilder = HeadlessEventBuilder(
+            run_id=run_id,
+            token_store=get_default_token_store(),
+        )
 
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
@@ -250,6 +356,9 @@ class AgenticService:
         Returns:
             AgenticResult
         """
+        # Store session context for approval checks
+        self._session_id = session_id
+        
         steps: List[AgenticStep] = []
         current_messages = messages.copy()
         # Retry tracking is now run-scoped via AgentState._fingerprint_retry_counts
@@ -321,18 +430,19 @@ To use a tool, respond with a function call in the format expected by the API.""
 
             # Stream plan to user
             if self.config.stream_callback:
-                await self.config.stream_callback({
-                    "type": "plan_created",
-                    "steps": [s.description for s in plan.steps],
-                })
+                event = self._event_builder.plan_created([s.description for s in plan.steps])
+                await self.config.stream_callback(event.to_dict())
 
-        # Emit start event
+        # Emit start event (Task E1: use HeadlessEventBuilder for run_id correlation)
         if self.config.stream_callback:
-            await self.config.stream_callback({
-                "type": "workflow_start",
-                "available_tools": len(available_tools),
-                "max_steps": self.config.max_steps,
-            })
+            workflow_type_str = self.config.workflow_type.value if self.config.workflow_type else None
+            event = self._event_builder.workflow_start(
+                available_tools=len(available_tools),
+                max_steps=self.config.max_steps,
+                workflow_type=workflow_type_str,
+                model=model,
+            )
+            await self.config.stream_callback(event.to_dict())
 
         # Main control loop
         for step_num in range(1, self.config.max_steps + 1):
@@ -367,10 +477,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                 )
 
                 if self.config.stream_callback:
-                    await self.config.stream_callback({
-                        "type": "loop_detected",
-                        "step": step_num,
-                    })
+                    event = self._event_builder.loop_detected(step_number=step_num)
+                    await self.config.stream_callback(event.to_dict())
 
                 return AgenticResult(
                     final_response="Agent loop detected. Stopping execution to prevent infinite loop.",
@@ -411,10 +519,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                     )
 
                     if self.config.stream_callback:
-                        await self.config.stream_callback({
-                            "type": "low_confidence",
-                            "confidence": confidence,
-                        })
+                        event = self._event_builder.low_confidence(confidence=confidence, step_number=step_num)
+                        await self.config.stream_callback(event.to_dict())
 
                     # For MVP, continue anyway but log it
                     # In production, might want to ask user for confirmation
@@ -437,10 +543,11 @@ To use a tool, respond with a function call in the format expected by the API.""
                 )
 
                 if self.config.stream_callback:
-                    await self.config.stream_callback({
-                        "type": "workflow_complete",
-                        "total_steps": step_num,
-                    })
+                    event = self._event_builder.workflow_complete(
+                        total_steps=step_num,
+                        stopped_reason="completed",
+                    )
+                    await self.config.stream_callback(event.to_dict())
 
                 return AgenticResult(
                     final_response=final_text,
@@ -468,14 +575,14 @@ To use a tool, respond with a function call in the format expected by the API.""
                 )
 
                 if self.config.stream_callback:
-                    await self.config.stream_callback({
-                        "type": "step",
-                        "step_number": step_num,
-                        "action": "tool_calls",
-                        "tool_count": len(tool_calls),
-                        "tool_names": tool_names,
-                        "max_steps": self.config.max_steps,
-                    })
+                    event = self._event_builder.step(
+                        step_number=step_num,
+                        action="tool_calls",
+                        tool_names=tool_names,
+                        tool_count=len(tool_calls),
+                        max_steps=self.config.max_steps,
+                    )
+                    await self.config.stream_callback(event.to_dict())
 
                 should_retry_step = False  # Flag to break out of tool loop for retry
 
@@ -503,16 +610,16 @@ To use a tool, respond with a function call in the format expected by the API.""
                         )
                         tool_args = {}
 
-                    # Emit tool_executing event BEFORE execution
+                    # Emit tool_executing event BEFORE execution (Task E1: use builder)
                     if self.config.stream_callback:
-                        await self.config.stream_callback({
-                            "type": "tool_executing",
-                            "tool_name": tool_name,
-                            "tool_index": tool_calls.index(tool_call) + 1,
-                            "tool_total": len(tool_calls),
-                            "step_number": step_num,
-                            "arguments": {k: (str(v)[:100] + "..." if len(str(v)) > 100 else v) for k, v in tool_args.items()} if tool_args else {},
-                        })
+                        event = self._event_builder.tool_executing(
+                            tool_name=tool_name,
+                            tool_index=tool_calls.index(tool_call) + 1,
+                            tool_total=len(tool_calls),
+                            step_number=step_num,
+                            arguments=tool_args,
+                        )
+                        await self.config.stream_callback(event.to_dict())
 
                     logger.debug(
                         f"Executing tool: {tool_name}",
@@ -529,11 +636,12 @@ To use a tool, respond with a function call in the format expected by the API.""
                         logger.info(f"Approval required for tool: {tool_name}")
 
                         if self.config.stream_callback:
-                            await self.config.stream_callback({
-                                "type": "approval_request",
-                                "tool_name": tool_name,
-                                "arguments": tool_args,
-                            })
+                            event = self._event_builder.approval_request(
+                                tool_name=tool_name,
+                                arguments=tool_args,
+                                step_number=step_num,
+                            )
+                            await self.config.stream_callback(event.to_dict())
 
                         return AgenticResult(
                             final_response="",
@@ -545,7 +653,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     "tool_name": tool_name,
                                     "arguments": tool_args,
                                     "tool_call_id": tool_id,
-                                }
+                                },
+                                "run_id": self._event_builder.run_id,  # Task E1: Include run_id in metadata
                             },
                         )
 
@@ -646,17 +755,34 @@ To use a tool, respond with a function call in the format expected by the API.""
                             outcome=ActionOutcome.ABORTED,
                             error_type="previously_failed_terminal",
                         )
-                        # P1-1: Deterministic stop for terminal failures - return ASK_USER
+                        # P1 Fix: Emit ask_user event BEFORE returning
                         terminal_error_msg = (
                             f"Tool '{tool_name}' previously failed with a non-retryable error and cannot be retried. "
                             f"Please review the error and provide alternative instructions."
                         )
+                        if self.config.stream_callback:
+                            event = self._event_builder.ask_user(
+                                reason=AskUserReason.TERMINAL_ERROR,
+                                title="Previous Tool Failure",
+                                message=terminal_error_msg,
+                                options=get_remediation_options_for_error_type("previously_failed_terminal"),
+                                context={
+                                    "tool_name": tool_name,
+                                    "error_type": "previously_failed_terminal",
+                                },
+                                step_number=step_num,
+                            )
+                            await self.config.stream_callback(event.to_dict())
+                            # Persist token for durable resume
+                            await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
+                        
                         return AgenticResult(
                             final_response=terminal_error_msg,
                             steps=steps,
                             total_steps=step_num,
                             stopped_reason="ask_user",
                             error=f"Terminal tool failure: {tool_name}",
+                            metadata={"run_id": self._event_builder.run_id},
                         )
                     
                     # Check global budget
@@ -799,22 +925,22 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 extra=telemetry.to_dict(),
                             )
                             
-                            # Emit telemetry event
+                            # Emit telemetry event (Task E1: use builder for run_id correlation)
                             if self.config.stream_callback:
-                                await self.config.stream_callback({
-                                    "type": "tool_error",
-                                    "tool_name": tool_name,
-                                    "error": result.error,
-                                    "error_type": error_type.value,
-                                    "http_status": http_status,
-                                    "retryable": retryable,
-                                    "attempt_index": current_retries,
-                                    "attempt_budget": attempt_budget,
-                                    "recovery_strategy": action.strategy.value,
-                                    "terminal": action.terminal,
-                                    "duration_ms": tool_duration_ms,
-                                    "step_number": step_num,
-                                })
+                                event = self._event_builder.tool_error(
+                                    tool_name=tool_name,
+                                    step_number=step_num,
+                                    error=result.error,
+                                    error_type=error_type.value,
+                                    http_status=http_status,
+                                    retryable=retryable,
+                                    attempt_index=current_retries,
+                                    attempt_budget=attempt_budget,
+                                    recovery_strategy=action.strategy.value,
+                                    terminal=action.terminal,
+                                    duration_ms=tool_duration_ms,
+                                )
+                                await self.config.stream_callback(event.to_dict())
 
                             # Task A2: Check retry ownership before proceeding
                             # If MCP client exhausted transport retries, don't retry at agent level
@@ -823,54 +949,122 @@ To use a tool, respond with a function call in the format expected by the API.""
 
                             if action.strategy == ErrorRecoveryStrategy.RETRY:
                                 # Task A2: Semantic errors should never be retried as transient failures.
-                                # If classifier mapped a semantic error to TOOL_FAILURE, escalate to ASK_USER.
+                                # However, we should let the agent SEE the error and try alternative approaches.
                                 if is_semantic:
-                                    logger.warning(
-                                        f"Semantic error for {tool_name} cannot be retried; escalating to ASK_USER",
+                                    error_lower = (result.error or "").lower()
+                                    
+                                    # Check if this is an agent-blocking error that requires USER action
+                                    # Note: 401 from external services (BRS) is NOT blocking - agent can authenticate
+                                    # Only truly blocking are approval workflow and user-level auth issues
+                                    is_agent_blocking = (
+                                        "requires approval" in error_lower or
+                                        "approval_required" in error_lower or
+                                        "pending approval" in error_lower
+                                        # Removed: "not authenticated" - agent can try authenticate_club tool
+                                        # Removed: "unauthorized" - agent can recover by authenticating
+                                    )
+                                    
+                                    if is_agent_blocking:
+                                        # These errors need user action - escalate immediately
+                                        logger.warning(
+                                            f"Agent-blocking error for {tool_name}; escalating to ASK_USER",
+                                            extra={
+                                                "tool_name": tool_name,
+                                                "reason": "agent_blocking_error",
+                                                "error_type": error_type.value,
+                                            }
+                                        )
+                                        state.record_action(
+                                            action_type="tool_call",
+                                            action_data=action_data,
+                                            result=result.error,
+                                            success=False,
+                                            outcome=ActionOutcome.NON_RETRYABLE_FAILURE,
+                                            error_type=error_type.value,
+                                            http_status=http_status,
+                                            duration_ms=tool_duration_ms,
+                                        )
+
+                                        # Format error into user-friendly message
+                                        error_title, error_message, remediation_options = _format_semantic_error_message(
+                                            tool_name, result.error
+                                        )
+
+                                        if self.config.stream_callback:
+                                            event = self._event_builder.ask_user(
+                                                reason=AskUserReason.SEMANTIC_ERROR,
+                                                title=error_title,
+                                                message=error_message,
+                                                options=remediation_options,
+                                                context={
+                                                    "tool_name": tool_name,
+                                                    "error": result.error,
+                                                    "error_type": error_type.value,
+                                                },
+                                                step_number=step_num,
+                                            )
+                                            await self.config.stream_callback(event.to_dict())
+                                            await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
+
+                                        return AgenticResult(
+                                            final_response=error_message,
+                                            steps=steps,
+                                            total_steps=step_num,
+                                            stopped_reason="ask_user",
+                                            error=None,  # Don't set error - ask_user is a controlled pause, not a failure
+                                            metadata={
+                                                "tool_name": tool_name,
+                                                "error_type": error_type.value,
+                                                "semantic_error": True,
+                                                "error_detail": result.error,  # Store original error here for reference
+                                                "run_id": self._event_builder.run_id,
+                                            },
+                                        )
+                                    
+                                    # Recoverable semantic error - let agent see it and try alternatives
+                                    logger.info(
+                                        f"Semantic error for {tool_name}; feeding back to agent for recovery",
                                         extra={
                                             "tool_name": tool_name,
-                                            "reason": "semantic_retry_guard",
+                                            "reason": "agent_recovery_attempt",
                                             "error_type": error_type.value,
                                         }
                                     )
+                                    
                                     state.record_action(
                                         action_type="tool_call",
                                         action_data=action_data,
                                         result=result.error,
                                         success=False,
-                                        outcome=ActionOutcome.NON_RETRYABLE_FAILURE,
+                                        outcome=ActionOutcome.RETRYABLE_FAILURE,
                                         error_type=error_type.value,
                                         http_status=http_status,
                                         duration_ms=tool_duration_ms,
                                     )
-
+                                    
+                                    # Add tool result with error to message history so agent can reason about it
+                                    tool_executions.append({
+                                        "tool_call_id": tool_id,
+                                        "tool_name": tool_name,
+                                        "arguments": tool_args,
+                                        "result": result,  # Includes error info
+                                        "error": result.error,
+                                    })
+                                    
+                                    # Emit error event for streaming UI
                                     if self.config.stream_callback:
-                                        await self.config.stream_callback({
-                                            "type": "ask_user",
-                                            "tool_name": tool_name,
-                                            "reason": "Semantic tool failure requires user or model correction guidance",
-                                            "remediation_prompt": (
-                                                f"Tool '{tool_name}' returned a semantic error and cannot be retried automatically.\n"
-                                                f"Error: {result.error}"
-                                            ),
-                                            "error_type": error_type.value,
-                                        })
-
-                                    return AgenticResult(
-                                        final_response=(
-                                            f"Tool '{tool_name}' failed with a non-transient semantic error. "
-                                            f"Please review and provide corrected input. Error: {result.error}"
-                                        ),
-                                        steps=steps,
-                                        total_steps=step_num,
-                                        stopped_reason="ask_user",
-                                        error=f"Semantic error for {tool_name}",
-                                        metadata={
-                                            "tool_name": tool_name,
-                                            "error_type": error_type.value,
-                                            "semantic_error": True,
-                                        },
-                                    )
+                                        event = self._event_builder.tool_result(
+                                            tool_name=tool_name,
+                                            tool_index=tool_idx,
+                                            tool_total=len(tool_calls),
+                                            success=False,
+                                            error=result.error,
+                                            duration_ms=tool_duration_ms,
+                                        )
+                                        await self.config.stream_callback(event.to_dict())
+                                    
+                                    # Continue with next tool in this step (or next step)
+                                    continue
 
                                 # Task A2: Guard against retry amplification
                                 if transport_exhausted:
@@ -894,15 +1088,43 @@ To use a tool, respond with a function call in the format expected by the API.""
                                         duration_ms=tool_duration_ms,
                                     )
                                     
-                                    # Emit event and return ASK_USER
+                                    # Task E2: Emit structured ask_user event
                                     if self.config.stream_callback:
-                                        await self.config.stream_callback({
-                                            "type": "ask_user",
-                                            "tool_name": tool_name,
-                                            "reason": "Transport retries exhausted",
-                                            "remediation_prompt": f"Tool '{tool_name}' failed after {result.retry_count} transport retries. Error: {result.error}",
-                                            "error_type": error_type.value,
-                                        })
+                                        event = self._event_builder.ask_user(
+                                            reason=AskUserReason.TRANSPORT_EXHAUSTED,
+                                            title="Transport Retries Exhausted",
+                                            message=f"Tool '{tool_name}' failed after {result.retry_count} transport retries. Error: {result.error}",
+                                            options=[
+                                                RemediationOption(
+                                                    id="retry",
+                                                    label="Retry",
+                                                    description="Try the tool again",
+                                                    action="retry",
+                                                ),
+                                                RemediationOption(
+                                                    id="skip",
+                                                    label="Skip",
+                                                    description="Skip this tool and continue",
+                                                    action="skip",
+                                                ),
+                                                RemediationOption(
+                                                    id="abort",
+                                                    label="Cancel",
+                                                    description="Stop the workflow",
+                                                    action="abort",
+                                                ),
+                                            ],
+                                            context={
+                                                "tool_name": tool_name,
+                                                "error": result.error,
+                                                "error_type": error_type.value,
+                                                "retry_count": result.retry_count,
+                                            },
+                                            step_number=step_num,
+                                        )
+                                        await self.config.stream_callback(event.to_dict())
+                                        # Persist token for durable resume
+                                        await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
                                     
                                     return AgenticResult(
                                         final_response=f"Tool '{tool_name}' failed after exhausting transport retries. Error: {result.error}",
@@ -914,6 +1136,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                             "tool_name": tool_name,
                                             "error_type": error_type.value,
                                             "transport_retries": result.retry_count,
+                                            "run_id": self._event_builder.run_id,
                                         },
                                     )
                                 
@@ -1070,14 +1293,29 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 
                                 logger.info(f"Requesting user intervention for tool: {tool_name}")
                                 
+                                # P1 Fix: Use error-specific AskUserReason for targeted UI rendering
+                                ask_reason = get_ask_user_reason_for_error_type(error_type.value)
+                                remediation_options = get_remediation_options_for_error_type(
+                                    error_type.value,
+                                    tool_name=tool_name,
+                                )
+                                
                                 if self.config.stream_callback:
-                                    await self.config.stream_callback({
-                                        "type": "ask_user",
-                                        "tool_name": tool_name,
-                                        "reason": action.reason,
-                                        "remediation_prompt": action.remediation_prompt,
-                                        "error_type": error_type.value,
-                                    })
+                                    event = self._event_builder.ask_user(
+                                        reason=ask_reason,
+                                        title=f"Tool Error: {error_type.value.replace('_', ' ').title()}",
+                                        message=action.remediation_prompt or action.reason,
+                                        options=remediation_options,
+                                        context={
+                                            "tool_name": tool_name,
+                                            "error": result.error,
+                                            "error_type": error_type.value,
+                                        },
+                                        step_number=step_num,
+                                    )
+                                    await self.config.stream_callback(event.to_dict())
+                                    # Persist token for durable resume
+                                    await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
                                 
                                 return AgenticResult(
                                     final_response=action.remediation_prompt or action.reason,
@@ -1089,6 +1327,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                         "tool_name": tool_name,
                                         "remediation_prompt": action.remediation_prompt,
                                         "error_type": error_type.value,
+                                        "run_id": self._event_builder.run_id,
                                     },
                                 )
 
@@ -1150,6 +1389,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                             }
                         )
 
+                        # Task E1: Emit tool_result event with run_id correlation
                         if self.config.stream_callback:
                             # Prepare a safe preview of the result
                             result_preview = None
@@ -1157,15 +1397,15 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 result_str = str(result.result)
                                 result_preview = result_str[:200] + "..." if len(result_str) > 200 else result_str
 
-                            await self.config.stream_callback({
-                                "type": "tool_result",
-                                "tool_name": tool_name,
-                                "success": result.success,
-                                "duration_ms": tool_duration_ms,
-                                "step_number": step_num,
-                                "error": result.error if not result.success else None,
-                                "result_preview": result_preview,
-                            })
+                            event = self._event_builder.tool_result(
+                                tool_name=tool_name,
+                                step_number=step_num,
+                                success=result.success,
+                                duration_ms=tool_duration_ms,
+                                result_preview=result_preview,
+                                error=result.error if not result.success else None,
+                            )
+                            await self.config.stream_callback(event.to_dict())
 
                     except Exception as e:
                         tool_duration_ms = int((time.time() - tool_start_time) * 1000)
@@ -1207,16 +1447,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                         })
 
                         # Emit error event for tool execution failure
+                        # P1 Fix: Use event builder for exception path to maintain contract
                         if self.config.stream_callback:
-                            await self.config.stream_callback({
-                                "type": "tool_error",
-                                "tool_name": tool_name,
-                                "error": str(e),
-                                "error_type": error_type.value,
-                                "retryable": is_error_retryable(error_type),
-                                "duration_ms": tool_duration_ms,
-                                "step_number": step_num,
-                            })
+                            event = self._event_builder.tool_error(
+                                tool_name=tool_name,
+                                step_number=step_num,
+                                error=str(e),
+                                error_type=error_type.value,
+                                retryable=is_error_retryable(error_type),
+                                duration_ms=tool_duration_ms,
+                                terminal=not is_error_retryable(error_type),
+                            )
+                            await self.config.stream_callback(event.to_dict())
                         
                         # For exceptions, check if we should abort
                         if not is_error_retryable(error_type):
@@ -1229,6 +1471,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 metadata={
                                     "error_type": error_type.value,
                                     "action_history": state.get_action_history_summary(),
+                                    "run_id": self._event_builder.run_id,
                                 },
                             )
 
@@ -1278,14 +1521,15 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 extra={"session_id": session_id, "step": next_step.step_number}
                             )
 
-                        # Stream progress
+                        # Stream progress (Task E1: use builder for canonical contract)
                         if self.config.stream_callback:
-                            await self.config.stream_callback({
-                                "type": "plan_progress",
-                                "progress": plan.get_progress(),
-                                "current_step": next_step.description,
-                                "verified": verified,
-                            })
+                            event = self._event_builder.plan_progress(
+                                progress=plan.get_progress(),
+                                current_step=next_step.step_number,
+                                current_step_description=next_step.description,
+                                verified=verified,
+                            )
+                            await self.config.stream_callback(event.to_dict())
 
                 # Add assistant message with tool calls to history
                 current_messages.append({
@@ -1322,16 +1566,56 @@ To use a tool, respond with a function call in the format expected by the API.""
         )
 
         if self.config.stream_callback:
-            await self.config.stream_callback({
-                "type": "max_steps_reached",
-                "max_steps": self.config.max_steps,
-            })
+            event = self._event_builder.max_steps_reached(
+                max_steps=self.config.max_steps,
+                step_number=self.config.max_steps,
+            )
+            await self.config.stream_callback(event.to_dict())
+            
+            # Ask user if they want to continue
+            continue_event = self._event_builder.ask_user(
+                reason=AskUserReason.USER_INPUT_NEEDED,
+                title="Maximum Steps Reached",
+                message=(
+                    f"The workflow has reached the maximum of {self.config.max_steps} steps "
+                    f"but hasn't completed yet.\n\n"
+                    "Would you like to continue for more steps?"
+                ),
+                options=[
+                    RemediationOption(
+                        id="continue",
+                        label="Continue",
+                        description=f"Run for another {self.config.max_steps} steps",
+                        action="continue",
+                    ),
+                    RemediationOption(
+                        id="stop",
+                        label="Stop here",
+                        description="End the workflow with current progress",
+                        action="abort",
+                    ),
+                ],
+                context={
+                    "completed_steps": self.config.max_steps,
+                    "progress_so_far": steps[-1] if steps else None,
+                },
+                step_number=self.config.max_steps,
+            )
+            await self.config.stream_callback(continue_event.to_dict())
+            await self._event_builder.persist_resume_token(continue_event.payload.get("resume_token"))
 
         return AgenticResult(
-            final_response="Maximum steps reached. Workflow incomplete.",
+            final_response=(
+                f"Maximum steps ({self.config.max_steps}) reached. "
+                f"Would you like me to continue? Reply 'continue' or 'yes' to proceed with more steps."
+            ),
             steps=steps,
             total_steps=self.config.max_steps,
-            stopped_reason="max_steps",
+            stopped_reason="ask_user",  # Changed from "max_steps" to allow continuation
+            metadata={
+                "run_id": self._event_builder.run_id,
+                "can_continue": True,
+            },
         )
 
     async def _get_tool_definitions(self, user: User) -> List[Dict[str, Any]]:
@@ -1474,7 +1758,15 @@ To use a tool, respond with a function call in the format expected by the API.""
 
     async def _requires_approval(self, tool_name: str, arguments: Dict[str, Any]) -> bool:
         """
-        Check if tool requires user approval (write operations).
+        Check if tool requires user approval.
+
+        Uses a multi-tier system:
+        1. Check tool's approval policy (SAFE, SENSITIVE, DANGEROUS, CONTEXTUAL)
+        2. For SAFE: always return False
+        3. For SENSITIVE: check session approval cache, return False if cached
+        4. For DANGEROUS: always return True
+        5. For CONTEXTUAL: evaluate based on arguments, then apply logic
+        6. Fallback: use legacy write pattern matching
 
         Args:
             tool_name: Name of tool
@@ -1483,7 +1775,31 @@ To use a tool, respond with a function call in the format expected by the API.""
         Returns:
             True if approval required
         """
-        # Define write tool patterns
+        # 1. Check tool's approval policy if lookup function provided
+        if self.config.tool_approval_policy_lookup:
+            policy = self.config.tool_approval_policy_lookup(tool_name)
+            
+            if policy == "safe":
+                return False
+            
+            if policy == "dangerous":
+                return True
+            
+            if policy in ("sensitive", "contextual"):
+                # Check session approval cache if checker provided
+                if self.config.session_approval_checker and self._session_id:
+                    is_approved = await self.config.session_approval_checker(
+                        self._session_id, tool_name, arguments
+                    )
+                    if is_approved:
+                        logger.debug(
+                            f"Tool {tool_name} already approved for session {self._session_id}"
+                        )
+                        return False
+                # Not in cache, approval required
+                return True
+        
+        # 2. Legacy fallback: pattern-based detection for write operations
         write_patterns = [
             "create", "update", "delete", "write", "modify",
             "insert", "remove", "drop", "set", "patch"

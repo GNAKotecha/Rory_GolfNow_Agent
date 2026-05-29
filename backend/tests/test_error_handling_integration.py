@@ -119,10 +119,12 @@ class TestMCP401HandlingIntegration:
         # Should only have called the tool ONCE (no retries for auth errors)
         assert mock_mcp_registry.execute_tool.call_count == 1
         
-        # Should have emitted an ask_user event
+        # Should have emitted an ask_user event (Task E2: structured payload)
         ask_user_events = [e for e in events if e.get("type") == "ask_user"]
         assert len(ask_user_events) == 1
-        assert ask_user_events[0].get("error_type") == "auth_failure"
+        # Task E2: error_type is now in context for structured ask_user events
+        event_context = ask_user_events[0].get("context", {})
+        assert event_context.get("error_type") == "auth_failure"
     
     @pytest.mark.asyncio
     async def test_mcp_403_stops_immediately(self, mock_user, mock_ollama, mock_mcp_registry, agentic_config):

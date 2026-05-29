@@ -190,9 +190,14 @@ class OllamaError(Exception):
 
 
 class OllamaClient:
-    """Client for interacting with Ollama API.
+    """Client for interacting with the configured LLM API.
     
-    Task C1: Now uses shared HTTP client pool for connection reuse.
+    Supports two modes:
+    - `USE_API_KEY=false` (default): Ollama endpoint (`OLLAMA_URL`)
+    - `USE_API_KEY=true`: Anthropic-compatible API endpoint
+      (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`)
+
+    Task C1: Uses shared HTTP client pool for connection reuse.
     """
 
     def __init__(self, http_client: Optional[httpx.AsyncClient] = None):
@@ -203,10 +208,53 @@ class OllamaClient:
             http_client: Optional explicit HTTP client. If not provided,
                         uses the shared pool.
         """
-        self.base_url = settings.ollama_url
-        self.default_model = "qwen2.5-coder:32b"  # Code generation model
+        self.use_api_key = bool(settings.use_api_key)
+        self.base_url = (
+            settings.anthropic_base_url if self.use_api_key else settings.ollama_url
+        ).rstrip("/")
+        self.auth_token = settings.anthropic_auth_token if self.use_api_key else ""
+        self.default_model = (
+            os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+            if self.use_api_key
+            else os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:32b")
+        )
         self._explicit_client = http_client
         self._pool = OllamaHTTPClientPool.get_instance()
+
+    def _api_headers(self) -> Dict[str, str]:
+        """Auth headers for API-key mode."""
+        if not self.use_api_key:
+            return {}
+        token = self.auth_token
+        return {
+            "Authorization": f"Bearer {token}",
+            "x-api-key": token,
+            "Content-Type": "application/json",
+        }
+
+    @staticmethod
+    def _extract_text_content(content: Any) -> str:
+        """
+        Extract plain text from model message content.
+
+        Handles:
+        - plain string content
+        - OpenAI/Anthropic-style block arrays
+        """
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: List[str] = []
+            for item in content:
+                if isinstance(item, dict):
+                    # OpenAI-like structured block
+                    if isinstance(item.get("text"), str):
+                        parts.append(item["text"])
+                    # Anthropic block format
+                    elif item.get("type") == "text" and isinstance(item.get("text"), str):
+                        parts.append(item["text"])
+            return "".join(parts).strip()
+        return ""
     
     async def _get_client(self) -> httpx.AsyncClient:
         """Get HTTP client - explicit client or shared pool."""
@@ -215,19 +263,51 @@ class OllamaClient:
         return await self._pool.get_client()
 
     async def check_connection(self) -> bool:
-        """Check if Ollama service is reachable."""
+        """Check if configured LLM service is reachable."""
         try:
             client = await self._get_client()
-            response = await client.get(f"{self.base_url}/api/tags", timeout=5.0)
+            if self.use_api_key:
+                response = await client.get(
+                    f"{self.base_url}/v1/models",
+                    headers=self._api_headers(),
+                    timeout=5.0,
+                )
+            else:
+                response = await client.get(f"{self.base_url}/api/tags", timeout=5.0)
             return response.status_code == 200
         except Exception as e:
-            print(f"Ollama connection failed: {e}")
+            provider = "API key backend" if self.use_api_key else "Ollama"
+            print(f"{provider} connection failed: {e}")
             return False
 
     async def list_models(self) -> List[str]:
-        """List available models."""
+        """List available models from configured LLM backend."""
         try:
             client = await self._get_client()
+            if self.use_api_key:
+                response = await client.get(
+                    f"{self.base_url}/v1/models",
+                    headers=self._api_headers(),
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+                data = response.json()
+                # OpenAI-compatible shape: {"data": [{"id": "..."}]}
+                if isinstance(data, dict) and isinstance(data.get("data"), list):
+                    return [
+                        m.get("id")
+                        for m in data["data"]
+                        if isinstance(m, dict) and isinstance(m.get("id"), str)
+                    ]
+                # Fallback shape: [{"id": "..."}]
+                if isinstance(data, list):
+                    return [
+                        m.get("id")
+                        for m in data
+                        if isinstance(m, dict) and isinstance(m.get("id"), str)
+                    ]
+                return []
+
             response = await client.get(f"{self.base_url}/api/tags", timeout=10.0)
             response.raise_for_status()
             data = response.json()
@@ -243,7 +323,7 @@ class OllamaClient:
         keep_alive: str = "5m",
     ) -> str:
         """
-        Generate a chat completion from Ollama.
+        Generate a chat completion from the configured LLM backend.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
@@ -265,18 +345,32 @@ class OllamaClient:
 
         try:
             client = await self._get_client()
-            response = await client.post(
-                f"{self.base_url}/api/chat",
-                json={
-                    "model": model_name,
-                    "messages": messages,
-                    "stream": False,
-                    "keep_alive": keep_alive,
-                },
-                timeout=60.0,
-            )
+            if self.use_api_key:
+                response = await client.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=self._api_headers(),
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": False,
+                    },
+                    timeout=60.0,
+                )
+            else:
+                response = await client.post(
+                    f"{self.base_url}/api/chat",
+                    json={
+                        "model": model_name,
+                        "messages": messages,
+                        "stream": False,
+                        "keep_alive": keep_alive,
+                    },
+                    timeout=60.0,
+                )
 
             if response.status_code == 404:
+                if self.use_api_key:
+                    raise OllamaError(f"Model '{model_name}' not found on API backend")
                 raise OllamaError(
                     f"Model '{model_name}' not found. "
                     f"Pull it with: docker exec infrastructure-ollama-1 ollama pull {model_name}"
@@ -285,24 +379,35 @@ class OllamaClient:
             response.raise_for_status()
             data = response.json()
 
-            # Extract the assistant's message
-            assistant_message = data.get("message", {}).get("content", "")
+            # Extract assistant text across both response formats
+            if self.use_api_key:
+                choices = data.get("choices", [])
+                first_choice = choices[0] if choices else {}
+                message_obj = first_choice.get("message", {}) if isinstance(first_choice, dict) else {}
+                assistant_message = self._extract_text_content(message_obj.get("content"))
+            else:
+                assistant_message = self._extract_text_content(
+                    data.get("message", {}).get("content", "")
+                )
 
             if not assistant_message:
-                raise OllamaError("Empty response from Ollama")
+                raise OllamaError("Empty response from model service")
 
             return assistant_message
 
         except httpx.TimeoutException:
-            raise OllamaError("Ollama request timed out")
+            raise OllamaError("LLM request timed out")
         except httpx.ConnectError:
-            raise OllamaError("Cannot connect to Ollama service")
+            raise OllamaError("Cannot connect to model service")
         except httpx.HTTPStatusError as e:
-            raise OllamaError(f"Ollama HTTP error: {e.response.status_code}")
+            status = e.response.status_code
+            if status in (401, 403):
+                raise OllamaError("Authentication failed for API backend token")
+            raise OllamaError(f"LLM HTTP error: {status}")
         except Exception as e:
             if isinstance(e, OllamaError):
                 raise
-            raise OllamaError(f"Ollama request failed: {str(e)}")
+            raise OllamaError(f"LLM request failed: {str(e)}")
 
     async def generate_chat_completion_with_tools(
         self,
@@ -352,6 +457,51 @@ class OllamaClient:
 
         try:
             client = await self._get_client()
+            if self.use_api_key:
+                # OpenAI-compatible tool-calling path.
+                api_payload: Dict[str, Any] = {
+                    "model": model_name,
+                    "messages": messages,
+                    "stream": False,
+                }
+                if tools:
+                    api_payload["tools"] = tools
+                    api_payload["tool_choice"] = "auto"
+
+                response = await client.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=self._api_headers(),
+                    json=api_payload,
+                    timeout=60.0,
+                )
+
+                if response.status_code == 404:
+                    raise OllamaError(f"Model '{model_name}' not found on API backend")
+
+                response.raise_for_status()
+                data = response.json()
+
+                choices = data.get("choices", [])
+                first_choice = choices[0] if choices else {}
+                message = first_choice.get("message", {}) if isinstance(first_choice, dict) else {}
+                if not isinstance(message, dict):
+                    message = {}
+
+                tool_calls = message.get("tool_calls") or []
+                if tool_calls:
+                    return {
+                        "type": "tool_calls",
+                        "tool_calls": tool_calls,
+                    }
+
+                content = self._extract_text_content(message.get("content"))
+                if not content:
+                    raise OllamaError("Empty response from model service")
+                return {
+                    "type": "text",
+                    "content": content,
+                }
+
             response = await client.post(
                 f"{self.base_url}/api/chat",
                 json=payload,
@@ -623,19 +773,22 @@ class OllamaClient:
             }
 
         except httpx.TimeoutException:
-            raise OllamaError("Ollama request timed out")
+            raise OllamaError("LLM request timed out")
         except httpx.ConnectError:
-            raise OllamaError("Cannot connect to Ollama service")
+            raise OllamaError("Cannot connect to model service")
         except httpx.HTTPStatusError as e:
-            raise OllamaError(f"Ollama HTTP error: {e.response.status_code}")
+            status = e.response.status_code
+            if status in (401, 403):
+                raise OllamaError("Authentication failed for API backend token")
+            raise OllamaError(f"LLM HTTP error: {status}")
         except Exception as e:
             if isinstance(e, OllamaError):
                 raise
-            raise OllamaError(f"Ollama request failed: {str(e)}")
+            raise OllamaError(f"LLM request failed: {str(e)}")
 
 
 # Backward compatibility
 async def check_ollama_connection() -> bool:
-    """Check if Ollama service is reachable."""
+    """Check if configured LLM service is reachable."""
     client = OllamaClient()
     return await client.check_connection()

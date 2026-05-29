@@ -35,15 +35,24 @@ class AnalyticsService:
     def get_workflow_success_rate(
         self,
         template_id: int,
+        tenant_id: int,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> float:
         """Calculate success rate over completed/failed runs in range.
 
-        Returns 0.0 when no terminal runs exist.
+        Args:
+            template_id: Workflow template ID
+            tenant_id: Tenant ID for isolation (from JWT)
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            Success rate (0.0 when no terminal runs exist)
         """
         query = self.db.query(WorkflowRun).filter(
             WorkflowRun.template_id == template_id,
+            WorkflowRun.tenant_id == tenant_id,
             WorkflowRun.status.in_(
                 [WorkflowRunStatus.COMPLETED, WorkflowRunStatus.FAILED]
             ),
@@ -67,15 +76,24 @@ class AnalyticsService:
     def get_average_workflow_duration(
         self,
         template_id: int,
+        tenant_id: int,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> Optional[float]:
         """Average duration (seconds) for completed workflows in range.
 
-        Returns None when no completed workflows exist.
+        Args:
+            template_id: Workflow template ID
+            tenant_id: Tenant ID for isolation (from JWT)
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            Average duration in seconds (None when no completed workflows exist)
         """
         query = self.db.query(WorkflowRun).filter(
             WorkflowRun.template_id == template_id,
+            WorkflowRun.tenant_id == tenant_id,
             WorkflowRun.status == WorkflowRunStatus.COMPLETED,
             WorkflowRun.started_at.isnot(None),
             WorkflowRun.completed_at.isnot(None),
@@ -98,16 +116,27 @@ class AnalyticsService:
     def get_step_failure_analysis(
         self,
         template_id: int,
+        tenant_id: int,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """Per-step failure analysis across runs of a template.
 
-        Returns {step_name: {total_executions, failed_executions, failure_rate}}.
+        Args:
+            template_id: Workflow template ID
+            tenant_id: Tenant ID for isolation (from JWT)
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+
+        Returns:
+            Dict mapping step_name to {total_executions, failed_executions, failure_rate}
         """
         query = self.db.query(WorkflowStepExecution).join(
             WorkflowRun, WorkflowStepExecution.workflow_run_id == WorkflowRun.id
-        ).filter(WorkflowRun.template_id == template_id)
+        ).filter(
+            WorkflowRun.template_id == template_id,
+            WorkflowRun.tenant_id == tenant_id
+        )
 
         if start_date:
             query = query.filter(WorkflowRun.created_at >= start_date)
@@ -168,16 +197,27 @@ class AnalyticsService:
 
         return comparison
 
-    def get_dashboard_summary(self, template_id: int) -> Dict[str, Any]:
-        """Aggregate summary metrics for a workflow template."""
+    def get_dashboard_summary(self, template_id: int, tenant_id: int) -> Dict[str, Any]:
+        """Aggregate summary metrics for a workflow template.
+
+        Args:
+            template_id: Workflow template ID
+            tenant_id: Tenant ID for isolation (from JWT)
+
+        Returns:
+            Dictionary with success_rate, avg_duration_seconds, step_failures, total_runs
+        """
         total_runs = (
             self.db.query(WorkflowRun)
-            .filter(WorkflowRun.template_id == template_id)
+            .filter(
+                WorkflowRun.template_id == template_id,
+                WorkflowRun.tenant_id == tenant_id
+            )
             .count()
         )
         return {
-            "success_rate": self.get_workflow_success_rate(template_id),
-            "avg_duration_seconds": self.get_average_workflow_duration(template_id),
-            "step_failures": self.get_step_failure_analysis(template_id),
+            "success_rate": self.get_workflow_success_rate(template_id, tenant_id),
+            "avg_duration_seconds": self.get_average_workflow_duration(template_id, tenant_id),
+            "step_failures": self.get_step_failure_analysis(template_id, tenant_id),
             "total_runs": total_runs,
         }

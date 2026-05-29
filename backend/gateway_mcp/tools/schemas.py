@@ -63,9 +63,8 @@ class CreateClubInput(BaseModel):
     )
     country: str = Field(
         ...,
-        description="ISO 3166-1 alpha-2 country code (e.g., 'US', 'IE')",
+        description="Country for the golf club. Must be one of: 'Australia', 'Bermuda', 'Canada', 'England', 'Ireland', 'Mexico', 'Scotland', 'South Africa', 'United States', 'Wales'. Use the exact name as shown (case-sensitive). Example: 'United States'",
         min_length=2,
-        max_length=2,
     )
     timezone: str = Field(
         ...,
@@ -73,15 +72,13 @@ class CreateClubInput(BaseModel):
     )
     currency: str = Field(
         ...,
-        description="ISO 4217 currency code (e.g., 'USD', 'EUR')",
+        description="ISO 4217 currency code. Supported: USD (US/Mexico/Bermuda), CAD (Canada), AUD (Australia), ZAR (South Africa). Example: 'USD'. Note: Currency is typically auto-determined by country.",
         min_length=3,
         max_length=3,
     )
     
-    @field_validator("country")
-    @classmethod
-    def validate_country(cls, v: str) -> str:
-        return v.upper()
+    # Country should NOT be uppercased - BRS expects proper case like "Ireland", "United States"
+    # Removed: @field_validator("country")
     
     @field_validator("currency")
     @classmethod
@@ -157,6 +154,12 @@ class CreateAdminUserInput(BaseModel):
         ...,
         description="Admin email address",
         min_length=5,
+    )
+    username: Optional[str] = Field(
+        None,
+        description="Username for the admin (defaults to email prefix if not provided)",
+        min_length=1,
+        max_length=64,
     )
     role: AdminRole = Field(
         default=AdminRole.ADMIN,

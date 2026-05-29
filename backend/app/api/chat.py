@@ -36,6 +36,34 @@ from app.services.message_validator import (
     get_message_validator, MessageValidationError,
 )
 from app.services.tool_catalog import WorkflowType
+from app.services.model_selector import (
+    AUTO_MODEL_ID,
+    AUTO_MODEL_LABEL,
+    get_available_models,
+    is_manual_model_request,
+    resolve_model_selection,
+)
+from app.services.session_approval_cache import (
+    has_session_approval,
+    grant_session_approval,
+    extract_approval_pattern,
+)
+
+# Tool approval policy registry
+# Maps tool names to their approval policies
+TOOL_APPROVAL_POLICIES: Dict[str, str] = {
+    # Safe tools - no approval needed
+    "list_routes": "safe",
+    "get_config": "safe",
+    # Sensitive tools - first use requires approval, then cached
+    "run_sql": "sensitive",
+    # Contextual tools - depends on arguments
+    "call_api": "contextual",
+    # Existing BRS tools - use existing logic based on tool name
+    "create_club": "sensitive",
+    "verify_club_setup": "safe",
+    "get_club_by_name": "safe",
+}
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -80,11 +108,15 @@ async def initialize_mcp_infrastructure() -> MCPToolRegistry:
         health_checker = get_health_checker()
         
         # Register MCP servers with health checker
+        # Gateway MCP is REQUIRED - it provides BRS tools essential for MVP
         for server_name in _mcp_registry.clients.keys():
-            # TODO: Configure required vs optional per server from config
+            requirement = (
+                ServerRequirement.REQUIRED if "gateway" in server_name.lower()
+                else ServerRequirement.OPTIONAL
+            )
             health_checker.register_server(
                 server_name=server_name,
-                requirement=ServerRequirement.OPTIONAL,
+                requirement=requirement,
             )
         
         # Build probe functions
@@ -133,6 +165,8 @@ class ChatRequest(BaseModel):
     session_id: int
     message: str = Field(..., max_length=50000)  # Limit message size
     model: Optional[str] = None
+    allow_opus: bool = False
+    opus_justification: Optional[str] = None
     require_approval: Optional[bool] = None  # Override to make stricter (fail-safe)
     workflow_type: Optional[str] = None  # Task D2: Workflow-scoped tool exposure (club_setup, ticket_management, admin, general)
 
@@ -149,6 +183,22 @@ class ChatResponse(BaseModel):
     pending_approval: Optional[Dict[str, Any]] = None
     run_id: Optional[str] = None  # For tracking/resuming
     degraded_mode: bool = False  # True if some MCP servers unavailable
+
+
+class ModelOption(BaseModel):
+    """Selectable model option for frontend."""
+    id: str
+    label: str
+    provider: str
+    tier: str
+
+
+class ModelListResponse(BaseModel):
+    """Available chat models and defaults."""
+    options: List[ModelOption]
+    default_model: str
+    provider: str
+    policy_note: Optional[str] = None
 
 
 class ApprovalRequest(BaseModel):
@@ -255,6 +305,7 @@ async def chat(
         
         session = db.query(SessionModel).filter(
             SessionModel.id == request.session_id,
+            SessionModel.tenant_id == current_user.tenant_id,
             SessionModel.user_id == current_user.id
         ).first()
         if not session:
@@ -393,9 +444,15 @@ async def chat(
         # Determine approval requirement (fail-safe: can only make stricter)
         user_requires_approval = current_user.require_tool_approval
         request_requires_approval = request.require_approval
-
+        
+        # YOLO MODE: Environment variable to bypass all approval requirements (dev/test only)
+        import os
+        yolo_mode = os.environ.get("YOLO_MODE", "").lower() in ("1", "true", "yes")
+        if yolo_mode:
+            logger.warning("YOLO_MODE enabled - bypassing all approval requirements")
+            final_approval_setting = False
         # Fail-safe logic: request can only increase strictness, never decrease
-        if request_requires_approval is not None:
+        elif request_requires_approval is not None:
             # If user/org requires approval, client cannot disable it
             if user_requires_approval and not request_requires_approval:
                 logger.warning(
@@ -436,6 +493,33 @@ async def chat(
                 )
         
         ollama_client = OllamaClient()
+        model_selection = await resolve_model_selection(
+            requested_model=request.model,
+            messages=ollama_messages,
+            client=ollama_client,
+            allow_opus=request.allow_opus,
+            opus_justification=request.opus_justification,
+        )
+        resolved_model = model_selection.resolved_model
+
+        if (
+            is_manual_model_request(request.model)
+            and request.model
+            and resolved_model != request.model
+        ):
+            raise HTTPException(status_code=400, detail=model_selection.reason)
+        
+        # Create session approval checker callback
+        async def check_session_approval(session_id: int, tool_name: str, arguments: Dict[str, Any]) -> bool:
+            """Check if tool is already approved for this session."""
+            pattern = extract_approval_pattern(tool_name, arguments)
+            return has_session_approval(db, session_id, tool_name, pattern)
+        
+        # Create tool approval policy lookup
+        def get_tool_approval_policy(tool_name: str) -> Optional[str]:
+            """Get approval policy for a tool."""
+            return TOOL_APPROVAL_POLICIES.get(tool_name)
+        
         agentic_service = AgenticService(
             ollama_client=ollama_client,
             mcp_registry=mcp_registry,
@@ -448,6 +532,8 @@ async def chat(
                 enable_planning=False,  # Simplified for MVP
                 verify_plan_steps=False,
                 workflow_type=workflow_type_enum,  # Task D2: Workflow-scoped exposure
+                session_approval_checker=check_session_approval,
+                tool_approval_policy_lookup=get_tool_approval_policy,
             ),
             rate_limiter=rate_limiter,
             health_checker=health_checker,
@@ -462,6 +548,12 @@ async def chat(
                 "user_role": current_user.role.value,
                 "run_id": run_id,
                 "degraded_mode": degraded_mode,
+                "requested_model": request.model or AUTO_MODEL_ID,
+                "resolved_model": resolved_model,
+                "model_strategy": model_selection.strategy,
+                "model_complexity_tier": model_selection.complexity_tier,
+                "coding_request": model_selection.coding_request,
+                "allow_opus": request.allow_opus,
                 **context_metadata,
             }
         )
@@ -470,7 +562,7 @@ async def chat(
             messages=ollama_messages,
             user=current_user,
             session_id=request.session_id,
-            model=request.model,
+            model=resolved_model,
         )
 
         # Check for errors
@@ -486,7 +578,6 @@ async def chat(
             )
             # Mark workflow as failed
             workflow_classification.outcome = WorkflowOutcome.FAILED
-            from datetime import datetime
             workflow_classification.completed_at = datetime.utcnow()
             db.commit()
 
@@ -530,7 +621,7 @@ async def chat(
                 run_id=run_id,
                 session_id=request.session_id,
                 user_id=current_user.id,
-                model=request.model,
+                model=resolved_model,
                 max_steps=10,
                 current_step=agentic_result.total_steps,
                 status="paused_for_approval",
@@ -612,7 +703,7 @@ async def chat(
                 tool_call = ToolCall(
                     session_id=request.session_id,
                     tool_name=execution["tool_name"],
-                    parameters=execution["arguments"],
+                    parameters=execution.get("arguments", {}),
                     result=result_data,
                     error=error_data or execution.get("error"),
                 )
@@ -639,7 +730,6 @@ async def chat(
         db.add(assistant_message)
 
         # Update session timestamp
-        from datetime import datetime
         session.updated_at = datetime.utcnow()
 
         # Update workflow outcome based on agentic result
@@ -647,7 +737,7 @@ async def chat(
             workflow_classification.outcome = WorkflowOutcome.SUCCESS
         elif agentic_result.stopped_reason in ["max_steps", "loop_detected"]:
             workflow_classification.outcome = WorkflowOutcome.PARTIAL
-        elif agentic_result.stopped_reason == "approval_needed":
+        elif agentic_result.stopped_reason in ["approval_needed", "ask_user"]:
             workflow_classification.outcome = WorkflowOutcome.PENDING
         else:
             workflow_classification.outcome = WorkflowOutcome.FAILED
@@ -739,6 +829,57 @@ async def chat(
         await rate_limiter.release_run(current_user.id)
 
 
+@router.get("/models", response_model=ModelListResponse)
+async def list_chat_models(
+    current_user: User = Depends(get_approved_user),
+):
+    """
+    Return selectable chat models.
+
+    Includes `auto` dynamic routing and discovered concrete models.
+    """
+    _ = current_user  # explicit auth dependency
+    client = OllamaClient()
+    models = await get_available_models(client)
+    provider = "api_key" if client.use_api_key else "ollama"
+
+    options: List[ModelOption] = [
+        ModelOption(
+            id=AUTO_MODEL_ID,
+            label=AUTO_MODEL_LABEL,
+            provider=provider,
+            tier="dynamic",
+        )
+    ]
+
+    for model in models:
+        lower = model.lower()
+        if "haiku" in lower:
+            tier = "fast"
+        elif "sonnet" in lower:
+            tier = "balanced"
+        elif "opus" in lower:
+            tier = "power"
+        else:
+            tier = "custom"
+
+        options.append(
+            ModelOption(
+                id=model,
+                label=model,
+                provider=provider,
+                tier=tier,
+            )
+        )
+
+    return ModelListResponse(
+        options=options,
+        default_model=AUTO_MODEL_ID,
+        provider=provider,
+        policy_note="Auto defaults to Haiku, prefers Sonnet for coding, and only uses Opus (4.5/4.6) with explicit permission + justification. Opus 4.7 is blocked.",
+    )
+
+
 @router.post("/approve", response_model=ApprovalResponse)
 async def process_approval(
     request: ApprovalRequest,
@@ -748,8 +889,13 @@ async def process_approval(
     """
     Process approval or rejection for a pending tool call.
     
-    On approval, resumes the paused workflow.
-    On rejection, marks the workflow as cancelled.
+    On approval:
+    - Records approval in the approvals table
+    - Grants session approval for future calls to same tool type
+    - Resumes the paused workflow
+    
+    On rejection:
+    - Marks the workflow as cancelled
     """
     approval_service = get_approval_service(db)
     
@@ -775,11 +921,42 @@ async def process_approval(
             resumed=False,
         )
     
+    # Grant session approval so future calls to this tool type don't require approval
+    pending = run_state.pending_approval or {}
+    tool_name = pending.get("tool_name")
+    tool_args = pending.get("arguments", {})
+    session_id = run_state.session_id
+    
+    if tool_name and session_id:
+        try:
+            pattern = extract_approval_pattern(tool_name, tool_args)
+            grant_session_approval(
+                db=db,
+                session_id=session_id,
+                tool_name=tool_name,
+                user_id=current_user.id,
+                pattern=pattern,
+            )
+            logger.info(
+                f"Session approval granted for {tool_name}",
+                extra={
+                    "session_id": session_id,
+                    "tool_name": tool_name,
+                    "user_id": current_user.id,
+                }
+            )
+        except Exception as e:
+            # Log but don't fail - session approval is an optimization
+            logger.warning(
+                f"Failed to grant session approval: {e}",
+                extra={"session_id": session_id, "tool_name": tool_name}
+            )
+    
     # TODO: Resume workflow execution from run_state
     # For now, just confirm approval was recorded
     return ApprovalResponse(
         success=True,
-        message=f"Tool call approved: {run_state.pending_approval.get('tool_name')}",
+        message=f"Tool call approved: {tool_name}",
         resumed=False,  # Will be True when resume is implemented
     )
 

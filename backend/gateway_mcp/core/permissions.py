@@ -126,6 +126,12 @@ class PermissionService:
         Returns:
             True if approval gate should be triggered
         """
+        import os
+        # YOLO_MODE bypasses all approval requirements
+        yolo_mode = os.environ.get("YOLO_MODE", "").lower() in ("1", "true", "yes")
+        if yolo_mode:
+            return False
+        
         # Tool-level flag
         if tool.requires_approval:
             return True

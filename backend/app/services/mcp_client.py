@@ -652,8 +652,15 @@ class MCPClient:
         if "connection refused" in msg_lower:
             return "connection_refused"
         
-        if "upstream" in msg_lower and ("unavailable" in msg_lower or "error" in msg_lower):
+        # Upstream UNAVAILABLE (infrastructure issue) - terminal
+        if "upstream" in msg_lower and "unavailable" in msg_lower:
             return "upstream_unavailable"
+        
+        # Upstream returned an error response (data/query issue) - retryable
+        # e.g., "Upstream service 'teesheet-db' error: SQL query failed: Unknown database"
+        # This is NOT infrastructure unavailable - the service responded, just with an error
+        if "upstream" in msg_lower and "error" in msg_lower:
+            return "upstream_error"
         
         # Auth errors
         if any(p in msg_lower for p in ["401", "unauthorized", "invalid token", "expired token"]):

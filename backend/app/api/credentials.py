@@ -19,7 +19,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.auth_deps import get_current_user
+from app.api.auth_deps import get_current_user, get_current_user_tenant_id
 from app.db.session import get_db
 from app.models.models import User
 from gateway_mcp.core.credentials import (
@@ -160,14 +160,18 @@ class ErrorResponse(BaseModel):
 def list_credentials(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
 ):
     """
-    List user's connected external credentials.
-    
+    List user's connected external credentials within their tenant.
+
     Returns credential metadata without secrets.
     """
     store = get_credential_store(db)
-    credentials = store.list_credentials(user_id=current_user.id)
+    credentials = store.list_credentials(
+        user_id=current_user.id,
+        tenant_id=tenant_id
+    )
     
     return CredentialsListResponse(
         credentials=[CredentialInfo(**c) for c in credentials]
@@ -284,18 +288,27 @@ def oauth_callback(
     # Get provider from state (it was stored when authorization started)
     provider_name = state_data.get("provider", provider)
     user_id = state_data.get("user_id")
-    
+
     if not user_id:
         return RedirectResponse(
             url=f"{frontend_base}/settings/credentials?error=Invalid+state",
             status_code=status.HTTP_302_FOUND,
         )
-    
+
+    # Fetch user to get tenant_id
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return RedirectResponse(
+            url=f"{frontend_base}/settings/credentials?error=User+not+found",
+            status_code=status.HTTP_302_FOUND,
+        )
+
     store = get_credential_store(db)
-    
+
     try:
         store.store_oauth_credential(
             user_id=user_id,
+            tenant_id=user.tenant_id,
             provider=provider_name,
             access_token=token_result.access_token,
             refresh_token=token_result.refresh_token,
@@ -323,38 +336,40 @@ def store_pat(
     request: PATRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
 ):
     """
-    Store a Personal Access Token for a provider.
-    
+    Store a Personal Access Token for a provider within tenant.
+
     Validates the PAT and stores it encrypted.
     """
     pat_flow = get_pat_flow()
-    
+
     if provider not in pat_flow.list_providers():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Provider '{provider}' is not a PAT provider or not configured",
         )
-    
+
     # Validate the PAT
     result = pat_flow.validate_and_prepare(
         provider=provider,
         pat=request.pat,
     )
-    
+
     if not result.success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result.error.message if result.error else "Validation failed",
         )
-    
+
     # Store the credential
     store = get_credential_store(db)
-    
+
     try:
         store.store_pat_credential(
             user_id=current_user.id,
+            tenant_id=tenant_id,
             provider=provider,
             pat=request.pat,
             metadata=result.metadata,
@@ -379,24 +394,26 @@ def disconnect_provider(
     provider: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
 ):
     """
-    Disconnect an external provider.
-    
+    Disconnect an external provider within tenant.
+
     Revokes the stored credential (soft delete).
     """
     config = get_credentials_config()
-    
+
     if provider not in config["providers"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown provider: {provider}",
         )
-    
+
     store = get_credential_store(db)
-    
+
     revoked = store.revoke_credential(
         user_id=current_user.id,
+        tenant_id=tenant_id,
         provider=provider,
     )
     

@@ -61,13 +61,14 @@ def register(
             detail="Email already registered"
         )
 
-    # Create user
+    # Create user (assigned to default tenant)
     user = User(
         email=request.email,
         name=request.name,
         password_hash=get_password_hash(request.password),
         role=UserRole.USER,
         approval_status=ApprovalStatus.PENDING,
+        tenant_id=1,  # Default tenant
     )
     db.add(user)
     db.commit()
@@ -92,8 +93,11 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user.id)})
+    # Create access token with user_id and tenant_id
+    access_token = create_access_token(data={
+        "sub": str(user.id),
+        "tenant_id": user.tenant_id
+    })
 
     return TokenResponse(access_token=access_token)
 

@@ -9,6 +9,7 @@ from datetime import datetime
 from app.db.session import SessionLocal
 from app.models.models import Session as SessionModel, Message as MessageModel, User as UserModel
 from app.services.ollama import OllamaClient, OllamaError
+from app.core.config import settings
 
 router = APIRouter(prefix="/ollama", tags=["ollama-compat"])
 
@@ -73,7 +74,8 @@ async def ollama_chat_endpoint(request: Request):
     """
     try:
         body = await request.json()
-        model = body.get("model", "qwen2.5-coder:32b")
+        ollama_client = OllamaClient()
+        model = body.get("model", ollama_client.default_model)
         messages = body.get("messages", [])
         stream = body.get("stream", False)
 
@@ -116,8 +118,7 @@ async def ollama_chat_endpoint(request: Request):
                 for msg in all_messages
             ]
 
-            # Call Ollama
-            ollama_client = OllamaClient()
+            # Call configured LLM backend through unified client
             assistant_response = await ollama_client.generate_chat_completion(
                 messages=ollama_messages,
                 model=model,
@@ -164,13 +165,18 @@ async def ollama_chat_endpoint(request: Request):
 async def ollama_tags_endpoint():
     """
     Ollama-compatible tags endpoint.
-    Proxies directly to Ollama to get full model details.
+    In API-key mode, adapts /v1/models into Ollama-style shape.
     """
     try:
-        import httpx
-        from app.core.config import settings
+        if settings.use_api_key:
+            client = OllamaClient()
+            models = await client.list_models()
+            return {
+                "models": [{"name": name} for name in models]
+            }
 
-        # Proxy directly to Ollama for full model details
+        import httpx
+        # Proxy directly to Ollama for full model details when in Ollama mode.
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{settings.ollama_url}/api/tags")
             response.raise_for_status()

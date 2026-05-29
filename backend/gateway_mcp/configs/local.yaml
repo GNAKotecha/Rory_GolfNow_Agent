@@ -9,6 +9,8 @@ services:
   teesheet:
     container: brs-teesheet-php-1  # Container name in brs-teesheet docker-compose (usually 'php')
     url: http://localhost:8056  # Symfony app with REST APIs
+  teesheet-db:
+    container: brs-teesheet-mysqlhost-1  # MySQL container for SQL queries
   admin_api:
     url: http://localhost:8056  # Same app, different routes /{clubId}/api/admin/...
   config_api:

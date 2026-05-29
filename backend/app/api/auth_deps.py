@@ -88,6 +88,17 @@ async def get_admin_user(
     return current_user
 
 
+async def get_current_user_tenant_id(
+    current_user: User = Depends(get_current_user),
+) -> int:
+    """
+    Extract tenant_id from current authenticated user.
+    This is the authoritative source for tenant isolation - all queries
+    must filter by this value to ensure tenant data separation.
+    """
+    return current_user.tenant_id
+
+
 # Optional auth - returns None if no token provided
 async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),

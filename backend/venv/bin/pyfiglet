@@ -1,0 +1,6 @@
+#!/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/backend/venv/bin/python3.11
+import sys
+from pyfiglet import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

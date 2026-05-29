@@ -38,6 +38,34 @@ from gateway_mcp.tools.schemas import (
 
 logger = logging.getLogger(__name__)
 
+# ISO 3166-1 alpha-2 to full country name mapping for BRS
+# BRS expects full country names like "Ireland", not ISO codes like "IE"
+COUNTRY_CODE_MAP = {
+    "AU": "Australia",
+    "BM": "Bermuda",
+    "CA": "Canada",
+    "GB": "United Kingdom",
+    "IE": "Ireland",
+    "MX": "Mexico",
+    "US": "United States",
+    "ZA": "South Africa",
+}
+
+# Default coordinates per country (central location, within BRS validation ranges)
+# BRS validates that coordinates are within the country boundaries
+DEFAULT_COORDS_BY_COUNTRY = {
+    "Ireland": (53.3498, -7.2603),        # Dublin area but more central longitude
+    "United States": (39.8283, -98.5795),  # Geographic center of USA
+    "Canada": (56.1304, -106.3468),        # Saskatchewan, central Canada
+    "Australia": (-25.2744, 133.7751),     # Central Australia
+    "England": (52.3555, -1.1743),         # Midlands
+    "Scotland": (56.4907, -4.2026),        # Central Scotland
+    "Wales": (52.1307, -3.7837),           # Central Wales
+    "South Africa": (-30.5595, 22.9375),   # Central South Africa
+    "Mexico": (23.6345, -102.5528),        # Central Mexico
+    "Bermuda": (32.3078, -64.7505),        # Bermuda
+}
+
 
 # -----------------------------------------------------------------------------
 # create_club handler
@@ -71,6 +99,10 @@ async def create_club_handler(
     # Remove non-alphanumeric except underscore
     club_id = "".join(c for c in club_id if c.isalnum() or c == "_")
     
+    # Pass country as-is (user can provide either ISO code or full name)
+    # BRS will validate and convert as needed
+    country_value = input.country
+    
     # Build Symfony console command for brs-teesheet
     # php app/console brs:tbs:create-installation --club-id=<id> --name=<name> ...
     argv = [
@@ -78,18 +110,22 @@ async def create_club_handler(
         "--no-interaction",
         f"--club-id={club_id}",
         f"--name={input.name}",
-        f"--country={input.country}",
-        # Timezone and currency go into configuration table
-        f"--latitude=54.5441561",  # Default Belfast coordinates
-        f"--longitude=-5.9710524",
+        f"--country={country_value}",
+    ]
+    
+    # Add country-specific coordinates (BRS validates coordinates are within country)
+    default_coords = DEFAULT_COORDS_BY_COUNTRY.get(country_value, (53.3498, -7.2603))
+    argv.extend([
+        f"--latitude={default_coords[0]}",
+        f"--longitude={default_coords[1]}",
         "--member-module=y",
         "--visitor-module=y", 
         "--facility-module=y",
         "--mobile-enabled=y",
-    ]
+    ])
     
     logger.info(
-        f"Creating club: name={input.name}, club_id={club_id}, country={input.country}",
+        f"Creating club: name={input.name}, club_id={club_id}, country={country_value}",
         extra={"correlation_id": context.correlation_id},
     )
     
@@ -114,8 +150,17 @@ async def create_club_handler(
     # Parse output - look for success indicators
     stdout = result.stdout
     
+    # BRS validation failures exit with code 0 but output error text
+    # Check for known error patterns first
+    if "Validation Failure" in stdout or "Error:" in stdout or "Exception" in stdout:
+        raise UpstreamError(
+            service="teesheet",
+            detail=f"BRS validation failed: {stdout[:300]}",
+            audit_id=context.audit_id,
+        )
+    
     # Check for "SUCCESS" in output (from CreateTbsInstallationCommand)
-    if "SUCCESS" in stdout or result.exit_code == 0:
+    if "SUCCESS" in stdout:
         return CreateClubOutput(
             club_id=club_id,
             club_name=input.name,

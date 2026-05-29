@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## BRS API Documentation
+
+When API calls fail during testing, consult the BRS Swagger docs:
+- **Main API**: http://localhost:8056/api/documentation/
+- **Admin API**: http://localhost:8056/api/admin/documentation/
+- **GolfNow G1 API**: http://localhost:8056/api/g1/documentation/
+
+See `../.claude/rules/brs-api-reference.md` for detailed endpoint reference.
+
 ## Project Architecture
 
 ### Core Components

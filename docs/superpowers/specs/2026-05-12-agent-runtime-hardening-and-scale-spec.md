@@ -209,7 +209,7 @@ By completion:
 
 ### Phase E: CLI/headless readiness (Claude Code style trajectory)
 
-- [ ] **Task E1: Headless run contract**
+- [x] **Task E1: Headless run contract**
   - Define stable request/response event contract for headless/CLI mode:
     - `workflow_start`, `step`, `tool_executing`, `tool_result`, `tool_error`, `ask_user`, `final_response`.
   - Add run correlation id to all events.
@@ -221,7 +221,7 @@ By completion:
   - **Checks:**
     - Contract test for required fields per event type.
 
-- [ ] **Task E2: Human-in-the-loop command channel**
+- [x] **Task E2: Human-in-the-loop command channel**
   - Standardize `ask_user` remediation payload so CLI/UI can render structured options and resume.
   - Add response envelope for corrected input continuation.
   - **Files likely:**
@@ -287,9 +287,9 @@ At end of each phase (A-E), run a focused smoke scenario:
 
 ## Completion checklist
 
-- [ ] All phase tasks completed with tests passing.
-- [ ] No known infinite retry path for repeated tool failures.
-- [ ] Documented architecture boundaries with automated checks.
+- [x] All phase tasks completed with tests passing.
+- [x] No known infinite retry path for repeated tool failures.
+- [x] Documented architecture boundaries with automated checks.
 - [ ] Club setup workflow validates successfully in Runpod dev mode.
-- [ ] Handover updated with results, risks, and next-step recommendation.
+- [x] Handover updated with results, risks, and next-step recommendation.
 

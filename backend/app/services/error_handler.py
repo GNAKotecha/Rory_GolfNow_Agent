@@ -178,12 +178,15 @@ def classify_error_from_category(error_category: Optional[str], http_status: Opt
         # Catalog stale - separate terminal error
         "catalog_stale": ErrorType.CATALOG_STALE,
         
-        # Server/infrastructure issues
+        # Server/infrastructure issues (terminal - admin action needed)
         "server_unavailable": ErrorType.RESOURCE_EXHAUSTED,
         "container_unavailable": ErrorType.RESOURCE_EXHAUSTED,
         "docker_unavailable": ErrorType.RESOURCE_EXHAUSTED,
         "connection_refused": ErrorType.RESOURCE_EXHAUSTED,
         "upstream_unavailable": ErrorType.RESOURCE_EXHAUSTED,
+        
+        # Upstream returned error response (retryable - LLM can try different approach)
+        "upstream_error": ErrorType.TOOL_FAILURE,
         
         # RBAC denial (policy, not credentials)
         "rbac_denied": ErrorType.RBAC_DENIED,
@@ -237,6 +240,17 @@ def classify_error_from_message(error_message: str, http_status: Optional[int] =
     msg_lower = error_message.lower()
     
     # =========================================================================
+    # AUTH ERRORS - check BEFORE infrastructure to avoid misclassification
+    # e.g., "Upstream service error: API returned 401" should be AUTH_FAILURE, not RESOURCE_EXHAUSTED
+    # =========================================================================
+    if any(term in msg_lower for term in [
+        "unauthorized", "authentication", "401", "403", 
+        "forbidden", "invalid token", "expired token",
+        "invalid api key", "missing credentials", "not authenticated"
+    ]):
+        return ErrorType.AUTH_FAILURE
+    
+    # =========================================================================
     # INFRASTRUCTURE/CONTAINER ERRORS - classify as TOOL_FAILURE or RESOURCE_EXHAUSTED
     # These are NOT "tool not found" - the tool exists but its backend is unavailable
     # =========================================================================
@@ -259,18 +273,11 @@ def classify_error_from_message(error_message: str, http_status: Optional[int] =
         # Container/infra issues are resource failures, not missing tools
         return ErrorType.RESOURCE_EXHAUSTED
     
-    # Auth errors
-    if any(term in msg_lower for term in [
-        "unauthorized", "authentication", "401", "403", 
-        "forbidden", "invalid token", "expired token",
-        "invalid api key", "missing credentials"
-    ]):
-        return ErrorType.AUTH_FAILURE
-    
     # Validation errors
     if any(term in msg_lower for term in [
         "validation", "invalid", "schema", "400", "422",
-        "missing required", "type error", "format error"
+        "missing required", "type error", "format error",
+        "undefined index", "notice: undefined"  # PHP validation errors
     ]):
         return ErrorType.VALIDATION_ERROR
     

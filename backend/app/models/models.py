@@ -7,6 +7,28 @@ import enum
 from app.db.session import Base
 
 
+class Tenant(Base):
+    """Tenant/organization for multi-tenancy support."""
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False)
+    slug = Column(String(255), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    users = relationship("User", back_populates="tenant")
+    sessions = relationship("Session", back_populates="tenant")
+    workflow_events = relationship("WorkflowEvent", back_populates="tenant")
+    tool_calls = relationship("ToolCall", back_populates="tenant")
+    approvals = relationship("Approval", back_populates="tenant")
+    session_tool_approvals = relationship("SessionToolApproval", back_populates="tenant")
+    workflow_classifications = relationship("WorkflowClassification", back_populates="tenant")
+    external_credentials = relationship("ExternalCredential", back_populates="tenant")
+    workflow_runs = relationship("WorkflowRun", back_populates="tenant")
+
+
 class UserRole(str, enum.Enum):
     """User role types."""
     ADMIN = "admin"
@@ -62,6 +84,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
     password_hash = Column(String(255), nullable=False)
@@ -77,6 +100,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
+    tenant = relationship("Tenant", back_populates="users")
     sessions = relationship("Session", back_populates="user")
 
 
@@ -85,6 +109,7 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -96,6 +121,7 @@ class Session(Base):
     message_count_at_summary = Column(Integer, default=0, nullable=False)
 
     # Relationships
+    tenant = relationship("Tenant", back_populates="sessions")
     user = relationship("User", back_populates="sessions")
     messages = relationship("Message", back_populates="session", cascade="all, delete-orphan")
     workflow_events = relationship("WorkflowEvent", back_populates="session", cascade="all, delete-orphan")
@@ -120,12 +146,14 @@ class WorkflowEvent(Base):
     __tablename__ = "workflow_events"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
     event_type = Column(SQLEnum(WorkflowEventType), nullable=False, index=True)
     event_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
+    tenant = relationship("Tenant", back_populates="workflow_events")
     session = relationship("Session", back_populates="workflow_events")
 
 
@@ -134,6 +162,7 @@ class ToolCall(Base):
     __tablename__ = "tool_calls"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
     tool_name = Column(String(255), nullable=False, index=True)
     parameters = Column(JSON, nullable=True)
@@ -141,12 +170,16 @@ class ToolCall(Base):
     error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # Relationships
+    tenant = relationship("Tenant", back_populates="tool_calls")
+
 
 class Approval(Base):
     """User approval records for sensitive operations."""
     __tablename__ = "approvals"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
     request_type = Column(String(255), nullable=False)
     request_data = Column(JSON, nullable=True)
@@ -154,12 +187,45 @@ class Approval(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     responded_at = Column(DateTime, nullable=True)
 
+    # Relationships
+    tenant = relationship("Tenant", back_populates="approvals")
+
+
+class SessionToolApproval(Base):
+    """
+    Session-scoped tool approval cache.
+
+    Once a user approves a tool for a session, subsequent calls
+    to the same tool (with matching pattern) skip approval.
+    """
+    __tablename__ = "session_tool_approvals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
+    tool_name = Column(String(255), nullable=False, index=True)
+    # Pattern for contextual matching (e.g., {"method": "POST", "path_prefix": "/api/v3/"})
+    # NULL means "any arguments" for this tool
+    approval_pattern = Column(JSON, nullable=True)
+    # Hash of approval_pattern for unique constraint (computed on insert)
+    pattern_hash = Column(String(64), nullable=False)
+    approved_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="session_tool_approvals")
+
+    __table_args__ = (
+        UniqueConstraint('session_id', 'tool_name', 'pattern_hash', name='uq_session_tool_approval'),
+    )
+
 
 class WorkflowClassification(Base):
     """Workflow classification and outcome tracking."""
     __tablename__ = "workflow_classifications"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
     message_id = Column(Integer, ForeignKey("messages.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -179,6 +245,9 @@ class WorkflowClassification(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="workflow_classifications")
 
 
 class UserPreference(Base):

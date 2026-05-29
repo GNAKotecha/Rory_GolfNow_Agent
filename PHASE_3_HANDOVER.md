@@ -1,8 +1,158 @@
 # Phase 3 Handover: Onboarding Workflow + Testing + Analytics
 
-**Last Updated:** 2026-05-13  
+**Last Updated:** 2026-05-21  
 **Branch:** `phase-3-onboarding-testing-analytics`  
-**Status:** Agent Runtime Hardening Phase D complete — ready for review
+**Status:** Agent Runtime Hardening Phase E complete + external harness architecture audit complete
+
+---
+
+## External Harness Architecture Audit (2026-05-21)
+
+### Task: Build-vs-Continue Decision for Internal Headless Harness ✅
+
+**What was implemented:**
+- Audited external harness options for internal platform alignment:
+  - `nousresearch/hermes-agent`
+  - `pi.dev` docs and package ecosystem
+  - `earendil-works/pi` (`packages/coding-agent`)
+- Compared those options against current Phase 1-3 implementation state.
+- Produced a recommendation to continue development on this codebase rather than restart from scratch.
+
+**Decision summary:**
+- **Recommendation:** Continue development in current repository.
+- **Reasoning:** Current backend already has the key foundation for your target architecture:
+  - Headless event contract with run correlation (`run_id`) and HITL (`ask_user`) payloads
+  - Tool catalog + workflow/risk scoped exposure policy
+  - Backend/Gateway boundary with credential isolation rules
+  - Credential management API with OAuth/PAT endpoints suitable for frontend-driven connection UX
+
+**Files touched:**
+- `PHASE_3_HANDOVER.md` (this entry)
+- `docs/superpowers/plans/2026-05-01-phase-3-onboarding-testing-analytics.md` (checklist update)
+
+**Tests run:**
+- No code changes; no automated tests executed.
+- Verification performed via source/doc audit of local project + external harness docs.
+
+**Remaining risks / blockers:**
+- Frontend-driven MCP server onboarding/management UX is not yet fully productized.
+- OAuth/session token storage still has in-memory components noted in Phase E follow-ups.
+- Need clear server capability/risk profiles for mixed operations (e.g., BRS writes + Playwright/Salesforce scraping).
+
+**Suggested next task:**
+1. Implement MCP Connection Registry + frontend management endpoints/UI (add/edit/disable/test server, OAuth state, scope display).
+2. Add workflow template for combined `BRS create club` + `Playwright MCP scrape Salesforce` with approval gates.
+
+**Key learnings:**
+- Hermes provides strong native MCP OAuth patterns and filtering semantics worth mirroring.
+- Pi provides strong headless/runtime embedding and extension ergonomics; MCP in Pi is extension-driven.
+- Current project is already structurally aligned with your desired hosted, headless, extensible internal harness.
+
+---
+
+## Agent Runtime Hardening: Phase E (2026-05-14)
+
+**Spec:** `docs/superpowers/specs/2026-05-12-agent-runtime-hardening-and-scale-spec.md`
+
+### Task E1: Headless Run Contract ✅
+
+**What was implemented:**
+- Created new `backend/app/services/headless_events.py` module with:
+  - `HeadlessEventType` enum: All canonical event types for headless/CLI streaming
+  - `HeadlessEvent` dataclass: Base event with `run_id` correlation and timestamp
+  - `HeadlessEventBuilder` class: Builder for creating properly structured events with:
+    - Auto-generated `run_id` for correlation across all events in a run
+    - Builder methods for all event types: `workflow_start`, `step`, `tool_executing`, `tool_result`, `tool_error`, `ask_user`, `final_response`, etc.
+    - Argument truncation to prevent bloated payloads
+    - Resume token management for HITL flows
+  - `REQUIRED_FIELDS_BY_TYPE` dict: Validation rules per event type
+  - `validate_event()` helper: Validates events have all required fields
+
+- Updated `AgenticService` to use `HeadlessEventBuilder`:
+  - Initialized `_event_builder` in constructor with `run_id` correlation
+  - Converted all event emissions to use builder methods
+  - All events now include `run_id` and `timestamp` for multi-run reconciliation
+
+- Updated `frontend/lib/websocket.ts`:
+  - Added `run_id?: string` and `timestamp?: string` to `StreamEvent`
+  - Added `StreamEventType` type alias with all event types
+  - Added HITL-related types for Phase E2
+
+**Files changed:**
+- `backend/app/services/headless_events.py` - New module (550+ lines)
+- `backend/app/services/agentic_service.py` - Updated to use HeadlessEventBuilder
+- `frontend/lib/websocket.ts` - Updated with new types and run_id field
+- `backend/tests/test_headless_event_contract.py` - 44 new contract tests
+
+### Task E2: Human-in-the-Loop Command Channel ✅
+
+**What was implemented:**
+- Added structured HITL types to `headless_events.py`:
+  - `AskUserReason` enum: Categorizes why user intervention is needed (auth_required, validation_failed, semantic_error, etc.)
+  - `InputFieldType` enum: Field types for structured prompts (text, password, select, number, etc.)
+  - `InputField` dataclass: A single input field with validation rules
+  - `RemediationOption` dataclass: Selectable actions user can take (retry, skip, abort, etc.)
+  - `AskUserPayload` dataclass: Full structured payload with options, context, and resume_token
+  - `UserResponse` dataclass: Response envelope for corrected input continuation
+
+- Added factory functions for common remediation scenarios:
+  - `create_auth_remediation_options()` - Credential input + skip + abort
+  - `create_validation_remediation_options(missing_fields)` - Field inputs + skip + abort
+  - `create_semantic_error_remediation_options()` - Correction + alternative + skip + abort
+  - `create_approval_remediation_options(tool_name)` - Approve + deny + abort
+
+- Implemented resume token lifecycle in `HeadlessEventBuilder`:
+  - `ask_user()` generates and stores resume token with context
+  - `validate_resume_token()` checks if token is valid
+  - `consume_resume_token()` retrieves and removes token for use
+
+- Updated `AgenticService` ask_user events to use structured payloads:
+  - Semantic errors use `create_semantic_error_remediation_options()`
+  - Transport exhausted errors include retry/skip/abort options
+  - Terminal errors include standard remediation options
+  - All ask_user results include `run_id` in metadata
+
+- Updated `frontend/lib/websocket.ts` with HITL types:
+  - `AskUserReason` type alias
+  - `InputFieldType`, `InputField`, `RemediationOption` interfaces
+  - `AskUserPayload` and `UserResponsePayload` interfaces
+
+**Files changed:**
+- `backend/app/services/headless_events.py` - Added HITL types and factories
+- `backend/app/services/agentic_service.py` - Updated ask_user events
+- `frontend/lib/websocket.ts` - Added HITL types
+- `backend/tests/test_headless_event_contract.py` - Tests for HITL contract
+- `backend/tests/test_error_handling_integration.py` - Updated for structured payload
+
+### Phase E Test Summary
+
+```
+Headless Event Contract tests: 44
+Error Handling tests: 53 (including integration)
+Total new tests: 44
+Total passed: 97
+```
+
+### Key Design Decisions
+
+1. **Run ID Correlation**: Every event from a single workflow execution shares the same `run_id`, enabling multi-run reconciliation and log correlation.
+2. **Structured HITL Payloads**: `ask_user` events now include machine-readable remediation options instead of just text prompts. This enables CLI/UI to render consistent forms.
+3. **Resume Tokens**: Each `ask_user` event generates a unique resume token stored in the builder. The token allows stateless resumption of paused workflows.
+4. **Factory Functions**: Common remediation scenarios have factory functions to ensure consistency and reduce boilerplate.
+5. **Backward Compatible**: Old clients ignoring new fields will still work; `type`, `tool_name`, `error` etc. remain at top level.
+
+### Remaining Risk / Follow-up
+
+1. Resume token storage is in-memory in `HeadlessEventBuilder` - for multi-process deployments, tokens should be stored in Redis or similar.
+2. Frontend needs to implement UI for rendering `RemediationOption` inputs and sending `UserResponse` payloads.
+3. CLI client needs to be built to consume the headless event stream.
+
+### Suggested Next Steps
+
+1. Code review Phase E changes
+2. Merge after approval
+3. Build CLI client consuming headless event stream
+4. Update frontend to render structured HITL prompts
 
 ---
 

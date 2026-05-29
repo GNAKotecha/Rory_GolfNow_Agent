@@ -173,6 +173,9 @@ from gateway_mcp.tools.api import API_TOOLS
 # Import Atlassian/Jira tools
 from gateway_mcp.tools.jira import JIRA_TOOLS
 
+# Import Teesheet tools (low-level access)
+from gateway_mcp.tools.teesheet import TEESHEET_TOOLS
+
 
 def create_brs_registry() -> ToolRegistry:
     """
@@ -215,15 +218,22 @@ def create_full_registry() -> ToolRegistry:
     - authenticate_club (secure credential handling)
     - call_internal_api
     
+    Teesheet Tools (4):
+    - list_routes (discover API routes)
+    - call_api (generic HTTP client)
+    - run_sql (read-only SQL queries)
+    - get_config (configuration lookup)
+    
     Atlassian Tools (3):
     - create_ticket
     - get_ticket_status
     - add_comment
     
     Returns:
-        ToolRegistry with all 10 tools
+        ToolRegistry with all 14 tools
     """
     registry = create_brs_registry()
+    registry.register_all(TEESHEET_TOOLS)
     registry.register_all(JIRA_TOOLS)
     return registry
 
