@@ -519,7 +519,16 @@ async def chat(
         def get_tool_approval_policy(tool_name: str) -> Optional[str]:
             """Get approval policy for a tool."""
             return TOOL_APPROVAL_POLICIES.get(tool_name)
-        
+
+        # Phase 5 M3: Create RunState early for cursor persistence
+        run_state = RunState(
+            run_id=run_id,
+            session_id=request.session_id,
+            user_id=current_user.id,
+            model=resolved_model,
+            max_steps=10,
+        )
+
         agentic_service = AgenticService(
             ollama_client=ollama_client,
             mcp_registry=mcp_registry,
@@ -538,6 +547,7 @@ async def chat(
             rate_limiter=rate_limiter,
             health_checker=health_checker,
             run_id=run_id,
+            run_state=run_state,  # Phase 5 M3: Pass RunState for cursor persistence
         )
 
         logger.info(
@@ -615,26 +625,19 @@ async def chat(
                 )
                 # TODO: Resume workflow with auto-approval
                 # For now, proceed as normal approval flow
-            
-            # Create RunState for pause/resume
-            run_state = RunState(
-                run_id=run_id,
-                session_id=request.session_id,
-                user_id=current_user.id,
-                model=resolved_model,
-                max_steps=10,
-                current_step=agentic_result.total_steps,
-                status="paused_for_approval",
-                messages=[m for m in ollama_messages],  # Copy messages
-                steps=[
-                    {
-                        "step_number": s.step_number,
-                        "llm_response_type": s.llm_response.get("type"),
-                        "tool_executions": s.tool_executions,
-                    }
-                    for s in agentic_result.steps
-                ],
-            )
+
+            # Phase 5 M3: Update existing RunState with execution details
+            run_state.current_step = agentic_result.total_steps
+            run_state.status = "paused_for_approval"
+            run_state.messages = [m for m in ollama_messages]  # Copy messages
+            run_state.steps = [
+                {
+                    "step_number": s.step_number,
+                    "llm_response_type": s.llm_response.get("type"),
+                    "tool_executions": s.tool_executions,
+                }
+                for s in agentic_result.steps
+            ]
             run_state.pause_for_approval(pending_tool)
             
             # Create approval record

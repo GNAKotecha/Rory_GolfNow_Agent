@@ -52,8 +52,12 @@ from app.services.headless_events import (
     get_remediation_options_for_error_type,
     get_default_token_store,
 )
+from app.services.loop_budget_policy import LoopBudgetPolicy, BudgetProfile
 from app.models.models import User
 import re
+
+if TYPE_CHECKING:
+    from app.services.run_state import RunState
 
 
 def _format_semantic_error_message(tool_name: str, error: str) -> tuple[str, str, list]:
@@ -137,11 +141,12 @@ AGENT_RETRY_BUDGET = int(os.environ.get("AGENT_RETRY_BUDGET", "3"))
 @dataclass
 class AgenticConfig:
     """Configuration for agentic loop.
-    
+
     Task D1: Adds enhanced_catalog flag for EnhancedToolCatalog usage.
     Task D2: Adds workflow_type for workflow-scoped tool filtering.
+    Task 5M2.2: Uses LoopBudgetPolicy for profile-driven loop limits.
     """
-    max_steps: int = 10
+    max_steps: int = 10  # DEPRECATED: Use loop_budget_policy instead
     require_approval_for_write: bool = False
     timeout_seconds: int = 120
     enable_loop_detection: bool = True
@@ -158,6 +163,8 @@ class AgenticConfig:
     # Signature: (session_id: int, tool_name: str, arguments: dict) -> bool
     # Returns True if already approved for this session
     session_approval_checker: Optional[Callable[[int, str, Dict[str, Any]], Awaitable[bool]]] = None
+    # Task 5M2.2: Loop budget policy (replaces hardcoded max_steps)
+    loop_budget_policy: Optional[LoopBudgetPolicy] = None
     # Tool approval policy lookup
     # Signature: (tool_name: str) -> Optional[str]  # Returns policy string or None
     tool_approval_policy_lookup: Optional[Callable[[str], Optional[str]]] = None
@@ -180,7 +187,7 @@ class AgenticResult:
     final_response: str
     steps: List[AgenticStep]
     total_steps: int
-    stopped_reason: str  # "completed", "max_steps", "error", "approval_needed", "loop_detected", "timeout", "ask_user", "rate_limited", "tool_unavailable"
+    stopped_reason: str  # "completed", "max_steps", "error", "approval_needed", "loop_detected", "timeout", "ask_user", "rate_limited", "tool_unavailable", "budget_exhausted"
     error: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -203,6 +210,7 @@ class AgenticService:
         rate_limiter: Optional["RateLimiter"] = None,
         health_checker: Optional["MCPHealthChecker"] = None,
         run_id: Optional[str] = None,
+        run_state: Optional["RunState"] = None,
     ):
         """
         Initialize agentic service.
@@ -214,6 +222,7 @@ class AgenticService:
             rate_limiter: Optional rate limiter for tool calls
             health_checker: Optional health checker for MCP servers
             run_id: Optional run ID for tracking
+            run_state: Optional RunState for cursor persistence (Phase 5 M3)
         """
         self.ollama = ollama_client
         self.mcp = mcp_registry
@@ -221,20 +230,27 @@ class AgenticService:
         self.rate_limiter = rate_limiter
         self.health_checker = health_checker
         self.run_id = run_id
+        self.run_state = run_state  # Phase 5 M3: Resume continuity with cursor persistence
         self.error_handler = AgentErrorHandler(max_retries=3)
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
         self.simple_tools = SimpleTool()  # Initialize simple built-in tools
-        
+
+        # Task 5M2.2: Resolve loop budget policy (fallback to default if not provided)
+        if self.config.loop_budget_policy is None:
+            self.config.loop_budget_policy = LoopBudgetPolicy.resolve(BudgetProfile.DEFAULT.value)
+
         # Session context (set during execute)
         self._session_id: Optional[int] = None
-        
+        self._current_step: int = 0  # Phase 5 M3: Track current step for cursor
+        self._message_index: int = 0  # Phase 5 M3: Track message index for deduplication
+
         # Task B1: Run-scoped tool catalog (created fresh for each run)
         self._run_catalog: Optional[ToolCatalog] = None
         self._catalog_initialized: bool = False  # Track if catalog was ever set
-        
+
         # Task D1: Enhanced tool catalog with metadata
         self._enhanced_catalog: Optional[EnhancedToolCatalog] = None
-        
+
         # Task E1: Headless event builder for run-correlated events
         # Wire in the default token store for durable resume token persistence
         self._event_builder: HeadlessEventBuilder = HeadlessEventBuilder(
@@ -242,9 +258,50 @@ class AgenticService:
             token_store=get_default_token_store(),
         )
 
+    def _persist_cursor_if_available(
+        self,
+        step_number: int,
+        pause_reason: str,
+        tenant_id: Optional[int] = None,
+        additional_metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Persist cursor before workflow pause/interrupt (Phase 5 M3).
+
+        Args:
+            step_number: Current step number in workflow
+            pause_reason: Reason for pause (approval, ask_user, error)
+            tenant_id: Tenant ID for isolation validation
+            additional_metadata: Optional metadata (tool_name, error_type, etc.)
+        """
+        if not self.run_state:
+            return  # No RunState provided - cursor persistence not enabled
+
+        self.run_state.persist_cursor(
+            step_number=step_number,
+            message_index=self._message_index,
+            workflow_id=None,  # Could track workflow_id if needed
+            tenant_id=tenant_id,
+            additional_metadata={
+                "pause_reason": pause_reason,
+                "run_id": self.run_id,
+                **(additional_metadata or {})
+            }
+        )
+
+        logger.info(
+            f"Persisted cursor before {pause_reason}",
+            extra={
+                "run_id": self.run_id,
+                "step_number": step_number,
+                "message_index": self._message_index,
+                "pause_reason": pause_reason,
+            }
+        )
+
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
-        
+
         Guards against mocked/malformed catalog objects that would derail control flow.
         """
         if self._run_catalog is None:
@@ -358,7 +415,10 @@ class AgenticService:
         """
         # Store session context for approval checks
         self._session_id = session_id
-        
+
+        # Phase 5 M3: Track message index for cursor deduplication
+        self._message_index = len(messages)
+
         steps: List[AgenticStep] = []
         current_messages = messages.copy()
         # Retry tracking is now run-scoped via AgentState._fingerprint_retry_counts
@@ -391,6 +451,10 @@ To use a tool, respond with a function call in the format expected by the API.""
                 "content": system_prompt
             })
 
+        # Task 5M2.2: Use policy-driven loop budget
+        loop_budget = self.config.loop_budget_policy
+        max_steps = loop_budget.max_steps
+
         logger.info(
             "Starting agentic workflow",
             extra={
@@ -398,7 +462,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                 "user_role": user.role.value,
                 "session_id": session_id,
                 "available_tools": len(available_tools),
-                "max_steps": self.config.max_steps,
+                "max_steps": max_steps,
+                "budget_profile": loop_budget.profile.value,
             }
         )
 
@@ -438,16 +503,33 @@ To use a tool, respond with a function call in the format expected by the API.""
             workflow_type_str = self.config.workflow_type.value if self.config.workflow_type else None
             event = self._event_builder.workflow_start(
                 available_tools=len(available_tools),
-                max_steps=self.config.max_steps,
+                max_steps=max_steps,
                 workflow_type=workflow_type_str,
                 model=model,
             )
             await self.config.stream_callback(event.to_dict())
 
-        # Main control loop
-        for step_num in range(1, self.config.max_steps + 1):
+        # Main control loop (Task 5M2.2: Use policy-driven max_steps)
+        for step_num in range(1, max_steps + 1):
             state.current_step = step_num
+            self._current_step = step_num  # Phase 5 M3: Track for cursor persistence
             step_start = datetime.now(timezone.utc)
+
+            # Task 5M2.3: Emit budget warning at 80% threshold
+            warning_step = loop_budget.get_warning_step()
+            if step_num == warning_step:
+                logger.warning(
+                    f"Budget warning: {step_num}/{max_steps} steps used ({loop_budget.profile.value} profile)",
+                    extra={"session_id": session_id, "step": step_num, "profile": loop_budget.profile.value}
+                )
+                if self.config.stream_callback:
+                    event = self._event_builder.budget_warning(
+                        current_step=step_num,
+                        budget_limit=max_steps,
+                        remaining=max_steps - step_num,
+                        profile=loop_budget.profile.value,
+                    )
+                    await self.config.stream_callback(event.to_dict())
 
             # Check plan progress if planning enabled
             if plan:
@@ -580,7 +662,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                         action="tool_calls",
                         tool_names=tool_names,
                         tool_count=len(tool_calls),
-                        max_steps=self.config.max_steps,
+                        max_steps=max_steps,
                     )
                     await self.config.stream_callback(event.to_dict())
 
@@ -642,6 +724,17 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 step_number=step_num,
                             )
                             await self.config.stream_callback(event.to_dict())
+
+                        # Phase 5 M3: Persist cursor before approval pause
+                        self._persist_cursor_if_available(
+                            step_number=step_num,
+                            pause_reason="approval_needed",
+                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+                            additional_metadata={
+                                "tool_name": tool_name,
+                                "tool_call_id": tool_id,
+                            }
+                        )
 
                         return AgenticResult(
                             final_response="",
@@ -775,7 +868,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                             await self.config.stream_callback(event.to_dict())
                             # Persist token for durable resume
                             await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-                        
+
+                        # Phase 5 M3: Persist cursor before ask_user pause
+                        self._persist_cursor_if_available(
+                            step_number=step_num,
+                            pause_reason="ask_user_terminal_error",
+                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+                            additional_metadata={
+                                "tool_name": tool_name,
+                                "error_type": "terminal_error",
+                            }
+                        )
+
                         return AgenticResult(
                             final_response=terminal_error_msg,
                             steps=steps,
@@ -1006,6 +1110,17 @@ To use a tool, respond with a function call in the format expected by the API.""
                                             await self.config.stream_callback(event.to_dict())
                                             await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
 
+                                        # Phase 5 M3: Persist cursor before ask_user pause
+                                        self._persist_cursor_if_available(
+                                            step_number=step_num,
+                                            pause_reason="ask_user_semantic_error",
+                                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+                                            additional_metadata={
+                                                "tool_name": tool_name,
+                                                "error_type": error_type.value,
+                                            }
+                                        )
+
                                         return AgenticResult(
                                             final_response=error_message,
                                             steps=steps,
@@ -1125,7 +1240,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                                         await self.config.stream_callback(event.to_dict())
                                         # Persist token for durable resume
                                         await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-                                    
+
+                                    # Phase 5 M3: Persist cursor before ask_user pause
+                                    self._persist_cursor_if_available(
+                                        step_number=step_num,
+                                        pause_reason="ask_user_transport_exhausted",
+                                        tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+                                        additional_metadata={
+                                            "tool_name": tool_name,
+                                            "error_type": error_type.value,
+                                        }
+                                    )
+
                                     return AgenticResult(
                                         final_response=f"Tool '{tool_name}' failed after exhausting transport retries. Error: {result.error}",
                                         steps=steps,
@@ -1316,7 +1442,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     await self.config.stream_callback(event.to_dict())
                                     # Persist token for durable resume
                                     await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-                                
+
+                                # Phase 5 M3: Persist cursor before ask_user pause
+                                self._persist_cursor_if_available(
+                                    step_number=step_num,
+                                    pause_reason="ask_user_tool_error",
+                                    tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+                                    additional_metadata={
+                                        "tool_name": tool_name,
+                                        "error_type": error_type.value,
+                                    }
+                                )
+
                                 return AgenticResult(
                                     final_response=action.remediation_prompt or action.reason,
                                     steps=steps,
@@ -1555,37 +1692,38 @@ To use a tool, respond with a function call in the format expected by the API.""
                 # Continue loop - next iteration will call Ollama with updated messages
                 continue
 
-        # Max steps reached
+        # Max steps reached (Task 5M2.2: Use policy-driven max_steps)
         logger.warning(
             "Agentic workflow hit max steps",
             extra={
                 "user_id": user.id,
                 "session_id": session_id,
-                "max_steps": self.config.max_steps,
+                "max_steps": max_steps,
+                "budget_profile": loop_budget.profile.value,
             }
         )
 
         if self.config.stream_callback:
             event = self._event_builder.max_steps_reached(
-                max_steps=self.config.max_steps,
-                step_number=self.config.max_steps,
+                max_steps=max_steps,
+                step_number=max_steps,
             )
             await self.config.stream_callback(event.to_dict())
-            
+
             # Ask user if they want to continue
             continue_event = self._event_builder.ask_user(
                 reason=AskUserReason.USER_INPUT_NEEDED,
                 title="Maximum Steps Reached",
                 message=(
-                    f"The workflow has reached the maximum of {self.config.max_steps} steps "
-                    f"but hasn't completed yet.\n\n"
+                    f"The workflow has reached the maximum of {max_steps} steps "
+                    f"(budget profile: {loop_budget.profile.value}) but hasn't completed yet.\n\n"
                     "Would you like to continue for more steps?"
                 ),
                 options=[
                     RemediationOption(
                         id="continue",
                         label="Continue",
-                        description=f"Run for another {self.config.max_steps} steps",
+                        description=f"Run for another {max_steps} steps",
                         action="continue",
                     ),
                     RemediationOption(
@@ -1596,25 +1734,38 @@ To use a tool, respond with a function call in the format expected by the API.""
                     ),
                 ],
                 context={
-                    "completed_steps": self.config.max_steps,
+                    "completed_steps": max_steps,
                     "progress_so_far": steps[-1] if steps else None,
                 },
-                step_number=self.config.max_steps,
+                step_number=max_steps,
             )
             await self.config.stream_callback(continue_event.to_dict())
             await self._event_builder.persist_resume_token(continue_event.payload.get("resume_token"))
 
+        # Phase 5 M3: Persist cursor before budget exhausted pause
+        self._persist_cursor_if_available(
+            step_number=max_steps,
+            pause_reason="ask_user_budget_exhausted",
+            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
+            additional_metadata={
+                "budget_profile": loop_budget.profile.value,
+                "max_steps": max_steps,
+            }
+        )
+
         return AgenticResult(
             final_response=(
-                f"Maximum steps ({self.config.max_steps}) reached. "
+                f"Maximum steps ({max_steps}) reached (budget profile: {loop_budget.profile.value}). "
                 f"Would you like me to continue? Reply 'continue' or 'yes' to proceed with more steps."
             ),
             steps=steps,
-            total_steps=self.config.max_steps,
-            stopped_reason="ask_user",  # Changed from "max_steps" to allow continuation
+            total_steps=max_steps,
+            stopped_reason="ask_user",  # Ask user to continue (budget_exhausted event already emitted at warning threshold)
             metadata={
                 "run_id": self._event_builder.run_id,
                 "can_continue": True,
+                "budget_exhausted": True,  # Task 5M2.3: Mark budget exhaustion in telemetry
+                "budget_profile": loop_budget.profile.value,
             },
         )
 
