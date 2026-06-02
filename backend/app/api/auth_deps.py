@@ -88,6 +88,22 @@ async def get_admin_user(
     return current_user
 
 
+async def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Get current user and verify they are an admin.
+    Alias for get_admin_user() to match task requirements.
+    Raises 403 if user is not an admin.
+    """
+    if not is_user_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+    return current_user
+
+
 async def get_current_user_tenant_id(
     current_user: User = Depends(get_current_user),
 ) -> int:

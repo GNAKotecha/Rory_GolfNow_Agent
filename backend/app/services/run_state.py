@@ -63,7 +63,7 @@ class RunStateStep:
 class RunState:
     """
     Complete state of an agentic run for pause/resume.
-    
+
     This allows:
     - Serializing state before approval pause
     - Resuming from exact point after approve/reject
@@ -73,36 +73,39 @@ class RunState:
     run_id: str
     session_id: int
     user_id: int
-    
+
     # Configuration
     model: Optional[str] = None
     max_steps: int = 10
     current_step: int = 0
-    
+
     # Status
     status: str = "running"
     stopped_reason: Optional[str] = None
     error: Optional[str] = None
-    
+
     # Messages (current conversation state)
     messages: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     # Execution history
     steps: List[Dict[str, Any]] = field(default_factory=list)  # Serialized AgenticSteps
-    
+
     # State management
     completed_action_keys: Set[str] = field(default_factory=set)
     retry_counts: Dict[str, int] = field(default_factory=dict)
-    
+
     # Pending approval
     pending_approval: Optional[Dict[str, Any]] = None
-    
+
+    # Cursor for resume continuity (Milestone 3)
+    cursor: Optional[Dict[str, Any]] = None
+
     # Timestamps
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     paused_at: Optional[str] = None
     resumed_at: Optional[str] = None
-    
+
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     
@@ -162,20 +165,168 @@ class RunState:
         }
         self.updated_at = datetime.now(timezone.utc).isoformat()
     
+    def persist_cursor(
+        self,
+        step_number: int,
+        message_index: int,
+        workflow_id: Optional[str] = None,
+        tenant_id: Optional[int] = None,
+        additional_metadata: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Persist workflow cursor before pause or interrupt.
+
+        Args:
+            step_number: Current step number in workflow execution
+            message_index: Current message index in conversation
+            workflow_id: Optional workflow identifier
+            tenant_id: Tenant ID for isolation validation
+            additional_metadata: Optional additional cursor metadata
+        """
+        cursor = {
+            'step_number': step_number,
+            'message_index': message_index,
+            'workflow_id': workflow_id,
+            'tenant_id': tenant_id,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'metadata': additional_metadata or {}
+        }
+        self.cursor = cursor
+        self.updated_at = datetime.now(timezone.utc).isoformat()
+
+        logger.info(
+            f"Persisted cursor for run {self.run_id}",
+            extra={
+                "run_id": self.run_id,
+                "step_number": step_number,
+                "message_index": message_index,
+                "tenant_id": tenant_id,
+            }
+        )
+
+    def get_cursor(self) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve cursor data.
+
+        Returns:
+            Cursor dictionary if exists, None otherwise
+        """
+        return self.cursor
+
+    def validate_cursor(
+        self,
+        current_tenant_id: int,
+        max_age_minutes: int = 60
+    ) -> bool:
+        """
+        Validate cursor before resume.
+
+        Validates:
+        - Cursor exists
+        - Tenant ID matches
+        - Cursor age is within limit
+
+        Args:
+            current_tenant_id: Current tenant ID for isolation check (REQUIRED)
+            max_age_minutes: Maximum cursor age in minutes (default: 60)
+
+        Returns:
+            True if cursor is valid, False otherwise
+
+        Raises:
+            ValueError: If current_tenant_id is None
+        """
+        if not self.cursor:
+            logger.warning(f"No cursor found for run {self.run_id}")
+            return False
+
+        # Ensure tenant_id is required
+        if current_tenant_id is None:
+            raise ValueError("current_tenant_id is required for cursor validation")
+
+        # Tenant validation
+        cursor_tenant_id = self.cursor.get('tenant_id')
+        if cursor_tenant_id is None:
+            logger.warning(
+                f"Cursor lacks tenant_id for run {self.run_id}",
+                extra={"current_tenant_id": current_tenant_id}
+            )
+            return False
+
+        if cursor_tenant_id != current_tenant_id:
+            logger.warning(
+                f"Cursor tenant mismatch for run {self.run_id}",
+                extra={
+                    "cursor_tenant_id": cursor_tenant_id,
+                    "current_tenant_id": current_tenant_id,
+                }
+            )
+            return False
+
+        # Age validation (prevent old cursors from being replayed)
+        try:
+            cursor_time = datetime.fromisoformat(self.cursor['timestamp'])
+            age_seconds = (datetime.now(timezone.utc) - cursor_time).total_seconds()
+            if age_seconds > max_age_minutes * 60:
+                logger.warning(
+                    f"Cursor expired for run {self.run_id}",
+                    extra={
+                        "age_seconds": age_seconds,
+                        "max_age_minutes": max_age_minutes,
+                    }
+                )
+                return False
+        except (KeyError, ValueError) as e:
+            logger.warning(f"Invalid cursor timestamp for run {self.run_id}: {e}")
+            return False
+
+        logger.info(f"Cursor validated successfully for run {self.run_id}")
+        return True
+
+    def resume_from_cursor(
+        self,
+        current_tenant_id: Optional[int] = None,
+        max_age_minutes: int = 60
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Attempt to resume from cursor with validation.
+
+        Args:
+            current_tenant_id: Current tenant ID for isolation check
+            max_age_minutes: Maximum cursor age in minutes
+
+        Returns:
+            Validated cursor dictionary if valid, None otherwise
+        """
+        if self.validate_cursor(current_tenant_id, max_age_minutes):
+            logger.info(f"Resuming from cursor for run {self.run_id}")
+            return self.cursor
+
+        logger.warning(f"Cannot resume from invalid cursor for run {self.run_id}")
+        return None
+
     def resume_after_approval(self, approved: bool, user_comment: Optional[str] = None):
         """Resume after approval decision."""
         self.status = RunStatus.RUNNING.value
         self.resumed_at = datetime.now(timezone.utc).isoformat()
-        
+
         if self.pending_approval:
             self.pending_approval["decision"] = (
-                ApprovalDecision.APPROVED.value if approved 
+                ApprovalDecision.APPROVED.value if approved
                 else ApprovalDecision.REJECTED.value
             )
             self.pending_approval["decided_at"] = self.resumed_at
             self.pending_approval["user_comment"] = user_comment
-        
+
         self.updated_at = datetime.now(timezone.utc).isoformat()
+
+        # Validate cursor if present
+        cursor_tenant_id = self.cursor.get('tenant_id') if self.cursor else None
+        if cursor_tenant_id and not self.validate_cursor(cursor_tenant_id):
+            logger.warning(
+                f"Resume after approval with invalid cursor for run {self.run_id}",
+                extra={"cursor_tenant_id": cursor_tenant_id}
+            )
     
     def mark_completed(self, response: str, reason: str = "completed"):
         """Mark run as completed."""

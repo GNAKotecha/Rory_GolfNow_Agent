@@ -167,15 +167,24 @@ class AnalyticsService:
         return analysis
 
     def get_prompt_version_comparison(
-        self, template_id: int
+        self,
+        template_id: int,
+        tenant_id: int
     ) -> List[Dict[str, Any]]:
         """Compare metrics across all versions of a prompt template.
+
+        Args:
+            template_id: Workflow template ID
+            tenant_id: Tenant ID for isolation (from JWT)
 
         Returns a list sorted by version_number.
         """
         versions = (
             self.db.query(PromptTemplateVersion)
-            .filter(PromptTemplateVersion.template_id == template_id)
+            .filter(
+                PromptTemplateVersion.template_id == template_id,
+                PromptTemplateVersion.tenant_id == tenant_id
+            )
             .order_by(PromptTemplateVersion.version_number)
             .all()
         )

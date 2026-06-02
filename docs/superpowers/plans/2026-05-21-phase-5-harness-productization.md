@@ -33,12 +33,12 @@ Create a reusable, headless harness that supports multi-client deployment with:
 
 ## Task Completion Status
 
-**Progress:** 1 of 9 tasks complete (11%)
+**Progress:** 4 of 9 tasks complete (44%) - Milestones 1 & 2 COMPLETE ✅, Milestone 3 IN PROGRESS
 
-- [x] **Task 1**: Define tenant boundary and ownership model (database + service layer)
-- [ ] **Task 2**: Implement policy-driven loop budget system (replace hardcoded limits)
-- [ ] **Task 3**: Add budget-pressure warning events to headless contract
-- [ ] **Task 4**: Implement true resume continuity (preserve `run_id`, unify REST/WS paths)
+- [x] **Task 1**: Define tenant boundary and ownership model (database + service layer) ✅
+- [x] **Task 2**: Implement policy-driven loop budget system (replace hardcoded limits) ✅
+- [x] **Task 3**: Add budget-pressure warning events to headless contract ✅
+- [x] **Task 4**: Implement true resume continuity - RunState cursor persistence COMPLETE ✅
 - [ ] **Task 5**: Build frontend-manageable MCP integration registry (OAuth + API-key support)
 - [ ] **Task 6**: Build frontend-manageable skill/workflow registries (tenant-scoped, versioned)
 - [ ] **Task 7**: Implement two-layer memory architecture (working + historical retrieval)

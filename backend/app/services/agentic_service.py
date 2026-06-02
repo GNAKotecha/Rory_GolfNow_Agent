@@ -56,9 +56,6 @@ from app.services.loop_budget_policy import LoopBudgetPolicy, BudgetProfile
 from app.models.models import User
 import re
 
-if TYPE_CHECKING:
-    from app.services.run_state import RunState
-
 
 def _format_semantic_error_message(tool_name: str, error: str) -> tuple[str, str, list]:
     """
@@ -210,7 +207,6 @@ class AgenticService:
         rate_limiter: Optional["RateLimiter"] = None,
         health_checker: Optional["MCPHealthChecker"] = None,
         run_id: Optional[str] = None,
-        run_state: Optional["RunState"] = None,
     ):
         """
         Initialize agentic service.
@@ -222,7 +218,6 @@ class AgenticService:
             rate_limiter: Optional rate limiter for tool calls
             health_checker: Optional health checker for MCP servers
             run_id: Optional run ID for tracking
-            run_state: Optional RunState for cursor persistence (Phase 5 M3)
         """
         self.ollama = ollama_client
         self.mcp = mcp_registry
@@ -230,7 +225,6 @@ class AgenticService:
         self.rate_limiter = rate_limiter
         self.health_checker = health_checker
         self.run_id = run_id
-        self.run_state = run_state  # Phase 5 M3: Resume continuity with cursor persistence
         self.error_handler = AgentErrorHandler(max_retries=3)
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
         self.simple_tools = SimpleTool()  # Initialize simple built-in tools
@@ -241,16 +235,14 @@ class AgenticService:
 
         # Session context (set during execute)
         self._session_id: Optional[int] = None
-        self._current_step: int = 0  # Phase 5 M3: Track current step for cursor
-        self._message_index: int = 0  # Phase 5 M3: Track message index for deduplication
-
+        
         # Task B1: Run-scoped tool catalog (created fresh for each run)
         self._run_catalog: Optional[ToolCatalog] = None
         self._catalog_initialized: bool = False  # Track if catalog was ever set
-
+        
         # Task D1: Enhanced tool catalog with metadata
         self._enhanced_catalog: Optional[EnhancedToolCatalog] = None
-
+        
         # Task E1: Headless event builder for run-correlated events
         # Wire in the default token store for durable resume token persistence
         self._event_builder: HeadlessEventBuilder = HeadlessEventBuilder(
@@ -258,50 +250,9 @@ class AgenticService:
             token_store=get_default_token_store(),
         )
 
-    def _persist_cursor_if_available(
-        self,
-        step_number: int,
-        pause_reason: str,
-        tenant_id: Optional[int] = None,
-        additional_metadata: Optional[Dict[str, Any]] = None
-    ) -> None:
-        """
-        Persist cursor before workflow pause/interrupt (Phase 5 M3).
-
-        Args:
-            step_number: Current step number in workflow
-            pause_reason: Reason for pause (approval, ask_user, error)
-            tenant_id: Tenant ID for isolation validation
-            additional_metadata: Optional metadata (tool_name, error_type, etc.)
-        """
-        if not self.run_state:
-            return  # No RunState provided - cursor persistence not enabled
-
-        self.run_state.persist_cursor(
-            step_number=step_number,
-            message_index=self._message_index,
-            workflow_id=None,  # Could track workflow_id if needed
-            tenant_id=tenant_id,
-            additional_metadata={
-                "pause_reason": pause_reason,
-                "run_id": self.run_id,
-                **(additional_metadata or {})
-            }
-        )
-
-        logger.info(
-            f"Persisted cursor before {pause_reason}",
-            extra={
-                "run_id": self.run_id,
-                "step_number": step_number,
-                "message_index": self._message_index,
-                "pause_reason": pause_reason,
-            }
-        )
-
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
-
+        
         Guards against mocked/malformed catalog objects that would derail control flow.
         """
         if self._run_catalog is None:
@@ -415,10 +366,7 @@ class AgenticService:
         """
         # Store session context for approval checks
         self._session_id = session_id
-
-        # Phase 5 M3: Track message index for cursor deduplication
-        self._message_index = len(messages)
-
+        
         steps: List[AgenticStep] = []
         current_messages = messages.copy()
         # Retry tracking is now run-scoped via AgentState._fingerprint_retry_counts
@@ -512,7 +460,6 @@ To use a tool, respond with a function call in the format expected by the API.""
         # Main control loop (Task 5M2.2: Use policy-driven max_steps)
         for step_num in range(1, max_steps + 1):
             state.current_step = step_num
-            self._current_step = step_num  # Phase 5 M3: Track for cursor persistence
             step_start = datetime.now(timezone.utc)
 
             # Task 5M2.3: Emit budget warning at 80% threshold
@@ -725,17 +672,6 @@ To use a tool, respond with a function call in the format expected by the API.""
                             )
                             await self.config.stream_callback(event.to_dict())
 
-                        # Phase 5 M3: Persist cursor before approval pause
-                        self._persist_cursor_if_available(
-                            step_number=step_num,
-                            pause_reason="approval_needed",
-                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-                            additional_metadata={
-                                "tool_name": tool_name,
-                                "tool_call_id": tool_id,
-                            }
-                        )
-
                         return AgenticResult(
                             final_response="",
                             steps=steps,
@@ -868,18 +804,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                             await self.config.stream_callback(event.to_dict())
                             # Persist token for durable resume
                             await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-
-                        # Phase 5 M3: Persist cursor before ask_user pause
-                        self._persist_cursor_if_available(
-                            step_number=step_num,
-                            pause_reason="ask_user_terminal_error",
-                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-                            additional_metadata={
-                                "tool_name": tool_name,
-                                "error_type": "terminal_error",
-                            }
-                        )
-
+                        
                         return AgenticResult(
                             final_response=terminal_error_msg,
                             steps=steps,
@@ -1110,17 +1035,6 @@ To use a tool, respond with a function call in the format expected by the API.""
                                             await self.config.stream_callback(event.to_dict())
                                             await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
 
-                                        # Phase 5 M3: Persist cursor before ask_user pause
-                                        self._persist_cursor_if_available(
-                                            step_number=step_num,
-                                            pause_reason="ask_user_semantic_error",
-                                            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-                                            additional_metadata={
-                                                "tool_name": tool_name,
-                                                "error_type": error_type.value,
-                                            }
-                                        )
-
                                         return AgenticResult(
                                             final_response=error_message,
                                             steps=steps,
@@ -1240,18 +1154,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                         await self.config.stream_callback(event.to_dict())
                                         # Persist token for durable resume
                                         await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-
-                                    # Phase 5 M3: Persist cursor before ask_user pause
-                                    self._persist_cursor_if_available(
-                                        step_number=step_num,
-                                        pause_reason="ask_user_transport_exhausted",
-                                        tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-                                        additional_metadata={
-                                            "tool_name": tool_name,
-                                            "error_type": error_type.value,
-                                        }
-                                    )
-
+                                    
                                     return AgenticResult(
                                         final_response=f"Tool '{tool_name}' failed after exhausting transport retries. Error: {result.error}",
                                         steps=steps,
@@ -1442,18 +1345,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     await self.config.stream_callback(event.to_dict())
                                     # Persist token for durable resume
                                     await self._event_builder.persist_resume_token(event.payload.get("resume_token"))
-
-                                # Phase 5 M3: Persist cursor before ask_user pause
-                                self._persist_cursor_if_available(
-                                    step_number=step_num,
-                                    pause_reason="ask_user_tool_error",
-                                    tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-                                    additional_metadata={
-                                        "tool_name": tool_name,
-                                        "error_type": error_type.value,
-                                    }
-                                )
-
+                                
                                 return AgenticResult(
                                     final_response=action.remediation_prompt or action.reason,
                                     steps=steps,
@@ -1741,17 +1633,6 @@ To use a tool, respond with a function call in the format expected by the API.""
             )
             await self.config.stream_callback(continue_event.to_dict())
             await self._event_builder.persist_resume_token(continue_event.payload.get("resume_token"))
-
-        # Phase 5 M3: Persist cursor before budget exhausted pause
-        self._persist_cursor_if_available(
-            step_number=max_steps,
-            pause_reason="ask_user_budget_exhausted",
-            tenant_id=user.tenant_id if hasattr(user, 'tenant_id') else None,
-            additional_metadata={
-                "budget_profile": loop_budget.profile.value,
-                "max_steps": max_steps,
-            }
-        )
 
         return AgenticResult(
             final_response=(

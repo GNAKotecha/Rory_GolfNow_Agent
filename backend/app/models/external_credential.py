@@ -55,6 +55,7 @@ class ExternalCredential(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    integration_id = Column(Integer, ForeignKey("mcp_integrations.id"), nullable=True, index=True)
     provider = Column(String(50), nullable=False)  # "atlassian", "github", etc.
     credential_type = Column(SQLEnum(CredentialType), nullable=False)
 
@@ -80,9 +81,10 @@ class ExternalCredential(Base):
     # Relationships
     tenant = relationship("Tenant", back_populates="external_credentials")
     user = relationship("User", backref="external_credentials")
+    integration = relationship("TenantMCPIntegration", backref="credentials")
 
     def __repr__(self) -> str:
-        return f"<ExternalCredential(id={self.id}, user_id={self.user_id}, provider={self.provider})>"
+        return f"<ExternalCredential(id={self.id}, user_id={self.user_id}, integration_id={self.integration_id}, provider={self.provider})>"
 
     @property
     def is_expired(self) -> bool:

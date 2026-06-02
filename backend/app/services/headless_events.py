@@ -144,7 +144,11 @@ class HeadlessEventType(str, Enum):
     LOW_CONFIDENCE = "low_confidence"
     MAX_STEPS_REACHED = "max_steps_reached"
     APPROVAL_REQUEST = "approval_request"
-    
+
+    # Budget events (Task 5M2.3)
+    BUDGET_WARNING = "budget_warning"
+    BUDGET_EXHAUSTED = "budget_exhausted"
+
     # Final output
     FINAL_RESPONSE = "final_response"
 
@@ -670,7 +674,36 @@ class HeadlessEventBuilder:
             step_number=step_number,
             payload={"max_steps": max_steps},
         )
-    
+
+    def budget_warning(
+        self,
+        current_step: int,
+        budget_limit: int,
+        remaining: int,
+        profile: str,
+    ) -> HeadlessEvent:
+        """Create budget_warning event (Task 5M2.3).
+
+        Emitted at 80% of loop budget threshold.
+
+        Args:
+            current_step: Current step number
+            budget_limit: Maximum steps allowed
+            remaining: Steps remaining until exhaustion
+            profile: Budget profile name (e.g., "default", "browser-heavy")
+        """
+        return HeadlessEvent(
+            type=HeadlessEventType.BUDGET_WARNING,
+            run_id=self.run_id,
+            step_number=current_step,
+            payload={
+                "current_step": current_step,
+                "budget_limit": budget_limit,
+                "remaining": remaining,
+                "profile": profile,
+            },
+        )
+
     def approval_request(
         self,
         tool_name: str,
