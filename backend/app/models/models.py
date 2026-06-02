@@ -27,6 +27,7 @@ class Tenant(Base):
     workflow_classifications = relationship("WorkflowClassification", back_populates="tenant")
     external_credentials = relationship("ExternalCredential", back_populates="tenant")
     workflow_runs = relationship("WorkflowRun", back_populates="tenant")
+    mcp_integrations = relationship("TenantMCPIntegration", back_populates="tenant")
 
 
 class UserRole(str, enum.Enum):
@@ -301,3 +302,38 @@ class FailedRun(Base):
     original_message_count = Column(Integer, nullable=False)
     context = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class TenantMCPIntegration(Base):
+    """
+    Tenant-scoped MCP integration registry.
+
+    Each tenant can onboard MCP integrations (GitHub, Jira, etc.) with their own credentials.
+    The gateway layer resolves tenant-scoped tools at runtime using this registry.
+
+    Example config schema:
+    {
+        "api_version": "v3",
+        "base_url": "https://api.github.com",
+        "timeout": 30,
+        "custom_settings": {...}
+    }
+
+    Credentials are stored separately in ExternalCredential model (encrypted).
+    """
+    __tablename__ = "mcp_integrations"
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'integration_name', name='uq_tenant_integration_name'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    integration_name = Column(String(100), nullable=False)  # "github", "jira", "slack", etc.
+    auth_type = Column(String(50), nullable=False)  # "oauth", "api_key", "pat"
+    config = Column(JSON, nullable=False, default={})  # Non-sensitive configuration
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="mcp_integrations")
