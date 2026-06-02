@@ -1,6 +1,7 @@
 """API endpoints for tenant MCP integrations management."""
+import os
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, validator
@@ -8,7 +9,10 @@ from datetime import datetime
 
 from app.db.session import get_db
 from app.models.models import TenantMCPIntegration, User
+from app.models.external_credential import ExternalCredential, CredentialType
 from app.api.auth_deps import get_approved_user, get_current_user_tenant_id
+from app.services.oauth_service import OAuthService
+from gateway_mcp.core.credentials import CredentialEncryption
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -283,3 +287,193 @@ def health_check(
         "is_enabled": integration.is_enabled,
         "checked_at": datetime.utcnow().isoformat()
     }
+
+
+# OAuth Response Schemas
+class OAuthInitiateResponse(BaseModel):
+    """Response for OAuth initiate endpoint."""
+    authorization_url: str
+    state: str
+
+
+class OAuthCallbackResponse(BaseModel):
+    """Response for OAuth callback endpoint."""
+    success: bool
+    message: str
+    credential_id: Optional[int] = None
+
+
+# OAuth Endpoints
+@router.post("/{integration_id}/oauth/initiate", response_model=OAuthInitiateResponse)
+def oauth_initiate(
+    integration_id: int,
+    current_user: User = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """Start OAuth authorization flow for an integration.
+
+    Args:
+        integration_id: ID of the integration to authorize
+        current_user: Authenticated user
+        tenant_id: Current user's tenant ID
+        db: Database session
+
+    Returns:
+        OAuth authorization URL and state token
+
+    Raises:
+        404: Integration not found or doesn't belong to tenant
+    """
+    # Fetch integration with tenant isolation
+    integration = db.query(TenantMCPIntegration).filter(
+        TenantMCPIntegration.id == integration_id,
+        TenantMCPIntegration.tenant_id == tenant_id
+    ).first()
+
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+
+    # Generate state token
+    state = OAuthService.generate_state_token()
+
+    # Store state with metadata
+    state_store = OAuthService.get_state_store()
+    state_store.store(
+        state=state,
+        data={
+            "integration_id": integration_id,
+            "tenant_id": tenant_id,
+            "user_id": current_user.id,
+            "integration_name": integration.integration_name
+        },
+        tenant_id=tenant_id
+    )
+
+    # Build authorization URL
+    base_url = os.environ.get("BACKEND_URL", "http://localhost:8000")
+    callback_url = f"{base_url}/api/integrations/{integration_id}/oauth/callback"
+
+    authorization_url = OAuthService.build_authorize_url(
+        integration_name=integration.integration_name,
+        config=integration.config,
+        state=state,
+        base_url=callback_url
+    )
+
+    return OAuthInitiateResponse(
+        authorization_url=authorization_url,
+        state=state
+    )
+
+
+@router.get("/{integration_id}/oauth/callback", response_model=OAuthCallbackResponse)
+def oauth_callback(
+    integration_id: int,
+    code: str = Query(..., description="Authorization code from OAuth provider"),
+    state: str = Query(..., description="State token for CSRF protection"),
+    current_user: User = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """Handle OAuth callback and store credentials.
+
+    Args:
+        integration_id: ID of the integration
+        code: Authorization code from OAuth provider
+        state: State token for validation
+        current_user: Authenticated user
+        tenant_id: Current user's tenant ID
+        db: Database session
+
+    Returns:
+        Success message and credential ID
+
+    Raises:
+        400: Invalid state token or token exchange failed
+        403: State token belongs to different tenant
+        404: Integration not found
+    """
+    # Validate state token
+    state_store = OAuthService.get_state_store()
+    state_data = state_store.retrieve(state, tenant_id=tenant_id)
+
+    if not state_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid state token or token expired"
+        )
+
+    # Verify tenant ownership
+    if state_data.get("tenant_id") != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="State token belongs to different tenant"
+        )
+
+    # Verify integration ID matches
+    if state_data.get("integration_id") != integration_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Integration ID mismatch"
+        )
+
+    # Fetch integration
+    integration = db.query(TenantMCPIntegration).filter(
+        TenantMCPIntegration.id == integration_id,
+        TenantMCPIntegration.tenant_id == tenant_id
+    ).first()
+
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+
+    # Exchange code for token
+    try:
+        token_data = OAuthService.exchange_code_for_token(
+            integration_name=integration.integration_name,
+            config=integration.config,
+            code=code
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Token exchange failed: {str(e)}"
+        )
+
+    # Encrypt access token
+    encryption_key = os.environ.get("GATEWAY_CREDENTIAL_ENCRYPTION_KEY")
+    if not encryption_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Credential encryption not configured"
+        )
+
+    encryption = CredentialEncryption(encryption_key)
+    encrypted_token = encryption.encrypt(token_data["access_token"])
+
+    # Store credential
+    credential = ExternalCredential(
+        tenant_id=tenant_id,
+        user_id=current_user.id,
+        integration_id=integration_id,
+        provider=integration.integration_name,
+        credential_type=CredentialType.OAUTH,
+        secret_enc=encrypted_token,
+        scope=token_data.get("scope", ""),
+    )
+
+    db.add(credential)
+    db.commit()
+    db.refresh(credential)
+
+    return OAuthCallbackResponse(
+        success=True,
+        message=f"OAuth credential stored successfully for {integration.integration_name}",
+        credential_id=credential.id
+    )
