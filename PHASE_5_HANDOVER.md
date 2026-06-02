@@ -525,6 +525,105 @@ alembic upgrade head
 
 ---
 
+### Task 2: Build REST API for MCP Integrations - COMPLETE ✅
+
+**Date:** 2026-06-02
+
+**What was implemented:**
+
+1. **Pydantic Schemas** (`/backend/app/api/integrations.py`):
+   - `TenantMCPIntegrationCreate`: integration_name, auth_type, config (with auth_type validation)
+   - `TenantMCPIntegrationUpdate`: Optional fields for integration_name, config, is_enabled
+   - `TenantMCPIntegrationResponse`: Complete response schema with timestamps
+
+2. **REST Endpoints** (all under `/api/integrations`):
+   - `GET /api/integrations` - List tenant's integrations (tenant-scoped)
+   - `POST /api/integrations` - Create new integration (duplicate check)
+   - `GET /api/integrations/{id}` - Get integration details (tenant-scoped)
+   - `PATCH /api/integrations/{id}` - Update integration (tenant-scoped)
+   - `DELETE /api/integrations/{id}` - Remove integration (tenant-scoped)
+   - `POST /api/integrations/{id}/enable` - Enable integration
+   - `POST /api/integrations/{id}/disable` - Disable integration
+   - `POST /api/integrations/{id}/health` - Health check endpoint
+
+3. **Security & Validation**:
+   - All endpoints use `get_approved_user()` dependency (authentication required)
+   - All endpoints use `get_current_user_tenant_id()` for tenant isolation
+   - Auth type validation: only "oauth", "api_key", "pat" allowed
+   - Duplicate prevention: 409 Conflict if integration_name exists in same tenant
+   - Cross-tenant access denied: 404 Not Found if attempting to access another tenant's integration
+   - Missing resources return 404 Not Found
+   - Pydantic validators reject invalid auth_type at schema level
+
+4. **Test Coverage** (`/backend/tests/test_integrations_api.py`):
+   - **27 tests total, all passing** ✅
+   - TestIntegrationsCreate (5 tests): success, missing fields, invalid auth_type, duplicates, unauthenticated
+   - TestIntegrationsList (4 tests): success, tenant isolation, empty list, unauthenticated
+   - TestIntegrationsGet (4 tests): success, cross-tenant denied, not found, unauthenticated
+   - TestIntegrationsUpdate (5 tests): update name/config/status, cross-tenant denied, not found
+   - TestIntegrationsDelete (3 tests): success, cross-tenant denied, not found
+   - TestIntegrationsEnable (2 tests): success, cross-tenant denied
+   - TestIntegrationsDisable (2 tests): success, cross-tenant denied
+   - TestIntegrationsHealth (2 tests): success, cross-tenant denied
+
+5. **Router Registration** (`/backend/app/main.py`):
+   - Added import: `from app.api.integrations import router as integrations_router`
+   - Registered router: `app.include_router(integrations_router, prefix="/api", tags=["integrations"])`
+
+**Files created:**
+- `/backend/app/api/integrations.py` - Complete API implementation (280 lines)
+- `/backend/tests/test_integrations_api.py` - Comprehensive test suite (600+ lines, 27 tests)
+
+**Files modified:**
+- `/backend/app/main.py` - Registered integrations router
+
+**Test Results:**
+```bash
+$ pytest tests/test_integrations_api.py -v
+======================== 27 passed in 5.56s ========================
+```
+
+**Key Implementation Details:**
+
+- **Tenant isolation enforcement**: Every query filters by `tenant_id` from JWT
+- **Duplicate prevention**: Checks for existing `integration_name` in same tenant before creation
+- **Cross-tenant protection**: All GET/PATCH/DELETE operations validate tenant_id match
+- **Auth type validation**: Pydantic validator + API-level check for valid auth types
+- **Error handling**: Proper HTTP status codes (201, 400, 403, 404, 409, 422)
+- **No credentials storage**: Config field stores non-sensitive settings only (credentials in ExternalCredential model)
+
+**API Usage Examples:**
+```bash
+# Create integration
+curl -X POST http://localhost:8000/api/integrations \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"integration_name": "github", "auth_type": "oauth", "config": {"base_url": "https://api.github.com"}}'
+
+# List integrations
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/integrations
+
+# Update integration
+curl -X PATCH http://localhost:8000/api/integrations/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"config": {"timeout": 60}}'
+
+# Health check
+curl -X POST http://localhost:8000/api/integrations/1/health \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Remaining risks/blockers:**
+- None - All endpoints implemented and tested
+- Note: TestClient required httpx downgrade to 0.27.0 for compatibility with starlette 0.36.3
+
+**Suggested next task:**
+- Task 3: Implement OAuth flow (initiate and callback endpoints)
+- OR Task 4: Implement API-key and PAT authentication helpers
+
+---
+
 ## Current Status: Milestone 1 Complete, Ready for Milestone 2
 
 ### Task 5: Write unit tests for tenant isolation - COMPLETE
