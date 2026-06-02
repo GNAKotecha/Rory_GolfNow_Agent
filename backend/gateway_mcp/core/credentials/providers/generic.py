@@ -12,7 +12,7 @@ import hashlib
 import os
 import secrets
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 from urllib.parse import urlencode
 
 import httpx
@@ -720,7 +720,7 @@ def create_pat_provider(
 def create_provider_from_config(
     name: str,
     config: dict,
-) -> GenericOAuthProvider | GenericPATProvider:
+) -> Union[GenericOAuthProvider, GenericPATProvider]:
     """
     Create appropriate provider based on config type.
     

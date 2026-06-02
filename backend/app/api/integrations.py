@@ -12,6 +12,7 @@ from app.models.models import TenantMCPIntegration, User
 from app.models.external_credential import ExternalCredential, CredentialType
 from app.api.auth_deps import get_approved_user, get_current_user_tenant_id
 from app.services.oauth_service import OAuthService
+from app.services.credential_service import CredentialService
 from gateway_mcp.core.credentials import CredentialEncryption
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -477,3 +478,239 @@ def oauth_callback(
         message=f"OAuth credential stored successfully for {integration.integration_name}",
         credential_id=credential.id
     )
+
+
+# API-key and PAT Credential Schemas
+class StoreAPIKeyRequest(BaseModel):
+    """Request schema for storing an API key."""
+    api_key: str
+    metadata: Optional[dict] = {}
+
+
+class StorePATRequest(BaseModel):
+    """Request schema for storing a PAT."""
+    pat: str
+    metadata: Optional[dict] = {}
+
+
+class CredentialResponse(BaseModel):
+    """Response schema for credential storage."""
+    id: int
+    integration_id: int
+    credential_type: str
+    stored_at: str
+    verified: bool
+
+
+class TestConnectionResponse(BaseModel):
+    """Response schema for connection test."""
+    status: str
+    provider: str
+    authenticated_user: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.post("/{integration_id}/credentials/api-key", status_code=status.HTTP_201_CREATED)
+def store_api_key(
+    integration_id: int,
+    request: StoreAPIKeyRequest,
+    current_user: User = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Store an API key credential for an integration.
+
+    Validates the API key before storing by making a test request to the provider.
+    Returns 400 if validation fails.
+    """
+    # Verify integration exists and belongs to tenant
+    integration = db.query(TenantMCPIntegration).filter(
+        TenantMCPIntegration.id == integration_id,
+        TenantMCPIntegration.tenant_id == tenant_id
+    ).first()
+
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+
+    # Get base_url from integration config
+    base_url = integration.config.get("base_url", "")
+    if not base_url and integration.integration_name not in ["github"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Integration config missing base_url"
+        )
+
+    # Initialize credential service
+    credential_service = CredentialService(db)
+
+    # Validate API key before storing
+    is_valid = credential_service.validate_api_key(
+        provider=integration.integration_name,
+        api_key=request.api_key,
+        base_url=base_url
+    )
+
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"API key validation failed for {integration.integration_name}. "
+                   "Please check that the key is valid and has appropriate permissions."
+        )
+
+    # Store the validated credential
+    credential = credential_service.store_api_key_credential(
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+        integration_id=integration_id,
+        provider=integration.integration_name,
+        api_key=request.api_key,
+        metadata=request.metadata
+    )
+
+    return CredentialResponse(
+        id=credential.id,
+        integration_id=credential.integration_id,
+        credential_type=credential.credential_type.value,
+        stored_at=credential.created_at.isoformat(),
+        verified=True
+    )
+
+
+@router.post("/{integration_id}/credentials/pat", status_code=status.HTTP_201_CREATED)
+def store_pat(
+    integration_id: int,
+    request: StorePATRequest,
+    current_user: User = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Store a Personal Access Token (PAT) credential for an integration.
+
+    Validates the PAT before storing by making a test request to the provider.
+    Returns 400 if validation fails.
+    """
+    # Verify integration exists and belongs to tenant
+    integration = db.query(TenantMCPIntegration).filter(
+        TenantMCPIntegration.id == integration_id,
+        TenantMCPIntegration.tenant_id == tenant_id
+    ).first()
+
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+
+    # Get base_url from integration config
+    base_url = integration.config.get("base_url", "")
+    if not base_url and integration.integration_name not in ["github"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Integration config missing base_url"
+        )
+
+    # Initialize credential service
+    credential_service = CredentialService(db)
+
+    # Validate PAT before storing
+    is_valid = credential_service.validate_pat(
+        provider=integration.integration_name,
+        pat=request.pat,
+        base_url=base_url
+    )
+
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"PAT validation failed for {integration.integration_name}. "
+                   "Please check that the token is valid and has appropriate permissions."
+        )
+
+    # Store the validated credential
+    credential = credential_service.store_pat_credential(
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+        integration_id=integration_id,
+        provider=integration.integration_name,
+        pat=request.pat,
+        metadata=request.metadata
+    )
+
+    return CredentialResponse(
+        id=credential.id,
+        integration_id=credential.integration_id,
+        credential_type=credential.credential_type.value,
+        stored_at=credential.created_at.isoformat(),
+        verified=True
+    )
+
+
+@router.post("/{integration_id}/test")
+def test_connection(
+    integration_id: int,
+    current_user: User = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Test connection using stored credentials for an integration.
+
+    Uses the stored OAuth token, API key, or PAT to verify the connection
+    is working.
+    """
+    # Verify integration exists and belongs to tenant
+    integration = db.query(TenantMCPIntegration).filter(
+        TenantMCPIntegration.id == integration_id,
+        TenantMCPIntegration.tenant_id == tenant_id
+    ).first()
+
+    if not integration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found"
+        )
+
+    # Initialize credential service
+    credential_service = CredentialService(db)
+
+    # Get credential for this integration
+    credential = credential_service.get_credential(
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+        integration_id=integration_id
+    )
+
+    if not credential:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No credential found for this integration. Please configure authentication first."
+        )
+
+    # Get base_url from integration config
+    base_url = integration.config.get("base_url", "")
+    if not base_url and integration.integration_name not in ["github"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Integration config missing base_url"
+        )
+
+    # Test the credential
+    is_valid = credential_service.test_credential(credential, base_url)
+
+    if is_valid:
+        return TestConnectionResponse(
+            status="ok",
+            provider=integration.integration_name,
+            authenticated_user=credential.provider_metadata.get("username") if credential.provider_metadata else None
+        )
+    else:
+        return TestConnectionResponse(
+            status="error",
+            provider=integration.integration_name,
+            error="Authentication failed. The credential may be invalid or expired."
+        )
