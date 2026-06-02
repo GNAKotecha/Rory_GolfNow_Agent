@@ -406,6 +406,125 @@ python3 -m py_compile app/api/chat.py
 
 ---
 
+## 🚀 Milestone 4: Frontend-Managed MCP Integrations - IN PROGRESS
+
+### Task 1: Implement TenantMCPIntegration model and migration - COMPLETE ✅
+
+**Date:** 2026-06-02
+
+**What was implemented:**
+
+1. **TenantMCPIntegration model** (`/backend/app/models/models.py`):
+   - Tenant-scoped MCP integration registry
+   - Fields: id, tenant_id, integration_name, auth_type, config, is_enabled
+   - Unique constraint on (tenant_id, integration_name)
+   - Timestamps: created_at (default=utcnow), updated_at (default=utcnow, onupdate)
+   - Relationship to Tenant model with back_populates
+   - JSONB config field for non-sensitive settings (default={})
+   - CASCADE delete on tenant deletion
+   - Comprehensive docstring explaining purpose and config schema
+
+2. **Updated Tenant model** (`/backend/app/models/models.py`):
+   - Added `mcp_integrations = relationship("TenantMCPIntegration", back_populates="tenant")`
+   - Maintains bidirectional relationship for easy querying
+
+3. **Alembic migration** (`/backend/alembic/versions/f2g3h4i5j6k7_add_mcp_integrations.py`):
+   - Creates mcp_integrations table with all fields
+   - Foreign key to tenants.id with CASCADE delete
+   - Indexes: id, tenant_id, (tenant_id, integration_name)
+   - Unique constraint on (tenant_id, integration_name)
+   - Idempotent: checks if table exists before creating
+   - Reversible: full downgrade() implementation with existence checks
+   - Server defaults for config ({}), is_enabled (true), timestamps (now())
+
+4. **Comprehensive test suite** (`/backend/tests/test_mcp_integrations_model.py`):
+   - 12 test cases organized into 6 test classes
+   - TestModelCreation: required fields, defaults, missing fields
+   - TestUniqueConstraint: duplicate prevention, tenant isolation
+   - TestTimestamps: created_at auto-set, updated_at changes on update
+   - TestRelationship: tenant relationship, back_populates
+   - TestSerialization: to_dict conversion
+   - TestQuerying: filter by tenant_id, filter by is_enabled status
+
+**Files created:**
+- `/backend/alembic/versions/f2g3h4i5j6k7_add_mcp_integrations.py` (67 lines)
+- `/backend/tests/test_mcp_integrations_model.py` (331 lines)
+
+**Files modified:**
+- `/backend/app/models/models.py` (Added TenantMCPIntegration model + Tenant relationship)
+
+**Tests run:**
+```bash
+cd backend
+python3 -m pytest tests/test_mcp_integrations_model.py -v
+```
+
+**Test results:**
+```
+✅ test_create_integration_with_required_fields PASSED
+✅ test_default_values PASSED
+✅ test_missing_required_fields_fails PASSED
+✅ test_duplicate_integration_same_tenant_fails PASSED
+✅ test_same_integration_different_tenant_succeeds PASSED
+✅ test_created_at_set_on_creation PASSED
+✅ test_updated_at_changes_on_update PASSED
+✅ test_relationship_to_tenant PASSED
+✅ test_tenant_back_populates PASSED
+✅ test_to_dict PASSED
+✅ test_filter_by_tenant_id PASSED
+✅ test_filter_by_enabled_status PASSED
+
+12 passed in 0.12s
+```
+
+**Migration verification:**
+```bash
+# Upgrade
+alembic upgrade head
+# Result: mcp_integrations table created with all columns, indexes, FKs, constraints
+
+# Downgrade
+alembic downgrade -1
+# Result: mcp_integrations table dropped cleanly
+
+# Re-upgrade
+alembic upgrade head
+# Result: Migration idempotent, table recreated successfully
+```
+
+**Schema verified:**
+- ✅ Table: mcp_integrations exists
+- ✅ Columns: id, tenant_id, integration_name, auth_type, config, is_enabled, created_at, updated_at
+- ✅ Indexes: id, tenant_id, (tenant_id, integration_name)
+- ✅ Foreign key: tenant_id -> tenants.id (CASCADE)
+- ✅ Unique constraint: (tenant_id, integration_name)
+
+**Key implementation details:**
+
+- **Tenant isolation enforced**: Unique constraint on (tenant_id, integration_name) allows same integration across tenants
+- **Backward compatible**: Migration is idempotent, existing code unaffected
+- **Type safety**: All fields properly typed, nullable constraints enforced
+- **Default values**: config={}, is_enabled=True reduce required input
+- **Cascade delete**: Deleting tenant cleans up integrations automatically
+- **Config schema example** (in model docstring):
+  ```python
+  {
+      "api_version": "v3",
+      "base_url": "https://api.github.com",
+      "timeout": 30,
+      "custom_settings": {...}
+  }
+  ```
+- **Credentials stored separately**: Uses existing ExternalCredential model (encrypted)
+
+**Remaining risks/blockers:**
+- None - Model and migration complete, all tests passing
+
+**Suggested next task:**
+- Task 2: Build REST API endpoints under `/api/integrations/*` (CRUD operations)
+
+---
+
 ## Current Status: Milestone 1 Complete, Ready for Milestone 2
 
 ### Task 5: Write unit tests for tenant isolation - COMPLETE
@@ -817,3 +936,139 @@ Task 4: Add tenant management admin APIs (or write integration tests)
 
 **Date (Task 1):** 2026-05-29
 **Completed by:** Claude Sonnet 4.5
+
+---
+
+## 🚀 Milestone 3: True Resume Continuity - IN PROGRESS
+
+### Task 6: Implement comprehensive resume validation mechanism - COMPLETE ✅
+
+**Date:** 2026-06-02
+**Completed by:** Claude Sonnet 4.5
+
+**What was implemented:**
+
+1. **Resume Validation Service** (`/backend/app/services/resume_validation.py`):
+   - **ResumeCursor** dataclass with comprehensive validation:
+     - Stores: run_id, tenant_id, step_number, message_index, workflow_type, timestamp, metadata
+     - Factory method `create()` - builds cursor from RunState
+     - `validate()` method - checks tenant isolation and cursor age (default 60 min)
+     - `serialize()`/`deserialize()` - JSON serialization with timestamp parsing
+     - Handles schema mismatch between persist_cursor (workflow_id) and ResumeCursor (workflow_type)
+   
+   - **ResumeValidationResult** dataclass:
+     - Fields: valid, cursor, error_code, error_message
+     - `success` property (alias for valid)
+   
+   - **WorkflowResumeService** class:
+     - `validate_resume()` - comprehensive validation with error codes:
+       - NO_CURSOR: Cursor doesn't exist
+       - INVALID_CURSOR_FORMAT: Malformed cursor data
+       - VALIDATION_FAILED: Tenant mismatch or age expired
+       - NO_NEW_MESSAGES: Message deduplication check
+     - `resume_workflow()` - validates and returns resume status
+     - `_record_resume_event()` - telemetry logging (structured events)
+
+2. **Integration with chat.py** (`/backend/app/api/chat.py`):
+   - Added import: `from app.services.resume_validation import WorkflowResumeService`
+   - Updated `process_approval()` endpoint:
+     - Calls `WorkflowResumeService.resume_workflow()` after approval granted
+     - Validates cursor with tenant isolation and age checks
+     - Logs resume success/failure
+     - Returns `resumed=True` on success, includes error message on failure
+     - Gracefully handles validation failures (approval still succeeds)
+
+3. **Security & Isolation Features**:
+   - **Tenant validation**: Prevents cross-tenant cursor replay
+   - **Age validation**: Prevents stale cursor replay (configurable max_age_minutes)
+   - **Message deduplication**: Checks current_message_count > cursor.message_index
+   - **Run ID preservation**: Cursor includes run_id from RunState
+   - **Timestamp validation**: Rejects corrupted/invalid timestamps
+
+4. **Telemetry & Observability**:
+   - Structured logging for all validation steps
+   - Resume events logged with:
+     - event_type: "workflow_resume"
+     - run_id, tenant_id, resume_type, timestamp
+     - Full cursor details in event payload
+   - Warning logs for tenant mismatch, age expiry, missing cursor
+   - Error logs for cursor deserialization failures
+
+5. **Comprehensive Test Suite** (`/backend/tests/test_resume_validation.py`):
+   - **18 unit tests** covering all validation scenarios:
+     - ResumeCursor creation, validation, serialization (8 tests)
+     - WorkflowResumeService validation logic (8 tests)
+     - ResumeValidationResult dataclass (2 tests)
+   - **Test coverage:**
+     - ✅ Cursor creation from RunState (with/without messages)
+     - ✅ Tenant isolation (mismatch detection)
+     - ✅ Age validation (expired vs valid)
+     - ✅ Serialization round-trip
+     - ✅ Missing cursor handling
+     - ✅ Invalid cursor format handling
+     - ✅ Message deduplication
+     - ✅ Successful resume workflow
+     - ✅ Error propagation
+
+**Files created:**
+- `/backend/app/services/resume_validation.py` - Complete validation service (320 lines)
+- `/backend/tests/test_resume_validation.py` - Comprehensive test suite (450 lines, 18 tests)
+
+**Files modified:**
+- `/backend/app/api/chat.py` - Added resume validation to approval endpoint
+
+**Test Results:**
+```bash
+$ pytest tests/test_resume_validation.py -v
+======================== 18 passed in 0.05s ========================
+```
+
+**Key Implementation Details:**
+
+- **Schema adaptation**: ResumeCursor.deserialize() handles mismatch between:
+  - `persist_cursor()` stores: workflow_id, step_number, message_index, tenant_id, timestamp, metadata
+  - `ResumeCursor` expects: run_id, workflow_type, step_number, message_index, tenant_id, timestamp, metadata
+  - run_id injected from RunState context during validation
+  - workflow_id mapped to metadata, workflow_type defaults to "unknown"
+
+- **Tenant isolation**: 
+  - Tenant ID always validated against current_user.tenant_id
+  - Prevents cross-tenant cursor replay attacks
+  - Logged as warning for security audit trail
+
+- **Message deduplication**:
+  - Cursor stores message_index at pause time
+  - Resume checks: len(run_state.messages) > cursor.message_index
+  - Prevents re-processing already-handled messages
+
+- **Age validation**:
+  - Default 60-minute expiry (configurable)
+  - Prevents stale cursor replay after long interruptions
+  - Uses UTC timestamps for consistency
+
+**Error Handling:**
+- Graceful degradation: Resume validation failure doesn't block approval
+- Detailed error codes for debugging
+- Structured logging for all failure paths
+- ValueError raised only in resume_workflow() (not validate_resume())
+
+**Integration with Existing Systems:**
+- Compatible with RunState.persist_cursor() (Task 4)
+- Compatible with AgenticService._persist_cursor_if_available() (Task 4.1)
+- Uses existing JWT tenant_id extraction
+- Leverages existing logging infrastructure
+
+**Remaining risks/blockers:**
+- None - Core validation mechanism complete and tested
+- Resume logic integration with AgenticService main loop (future work)
+- WebSocket resume endpoint not yet updated (REST only for now)
+
+**Suggested next task:**
+- Task 21: Add cursor provenance telemetry to HeadlessEventBuilder (structured events)
+- OR integrate cursor validation into WebSocket resume flow (`chat_ws.py`)
+
+**Important learned:**
+- Schema mismatch between persist and validate requires adaptation layer
+- Tenant isolation must be enforced at every validation boundary
+- Message deduplication requires tracking message count, not "last_processed" field
+- Graceful degradation prevents validation failures from blocking critical operations
