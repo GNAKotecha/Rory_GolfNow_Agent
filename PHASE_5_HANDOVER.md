@@ -775,6 +775,178 @@ GATEWAY_CREDENTIAL_ENCRYPTION_KEY=<fernet_key>
 
 ---
 
+### Task 4: Implement API-Key and PAT Authentication - COMPLETE ✅
+
+**Date:** 2026-06-02
+
+**What was implemented:**
+
+1. **CredentialService** (`/backend/app/services/credential_service.py`):
+   - `validate_api_key()` - Provider-specific API key validation
+   - `validate_pat()` - Personal Access Token validation
+   - `store_api_key_credential()` - Encrypted storage with tenant_id
+   - `store_pat_credential()` - Encrypted PAT storage
+   - `get_credential()` - Retrieve and decrypt credentials
+   - `test_credential()` - Test connection with stored credential
+   - Provider implementations: GitHub, GitLab, Jira, Generic HTTP
+   - Uses CredentialEncryption from gateway_mcp for encryption
+
+2. **API Endpoints** (`/backend/app/api/integrations.py`):
+   - `POST /api/integrations/{id}/credentials/api-key` - Store API key (validates first)
+   - `POST /api/integrations/{id}/credentials/pat` - Store PAT (validates first)
+   - `POST /api/integrations/{id}/test` - Test connection using stored credential
+   - All endpoints tenant-scoped via JWT
+   - Return 400 if validation fails (with error reason)
+   - Return 201 on successful storage
+
+3. **Validation Logic:**
+   - GitHub: GET /user with Authorization: token <api_key>
+   - GitLab: GET /api/v4/user with PRIVATE-TOKEN: <pat>
+   - Jira: GET /rest/api/2/myself with basic auth
+   - Generic: GET <base_url>/health
+   - Format validation: GitHub tokens (ghp_, ghs_, ghu_)
+   - Network error handling with proper status codes
+
+4. **Comprehensive Test Suite** (`/backend/tests/test_credential_service.py`):
+   - **19 tests total, all passing** ✅
+   - TestAPIKeyValidation (6 tests): GitHub/GitLab/Jira validation success/failure
+   - TestPATValidation (3 tests): PAT validation success/invalid/expired
+   - TestCredentialStorage (4 tests): Store/retrieve/duplicate/tenant isolation
+   - TestGetCredential (3 tests): Get success/not found/cross-tenant
+   - TestConnectionTesting (3 tests): Test connection success/invalid/network error
+   - Proper HTTP request mocking
+   - Encryption verification
+   - Tenant isolation verification
+
+**Files created:**
+- `/backend/app/services/credential_service.py` - Credential validation and storage service (10,116 bytes)
+- `/backend/tests/test_credential_service.py` - Comprehensive test suite (15,049 bytes, 19 tests)
+
+**Files modified:**
+- `/backend/app/api/integrations.py` - Added API-key/PAT endpoints (already existed from previous work)
+- `/backend/gateway_mcp/core/credentials/providers/generic.py` - Python 3.9 compatibility fix (Union vs |)
+
+**Tests run:**
+```bash
+$ pytest tests/test_credential_service.py -v
+======================== 19 passed, 9 warnings in 0.45s ========================
+```
+
+**Test Coverage Breakdown:**
+```
+TestAPIKeyValidation:
+  ✅ test_validate_github_api_key_success
+  ✅ test_validate_github_api_key_invalid
+  ✅ test_validate_github_api_key_forbidden
+  ✅ test_validate_api_key_network_error
+  ✅ test_validate_gitlab_api_key_success
+  ✅ test_validate_jira_api_key_success
+
+TestPATValidation:
+  ✅ test_validate_pat_success
+  ✅ test_validate_pat_invalid
+  ✅ test_validate_pat_expired
+
+TestCredentialStorage:
+  ✅ test_store_api_key_credential_new
+  ✅ test_store_pat_credential_new
+  ✅ test_store_api_key_duplicate_replaces
+  ✅ test_store_credential_tenant_isolation
+
+TestGetCredential:
+  ✅ test_get_credential_success
+  ✅ test_get_credential_not_found
+  ✅ test_get_credential_cross_tenant_denied
+
+TestConnectionTesting:
+  ✅ test_test_credential_success
+  ✅ test_test_credential_invalid
+  ✅ test_test_credential_network_error
+```
+
+**Key Implementation Details:**
+
+- **Validation before storage**: All credentials validated with provider before storing
+- **Encryption**: Uses CredentialEncryption (AES-GCM via Fernet) from gateway_mcp
+- **Tenant isolation**: All operations scoped by tenant_id from JWT
+- **Provider-specific logic**: GitHub, GitLab, Jira have custom validation endpoints
+- **Generic fallback**: HTTP health check for unknown providers
+- **Format validation**: GitHub token format validation (ghp_, ghs_, ghu_)
+- **Error handling**: Network errors, invalid credentials, expired tokens
+- **Duplicate handling**: Storing duplicate credential replaces previous one
+
+**Security Features:**
+- Credentials stored encrypted in ExternalCredential table
+- Tenant isolation enforced at query level
+- Validation prevents storing invalid credentials
+- Never log sensitive credential values
+- Integration_id links credential to specific integration
+
+**API Usage Examples:**
+
+Store API-key:
+```bash
+POST /api/integrations/123/credentials/api-key
+{
+    "api_key": "ghp_xxxxxxxxxxx",
+    "metadata": {"note": "GitHub API key for PR automation"}
+}
+
+Response 201:
+{
+    "id": 456,
+    "integration_id": 123,
+    "credential_type": "api_key",
+    "stored_at": "2026-06-02T...",
+    "verified": true
+}
+```
+
+Store PAT:
+```bash
+POST /api/integrations/123/credentials/pat
+{
+    "pat": "glpat-xxxxxxxxxxx",
+    "metadata": {"scope": "read_api"}
+}
+
+Response 201: {id, integration_id, credential_type, stored_at, verified}
+```
+
+Test connection:
+```bash
+POST /api/integrations/123/test
+{}
+
+Response 200:
+{
+    "status": "ok",
+    "provider": "github",
+    "authenticated_user": "john_doe"
+}
+```
+
+**Dependencies Fixed:**
+- Installed `cryptography` package (missing dependency)
+- Fixed Python 3.9 compatibility (Union[A, B] instead of A | B)
+
+**Remaining risks/blockers:**
+- None - Core implementation complete and tested
+- Integration tests should be added for end-to-end validation
+
+**Suggested next task:**
+- Task 5: Integration testing and end-to-end validation
+- OR integrate with runtime MCP tool resolution
+
+**Important learned:**
+- Python 3.9 doesn't support union operator (|) for type hints - must use Union
+- User model requires `name` field in addition to email and password_hash
+- cryptography package required for Fernet encryption (not in base requirements)
+- Test fixtures must match exact SQLAlchemy model structure
+- Provider-specific credential validation requires different HTTP patterns
+
+---
+
 ## Current Status: Milestone 1 Complete, Ready for Milestone 2
 
 ### Task 5: Write unit tests for tenant isolation - COMPLETE
