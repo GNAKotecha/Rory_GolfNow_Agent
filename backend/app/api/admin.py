@@ -1,8 +1,9 @@
 """Admin endpoints for user management."""
+from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from app.db.session import get_db
@@ -19,7 +20,7 @@ class UserListItem(BaseModel):
     role: str
     approval_status: str
     created_at: datetime
-    approved_at: datetime | None
+    approved_at: Optional[datetime]
 
     class Config:
         from_attributes = True
