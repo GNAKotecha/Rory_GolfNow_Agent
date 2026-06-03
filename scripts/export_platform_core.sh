@@ -168,7 +168,7 @@ Database:
   - Generic skill/workflow models
 
 Tests:
-  - tests/                         (Generic tests only)
+  - Excluded
 
 Documentation:
   - README.md
@@ -232,14 +232,27 @@ EOF
 create_tarball() {
     log_info "Creating compressed tarball..."
 
-    if ! tar -czf "${OUTPUT_FILE}" -C "$(dirname "${EXPORT_DIR}")" "$(basename "${EXPORT_DIR}")"; then
+    local temp_tarball="${OUTPUT_FILE}.tmp"
+
+    # Create initial tarball with temp dir prefix
+    if ! tar -czf "${temp_tarball}" -C "$(dirname "${EXPORT_DIR}")" "$(basename "${EXPORT_DIR}")"; then
         log_error "Failed to create tarball"
+        rm -f "${temp_tarball}"
         return 1
     fi
 
-    local size_bytes=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null)
+    # Repackage to strip the temporary directory prefix
+    local temp_extract_dir=$(mktemp -d)
+    trap "rm -rf ${temp_extract_dir}" RETURN
+
+    tar -xzf "${temp_tarball}" -C "${temp_extract_dir}"
+    local temp_subdir=$(basename "${EXPORT_DIR}")
+    tar -czf "${OUTPUT_FILE}" -C "${temp_extract_dir}/${temp_subdir}" .
+    rm -f "${temp_tarball}"
+
+    local size_bytes=$(wc -c < "${OUTPUT_FILE}" | awk '{print $1}')
     if [[ -z "$size_bytes" ]]; then
-        log_error "Unable to determine file size - stat command not available on this platform"
+        log_error "Unable to determine file size"
         return 1
     fi
     local size_mb=$(echo "scale=2; $size_bytes / 1048576" | bc)
@@ -292,9 +305,9 @@ generate_report() {
     local report_file="${REPO_ROOT}/platform-core-export-${TIMESTAMP}.report"
 
     # Get file size with proper error handling
-    local size_bytes=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null)
+    local size_bytes=$(wc -c < "${OUTPUT_FILE}" | awk '{print $1}')
     if [[ -z "$size_bytes" ]]; then
-        log_error "Unable to determine file size - stat command not available on this platform"
+        log_error "Unable to determine file size"
         return 1
     fi
 
