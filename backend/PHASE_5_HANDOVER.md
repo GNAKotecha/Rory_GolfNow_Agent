@@ -1,9 +1,9 @@
 # Phase 5 Handover: Harness Productization - Tenant Skills & Workflows
 
-**Status:** Task 1 & Task 2 Complete (Models + Migrations + Service Layer + REST APIs + Tests)  
+**Status:** Task 1, Task 2, Task 5 Complete (Models + Migrations + Service Layer + REST APIs + Tests + Admin Dashboard)  
 **Date:** 2026-06-03  
-**Implementation:** Milestone 5 Tasks 1-2  
-**Addendum:** E2E Test Stability Phase 1 Complete (2026-06-03)
+**Implementation:** Milestone 5 Tasks 1-2, Milestone 6 Task 5  
+**Addendum:** E2E Test Stability Phase 1 Complete (2026-06-03), Admin Trace Explorer Complete (2026-06-03)
 
 ---
 
@@ -2163,9 +2163,9 @@ All 4 acceptance criteria met. Phase 5 Milestone 8 complete.
 
 **Implemented By:** Claude Code (Agent)  
 **Reviewed By:** Spec Reviewer (Agent), Code Quality Reviewer (Agent)  
-**Phase:** 5 (Harness Productization)  
-**Milestone:** 8 (End-to-End Validation)  
-**Tasks:** 1 (Models + Migrations), 2 (REST APIs), 3 (Runtime Integration), 3.1 (Code Quality Fixes), 4 (E2E Tests), 4.1 (E2E Code Quality Fixes), 8 (Integration Tests + Validation)
+**Phase:** 5 (Harness Productization), 6 (Frontend Admin)  
+**Milestone:** 8 (End-to-End Validation), 6 Task 5 (Admin Dashboard)  
+**Tasks:** 1 (Models + Migrations), 2 (REST APIs), 3 (Runtime Integration), 3.1 (Code Quality Fixes), 4 (E2E Tests), 4.1 (E2E Code Quality Fixes), 8 (Integration Tests + Validation), 6.5 (Admin Dashboard)
 
 ---
 
@@ -3251,6 +3251,339 @@ git commit -m "fix: Complete and stabilize backend trace API implementation"
 - Performance: Add Langfuse query optimization
 - Observability: Connect traces to workflow runs
 - Export: Add trace export functionality
+
+---
+
+## Milestone 6: Frontend Admin Interface - Task 5: Admin Dashboard ✅
+
+**Status:** Complete  
+**Date:** 2026-06-03  
+**Purpose:** Create admin-only frontend pages for exploring and debugging workflow execution traces from Langfuse
+
+### Implementation Summary
+
+Built a comprehensive trace explorer dashboard with filtering, pagination, and detail views.
+
+#### Files Created
+
+**Frontend Pages:**
+- `/frontend/app/admin/layout.tsx` - Admin section layout with role-based access control
+- `/frontend/app/admin/traces/page.tsx` - Main Trace Explorer page with filter and list views
+
+**Frontend Components:**
+- `/frontend/components/admin/TraceFiltersPanel.tsx` - Filter panel (trace ID, user ID, status, date range, workflow name)
+- `/frontend/components/admin/TraceListTable.tsx` - Trace list table with pagination
+- `/frontend/components/admin/TraceDetailModal.tsx` - Detail modal with timeline view and JSON inspection
+
+#### Key Features Implemented
+
+**1. Admin-Only Access Control**
+- Layout enforces `user.role === 'admin'` check
+- Redirects non-admin users to home
+- Redirects unauthenticated users to login
+
+**2. Filter Panel**
+- Trace ID search (real-time)
+- User ID filter
+- Status dropdown (All, Success, Error, Timeout, Validation Error)
+- Date range picker (start_date, end_date)
+- Workflow name filter
+- Clear Filters button
+- Disabled during loading
+
+**3. Trace List View**
+- Table with columns:
+  - Trace ID (truncated display with hover)
+  - User ID (with fallback for null)
+  - Status (color-coded badges)
+  - Created At (formatted timestamp)
+  - Duration (formatted in ms or seconds)
+  - View action button
+- Pagination controls (Previous/Next)
+- Page indicator (e.g., "Page 1 of 5")
+- Loading state (animated spinner)
+- Empty state message
+- Error state with dismissible message
+
+**4. Trace Detail Modal**
+- Full trace ID display
+- Summary section with:
+  - Status badge
+  - Duration
+  - Created/Updated timestamps
+  - User ID, Session ID, Workflow Name
+- Execution Timeline with expandable spans:
+  - Span name and type
+  - Duration calculation
+  - Input/Output previews (expandable)
+  - Formatted JSON display
+- Full JSON toggle for complete trace inspection
+- Copy Trace ID button
+- Close button
+
+**5. Styling & UX**
+- Responsive layout (1 column on mobile, 4-column grid on desktop)
+- Filter panel on left (fixed width on desktop)
+- Trace list on right (3-column span on desktop)
+- Tailwind CSS styling
+- Color-coded status badges:
+  - Green (success)
+  - Red (error)
+  - Yellow (timeout)
+  - Orange (validation_error)
+- Hover states on interactive elements
+- Loading spinners
+- Disabled state handling
+
+#### API Integration
+
+Uses existing `/frontend/lib/api.ts` utilities:
+- `apiClient.getTraces(filters)` - List traces with pagination
+- `apiClient.getTrace(traceId)` - Get full trace details with observations
+- Automatic JWT token handling from localStorage
+- Error handling with user-friendly messages
+
+#### Filter Options
+
+All filters support:
+- Real-time filter updates
+- Pagination reset on filter change
+- Query parameter construction for API
+- Optional status filtering ("all" skips status parameter)
+
+**Supported Filters:**
+- `trace_id` - Exact or partial match
+- `user_id` - User identifier
+- `status` - trace status (success|error|timeout|validation_error)
+- `start_date` - ISO datetime start
+- `end_date` - ISO datetime end
+- `name` - Workflow name
+- Pagination: `limit=20`, `offset=(page-1)*20`
+
+#### Component Structure
+
+```
+/admin/layout.tsx
+  └─ AdminLayout (role check, nav header)
+     └─ children
+
+/admin/traces/page.tsx
+  └─ TraceExplorerPage (main orchestrator)
+     ├─ TraceFiltersPanel (filter input)
+     ├─ TraceListTable (trace listing)
+     └─ TraceDetailModal (detail view)
+```
+
+#### State Management
+
+**Main Page State:**
+- Filters (trace_id, user_id, status, start_date, end_date, name)
+- Traces list
+- Total count
+- Current page
+- Loading state
+- Error message
+- Selected trace for detail view
+- Detail loading state
+
+**Component Props:**
+- TraceFiltersPanel: filters, onFilterChange, onClearFilters, loading
+- TraceListTable: traces, onViewTrace, loading
+- TraceDetailModal: trace, onClose, loading
+
+#### TypeScript Types
+
+All components properly typed using:
+- `TracePreview` - List item format
+- `TraceDetail` - Full trace with observations
+- `ObservationDetail` - Span/observation data
+
+#### Build Status
+
+✅ Project compiles successfully with Next.js 16.2.4 (Turbopack)
+✅ TypeScript configuration respected
+✅ No new TypeScript errors introduced
+
+#### Verification Steps Completed
+
+1. ✅ Admin layout created with role-based access
+2. ✅ Trace Explorer page implemented with all features
+3. ✅ Filter panel component with all controls
+4. ✅ Trace list table with pagination
+5. ✅ Detail modal with timeline and JSON views
+6. ✅ Styling matches existing dashboard patterns
+7. ✅ Error handling and loading states
+8. ✅ Responsive layout (desktop and tablet)
+9. ✅ TypeScript compilation successful
+10. ✅ All imports resolve correctly
+
+#### Usage
+
+**Access the dashboard:**
+```
+Navigate to http://localhost:3000/admin/traces
+(Requires admin role in JWT token)
+```
+
+**Filter traces:**
+1. Enter search criteria in filter panel
+2. Status automatically filters as you select
+3. Date range picker for time filtering
+4. Click "Clear Filters" to reset all
+
+**View trace details:**
+1. Click "View" button on any trace
+2. Modal opens with full trace information
+3. Click span names to expand/collapse details
+4. Toggle "Show Full JSON" for raw data
+5. Click "Copy Trace ID" to copy to clipboard
+
+#### Known Limitations
+
+1. **Pagination:** Fixed limit of 20 items per page (configurable via DEFAULT_LIMIT)
+2. **Real-time updates:** No polling for new traces (manual refresh via pagination)
+3. **Export:** No trace export functionality yet
+4. **Search:** Only exact field matching (no full-text search across content)
+5. **Comparison:** No side-by-side trace comparison
+
+#### Future Enhancements
+
+1. Real-time trace updates (WebSocket polling)
+2. Export traces as JSON/CSV
+3. Advanced search with full-text search
+4. Trace comparison view (two traces side-by-side)
+5. Workflow run correlation (link to workflow execution)
+6. Performance metrics and trends
+7. Custom trace tagging/annotations
+8. Bulk operations (delete, export multiple)
+
+#### Files Modified
+
+- `backend/PHASE_5_HANDOVER.md` - Updated status header
+
+#### Success Criteria Met
+
+✅ Admin-only access enforced via role check  
+✅ Real-time filter updates with pagination reset  
+✅ Trace list table with all required columns  
+✅ Status color-coding implemented  
+✅ Pagination controls (Previous/Next)  
+✅ Detail modal with timeline view  
+✅ Span expansion for input/output inspection  
+✅ Full JSON inspection toggle  
+✅ Copy trace ID functionality  
+✅ Loading and error states  
+✅ Responsive design (desktop/tablet)  
+✅ TypeScript compilation successful  
+✅ Styling matches existing dashboard  
+
+---
+
+## Task 3: Audit Report Formatter ✅
+
+**Status:** Complete  
+**Date:** 2026-06-03  
+**Scope:** Create audit report formatter module for structured markdown audit reports
+
+### Implementation Summary
+
+Implemented `audit_report_formatter.py` module providing classes to build and format audit findings into structured markdown reports with severity levels, affected tests, root causes, and remediation fixes.
+
+**File Created:** `/backend/scripts/audit_report_formatter.py` (226 lines)
+
+### Module Components
+
+#### 1. Severity Enum
+```python
+class Severity(Enum):
+    CRITICAL = 1  # Highest priority
+    WARNING = 2
+    INFO = 3
+```
+
+#### 2. AuditFinding Class
+Represents a single audit finding with complete metadata:
+
+**Attributes:**
+- `title: str` - Short descriptive title
+- `severity: Severity` - Severity level (CRITICAL/WARNING/INFO)
+- `affected_tests: List[str]` - List of impacted test names
+- `root_cause: str` - Explanation of underlying cause
+- `trace_ids: List[str]` - Trace IDs for observability correlation
+- `affected_code_path: str` - File path or code location
+- `suggested_fix: str` - Recommended solution
+- `details: Dict[str, Any]` - Additional context (metrics, error messages)
+
+**Methods:**
+- `to_markdown() -> str` - Converts finding to markdown section with severity indicator, title, affected tests, root cause, trace IDs, code path, suggested fix, and details
+
+#### 3. AuditReportFormatter Class
+Collects and formats multiple audit findings into complete markdown report.
+
+**Methods:**
+- `__init__(qa_run_id: str)` - Initialize with QA run ID and timestamp
+- `add_finding(finding: AuditFinding) -> None` - Add finding to report
+- `_count_by_severity() -> Dict[Severity, int]` - Count findings by severity
+- `to_markdown() -> str` - Generate complete markdown report with header, summary, critical/warning/info sections, and recommendations
+- `write_to_file(output_path: str) -> str` - Write report to file, return absolute path
+
+### Report Structure
+
+Reports auto-organize findings by severity:
+1. Header with run ID and timestamp
+2. Summary counts (CRITICAL, WARNING, INFO)
+3. Critical Failures section (priority-ordered)
+4. Warnings section
+5. Info section
+6. Recommendations section (critical items ranked by priority)
+
+Each finding includes severity emoji (🔴/🟡/ℹ️), affected tests, root cause, trace IDs, code path, suggested fix, and optional details.
+
+### Testing
+
+**Verification Steps Completed:**
+
+1. ✅ Import test: `python3 -c "from backend.scripts.audit_report_formatter import AuditReportFormatter, AuditFinding, Severity; print('OK')"`
+2. ✅ Functional test: Created sample finding, generated markdown, verified output structure
+3. ✅ Severity counting: Confirmed counts reflect actual findings
+4. ✅ Details formatting: Verified complex data types rendered as JSON
+5. ✅ File writing: Confirmed write_to_file creates directories and returns absolute path
+
+### Integration Points
+
+**Used By:**
+- Task 4: AuditAnalyzer will use this formatter to output analysis results
+
+**Integrates With:**
+- QA test runner results (findings created from test failures)
+- Backend observability system (trace IDs embedded in findings)
+
+### Files Modified
+
+- `backend/PHASE_5_HANDOVER.md` - Added Task 3 completion entry
+- `docs/superpowers/plans/2026-06-03-test-qa-audit-loop.md` - Marked Task 3 complete
+
+### Commit
+
+```
+commit: 2b207a7
+message: feat: Add audit report formatter
+```
+
+### Success Criteria Met
+
+✅ AuditFinding dataclass with all required properties  
+✅ Severity enum with CRITICAL/WARNING/INFO levels  
+✅ AuditReportFormatter with qa_run_id and timestamp initialization  
+✅ add_finding() method implemented  
+✅ to_markdown() returns full structured report  
+✅ Critical failures section with priority ordering  
+✅ Warnings section  
+✅ Info section  
+✅ Recommendations section listing critical items by priority  
+✅ write_to_file() with directory creation and path return  
+✅ Module imports successfully  
+✅ Committed to main branch  
 
 ---
 
