@@ -1,9 +1,15 @@
 """Agent memory service for working memory and historical context retrieval."""
 import json
-from typing import Dict, List, Optional
+import logging
+from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import text
+from datetime import datetime, timezone
+from contextlib import contextmanager
 
 from app.models.models import SessionMemorySummary
+
+logger = logging.getLogger(__name__)
 
 
 # Size limit for working memory (2KB)
@@ -180,3 +186,262 @@ class AgentMemoryService:
 
         # If we get here, even empty dict is too large (shouldn't happen)
         return {}
+
+
+class AgentMemory:
+    """
+    Manages cross-session memory storage for user preferences, 
+    workflow outcomes, and domain knowledge.
+    
+    This is the original implementation for backwards compatibility.
+    For working memory and historical context, use AgentMemoryService.
+    """
+
+    def __init__(self, db: Session):
+        """
+        Initialize agent memory.
+
+        Args:
+            db: SQLAlchemy database session
+        """
+        self.db = db
+        self._batch_mode = False
+
+    @contextmanager
+    def batch(self):
+        """
+        Context manager for batched operations with atomicity.
+
+        Usage:
+            with memory.batch():
+                memory.store_user_preference(user_id, "format", "verbose")
+                memory.store_workflow_outcome(user_id, "analysis", "success", {})
+                memory.store_domain_knowledge(user_id, "golf", "data", "source")
+
+        All operations succeed or all rollback on error.
+        """
+        self._batch_mode = True
+        try:
+            yield
+            self.db.commit()
+            logger.debug("Batch commit successful")
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Batch rollback due to error: {e}")
+            raise
+        finally:
+            self._batch_mode = False
+
+    def store_user_preference(self, user_id: int, key: str, value: Any):
+        """
+        Store user preference (e.g., output format, verbosity level).
+
+        Args:
+            user_id: User ID
+            key: Preference key
+            value: Preference value (will be JSON serialized)
+        """
+        try:
+            self.db.execute(
+                text("""
+                    INSERT INTO user_preferences (user_id, key, value, updated_at)
+                    VALUES (:user_id, :key, :value, :updated_at)
+                    ON CONFLICT (user_id, key)
+                    DO UPDATE SET value = :value, updated_at = :updated_at
+                """),
+                {
+                    "user_id": user_id,
+                    "key": key,
+                    "value": json.dumps(value),
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            )
+            if not self._batch_mode:
+                self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to store user preference: {e}")
+            raise
+
+    def get_user_preferences(self, user_id: int) -> Dict[str, Any]:
+        """
+        Get all user preferences.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Dictionary of preference key-value pairs
+        """
+        try:
+            result = self.db.execute(
+                text("""
+                    SELECT key, value FROM user_preferences
+                    WHERE user_id = :user_id
+                """),
+                {"user_id": user_id}
+            )
+            preferences = {}
+            for row in result:
+                preferences[row.key] = json.loads(row.value)
+            return preferences
+        except Exception as e:
+            logger.error(f"Failed to get user preferences: {e}")
+            return {}
+
+    def store_workflow_outcome(
+        self,
+        user_id: int,
+        workflow_type: str,
+        outcome: str,
+        context: Dict[str, Any]
+    ):
+        """
+        Store workflow outcome for learning.
+
+        Args:
+            user_id: User ID
+            workflow_type: Type of workflow (e.g., "data_analysis", "report_generation")
+            outcome: Outcome status (e.g., "completed", "failed", "partial")
+            context: Additional context about the workflow execution
+        """
+        try:
+            self.db.execute(
+                text("""
+                    INSERT INTO workflow_outcomes 
+                    (user_id, workflow_type, outcome, context, created_at)
+                    VALUES (:user_id, :workflow_type, :outcome, :context, :created_at)
+                """),
+                {
+                    "user_id": user_id,
+                    "workflow_type": workflow_type,
+                    "outcome": outcome,
+                    "context": json.dumps(context),
+                    "created_at": datetime.now(timezone.utc),
+                }
+            )
+            if not self._batch_mode:
+                self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to store workflow outcome: {e}")
+            raise
+
+    def get_relevant_past_outcomes(
+        self,
+        user_id: int,
+        workflow_type: str,
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Get relevant past workflow outcomes.
+
+        Args:
+            user_id: User ID
+            workflow_type: Type of workflow to retrieve
+            limit: Maximum number of outcomes to return
+
+        Returns:
+            List of past outcomes with context
+        """
+        try:
+            result = self.db.execute(
+                text("""
+                    SELECT outcome, context, created_at 
+                    FROM workflow_outcomes
+                    WHERE user_id = :user_id AND workflow_type = :workflow_type
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                """),
+                {
+                    "user_id": user_id,
+                    "workflow_type": workflow_type,
+                    "limit": limit,
+                }
+            )
+            outcomes = []
+            for row in result:
+                outcomes.append({
+                    "outcome": row.outcome,
+                    "context": json.loads(row.context),
+                    "created_at": row.created_at,
+                })
+            return outcomes
+        except Exception as e:
+            logger.error(f"Failed to get past outcomes: {e}")
+            return []
+
+    def store_domain_knowledge(
+        self,
+        user_id: int,
+        domain: str,
+        knowledge: str,
+        source: str
+    ):
+        """
+        Store learned domain knowledge.
+
+        Args:
+            user_id: User ID
+            domain: Domain area (e.g., "golf_booking", "api_patterns")
+            knowledge: Knowledge content
+            source: Where this knowledge came from
+        """
+        try:
+            self.db.execute(
+                text("""
+                    INSERT INTO domain_knowledge 
+                    (user_id, domain, knowledge, source, created_at)
+                    VALUES (:user_id, :domain, :knowledge, :source, :created_at)
+                """),
+                {
+                    "user_id": user_id,
+                    "domain": domain,
+                    "knowledge": knowledge,
+                    "source": source,
+                    "created_at": datetime.now(timezone.utc),
+                }
+            )
+            if not self._batch_mode:
+                self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to store domain knowledge: {e}")
+            raise
+
+    def get_domain_knowledge(
+        self,
+        user_id: int,
+        domain: str,
+        limit: int = 10
+    ) -> List[str]:
+        """
+        Get domain knowledge.
+
+        Args:
+            user_id: User ID
+            domain: Domain area to query
+            limit: Maximum number of items to return
+
+        Returns:
+            List of knowledge strings
+        """
+        try:
+            result = self.db.execute(
+                text("""
+                    SELECT knowledge, source, created_at 
+                    FROM domain_knowledge
+                    WHERE user_id = :user_id AND domain = :domain
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                """),
+                {
+                    "user_id": user_id,
+                    "domain": domain,
+                    "limit": limit,
+                }
+            )
+            return [row.knowledge for row in result]
+        except Exception as e:
+            logger.error(f"Failed to get domain knowledge: {e}")
+            return []
