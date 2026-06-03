@@ -3587,3 +3587,139 @@ message: feat: Add audit report formatter
 
 ---
 
+## Task 4: Audit Analyzer ✅
+
+**Status:** Complete  
+**Date:** 2026-06-03  
+**Scope:** Create audit analyzer module to analyze QA results and generate structured audit reports
+
+### Module Components
+
+#### 1. AuditAnalyzer Class
+Analyzes QA test results to identify failures, anomalies, and performance issues.
+
+**Constructor:**
+- `__init__(qa_results_file: str, logs_file: str = "")` - Load QA results JSON from file
+
+**Main Methods:**
+- `analyze()` - Execute full analysis pipeline (failures → anomalies → report), return path to written report
+- `_analyze_failures()` - Find root causes in failed tests, create CRITICAL findings
+- `_categorize_failure()` - Categorize individual failure and create AuditFinding with details
+- `_analyze_anomalies()` - Detect issues in passed tests (slow tests >2000ms), create WARNING findings
+
+**Private Methods:**
+- `_load_qa_results()` - Load and parse QA results JSON from file
+
+**Attributes:**
+- `qa_results: Dict[str, Any]` - Loaded QA results
+- `findings: List[AuditFinding]` - Collected findings
+- `qa_results_file: str` - Path to results file
+- `logs_file: str` - Path to logs file (optional)
+
+### Analysis Logic
+
+**Failure Analysis (`_analyze_failures`):**
+- Loops through test_results where status=="failed"
+- Extracts error message, trace ID, tool call count
+- Creates CRITICAL AuditFinding for each failure
+- Includes error details, response snippet, and DB state if available
+
+**Failure Categorization (`_categorize_failure`):**
+- Maps scenario failure to root cause explanation
+- Generates code path reference (tests/scenarios/{scenario_name})
+- Suggests fixes referencing trace IDs for investigation
+- Populates details dict with tool_calls, duration, response snippet, db_state
+
+**Anomaly Analysis (`_analyze_anomalies`):**
+- Loops through test_results where status=="passed"
+- Checks duration_ms > 2000 (threshold)
+- Creates WARNING AuditFinding for slow tests
+- Includes performance metrics (duration, tool count, assertions)
+- Suggests performance investigation and trace inspection
+
+### Report Generation
+
+Uses AuditReportFormatter to:
+1. Create formatter with QA run ID
+2. Add all findings (critical + warning)
+3. Write report to `backend/results/audit_report_<timestamp>.md`
+4. Return absolute path to report file
+
+Report structure:
+- Header with QA run ID and generation timestamp
+- Summary section with severity counts
+- Critical Failures section (if any)
+- Warnings section (if any)
+- Recommendations section with priority ordering
+
+### Files Created
+
+- `backend/scripts/audit_analyzer.py` - Main analyzer module (237 lines)
+
+### Testing
+
+**Verification Steps Completed:**
+
+1. ✅ Import test: `python3 -c "from backend.scripts.audit_analyzer import AuditAnalyzer; print('OK')"`
+2. ✅ Functional test: Loaded sample QA results with 3 scenarios (2 passed, 1 failed)
+3. ✅ Failure analysis: Identified 1 CRITICAL finding from failed test
+4. ✅ Anomaly analysis: Identified 1 WARNING finding from slow test (2500ms > 2000ms threshold)
+5. ✅ Report generation: Generated markdown report with both finding types
+6. ✅ File writing: Confirmed report file created with correct structure
+7. ✅ Report content: Verified "Critical Failures" and "Warnings" sections present
+
+### Success Criteria Met
+
+✅ AuditAnalyzer class with __init__(qa_results_file, logs_file)  
+✅ analyze() method that runs full pipeline and returns report path  
+✅ _analyze_failures() identifies failed tests and creates CRITICAL findings  
+✅ _categorize_failure() creates findings with tool names, errors, trace IDs, code paths  
+✅ _analyze_anomalies() identifies slow tests (>2000ms) as WARNING findings  
+✅ Report written to backend/results/audit_report_<timestamp>.md  
+✅ Integration with AuditReportFormatter  
+✅ Module imports successfully  
+✅ Committed to main branch  
+
+### Integration Points
+
+**Receives Input From:**
+- QA test runner results (JSON file with test scenarios and outcomes)
+
+**Provides Output To:**
+- Audit report (markdown file for admin review)
+- Next task: Skill definition will call this module
+
+**Dependencies Used:**
+- AuditReportFormatter, AuditFinding, Severity (from Task 3)
+- pathlib.Path for file operations
+- json for QA results loading
+- datetime for timestamping
+
+### Files Modified
+
+- `backend/PHASE_5_HANDOVER.md` - Added Task 4 completion entry
+
+### Commit
+
+```
+commit: fbb2503
+message: feat: Add audit analyzer for QA results analysis
+```
+
+### Key Design Decisions
+
+1. **Threshold-based anomaly detection** - 2000ms hardcoded threshold for "slow" tests allows quick identification of performance issues
+2. **Severity differentiation** - Failures are CRITICAL, anomalies are WARNING - allows prioritization in reports
+3. **Minimal logs_file usage** - logs_file parameter accepts optional path but not yet used; future enhancement for deeper analysis
+4. **Trace ID correlation** - All findings include trace IDs when available for observability integration
+5. **Flexible details dict** - Findings capture tool_calls, duration, assertions, db_state, response_snippet for complete context
+
+### Next Steps (Task 5)
+
+**Main Skill Definition:**
+- Create `~/.claude/skills/test-qa-audit-loop.md`
+- Document workflow phases: QA → Audit → Plan → Fix
+- Include usage examples and scope documentation
+
+---
+
