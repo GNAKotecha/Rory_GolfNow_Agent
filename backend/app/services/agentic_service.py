@@ -14,6 +14,7 @@ import json
 import time
 import os
 
+from sqlalchemy.orm import Session
 from app.services.ollama import OllamaClient, OllamaError
 from app.services.mcp_registry import MCPToolRegistry, ToolCatalog
 from app.services.mcp_client import MCPTool, MCPToolResult
@@ -207,6 +208,9 @@ class AgenticService:
         rate_limiter: Optional["RateLimiter"] = None,
         health_checker: Optional["MCPHealthChecker"] = None,
         run_id: Optional[str] = None,
+        session: Optional[Session] = None,
+        tenant_id: Optional[int] = None,
+        workflow_name: Optional[str] = None,
     ):
         """
         Initialize agentic service.
@@ -218,6 +222,9 @@ class AgenticService:
             rate_limiter: Optional rate limiter for tool calls
             health_checker: Optional health checker for MCP servers
             run_id: Optional run ID for tracking
+            session: Optional database session for workflow loading
+            tenant_id: Optional tenant ID for workflow context
+            workflow_name: Optional workflow name to load
         """
         self.ollama = ollama_client
         self.mcp = mcp_registry
@@ -225,9 +232,15 @@ class AgenticService:
         self.rate_limiter = rate_limiter
         self.health_checker = health_checker
         self.run_id = run_id
+        self.session = session
+        self.tenant_id = tenant_id
+        self.workflow_name = workflow_name
+        self.workflow_context: Dict[str, Any] = {}
+        self.skills_context: Dict[str, Any] = {}
         self.error_handler = AgentErrorHandler(max_retries=3)
         self.bash_tool = BashTool(run_id=run_id)  # Initialize bash escape hatch with run_id
         self.simple_tools = SimpleTool()  # Initialize simple built-in tools
+        self.logger = logging.getLogger(__name__)
 
         # Task 5M2.2: Resolve loop budget policy (fallback to default if not provided)
         if self.config.loop_budget_policy is None:
@@ -235,14 +248,14 @@ class AgenticService:
 
         # Session context (set during execute)
         self._session_id: Optional[int] = None
-        
+
         # Task B1: Run-scoped tool catalog (created fresh for each run)
         self._run_catalog: Optional[ToolCatalog] = None
         self._catalog_initialized: bool = False  # Track if catalog was ever set
-        
+
         # Task D1: Enhanced tool catalog with metadata
         self._enhanced_catalog: Optional[EnhancedToolCatalog] = None
-        
+
         # Task E1: Headless event builder for run-correlated events
         # Wire in the default token store for durable resume token persistence
         self._event_builder: HeadlessEventBuilder = HeadlessEventBuilder(
@@ -250,9 +263,35 @@ class AgenticService:
             token_store=get_default_token_store(),
         )
 
+    def _load_workflow_context(self) -> None:
+        """Load tenant workflow if provided.
+
+        Task 3 (Phase 5): Runtime integration for tenant-managed workflows.
+        Loads active workflow and skills for the tenant and extracts runtime context.
+
+        Contract:
+        - Session must remain valid for entire workflow duration
+        - Workflow lookup occurs once before first tool call
+        - None results are logged but execution continues gracefully
+        """
+        if not (self.session and self.tenant_id and self.workflow_name):
+            return
+
+        from app.services.workflow_runtime_service import WorkflowRuntimeService
+
+        workflow = WorkflowRuntimeService.load_active_workflow(
+            self.session, self.tenant_id, self.workflow_name
+        )
+
+        if workflow:
+            self.workflow_context = WorkflowRuntimeService.get_workflow_context(workflow)
+            self.logger.info(f"Loaded workflow: {self.workflow_name} v{workflow.version}")
+        else:
+            self.logger.warning(f"Workflow not found: {self.workflow_name} for tenant {self.tenant_id}")
+
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
-        
+
         Guards against mocked/malformed catalog objects that would derail control flow.
         """
         if self._run_catalog is None:
@@ -399,6 +438,20 @@ To use a tool, respond with a function call in the format expected by the API.""
                 "content": system_prompt
             })
 
+        # Task 3 (Phase 5): Load workflow context before execution
+        self._load_workflow_context()
+
+        # Log workflow start if workflow loaded
+        if self.workflow_name and self.workflow_context:
+            from app.services.workflow_runtime_service import WorkflowRuntimeService
+            WorkflowRuntimeService.log_workflow_execution(
+                self.run_id,
+                self.tenant_id,
+                self.workflow_name,
+                self.workflow_context.get("version"),
+                "started"
+            )
+
         # Task 5M2.2: Use policy-driven loop budget
         loop_budget = self.config.loop_budget_policy
         max_steps = loop_budget.max_steps
@@ -412,6 +465,8 @@ To use a tool, respond with a function call in the format expected by the API.""
                 "available_tools": len(available_tools),
                 "max_steps": max_steps,
                 "budget_profile": loop_budget.profile.value,
+                "workflow_name": self.workflow_name,
+                "workflow_version": self.workflow_context.get("version") if self.workflow_context else None,
             }
         )
 
@@ -840,9 +895,15 @@ To use a tool, respond with a function call in the format expected by the API.""
                             await self.rate_limiter.record_tool_call(user.id)
 
                         # Handle simple built-in tools first
-                        simple_tool_names = ["store_memory", "retrieve_memory", "list_memory_keys", "calculate"]
+                        simple_tool_names = ["store_memory", "retrieve_memory", "list_memory_keys", "calculate", "retrieve_historical_context"]
                         if tool_name in simple_tool_names:
                             from app.services.mcp_client import MCPToolResult
+                            # Set context for tools that need database access
+                            self.simple_tools.set_context(
+                                db_session=self.session,
+                                tenant_id=self.tenant_id,
+                                session_id=self._session_id or 0
+                            )
                             simple_result = await self.simple_tools.execute_tool(tool_name, tool_args)
                             result = MCPToolResult(
                                 success=simple_result["success"],
@@ -1084,7 +1145,7 @@ To use a tool, respond with a function call in the format expected by the API.""
                                     if self.config.stream_callback:
                                         event = self._event_builder.tool_result(
                                             tool_name=tool_name,
-                                            tool_index=tool_idx,
+                                            tool_index=tool_calls.index(tool_call) + 1,
                                             tool_total=len(tool_calls),
                                             success=False,
                                             error=result.error,
