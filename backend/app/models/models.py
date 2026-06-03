@@ -28,6 +28,9 @@ class Tenant(Base):
     external_credentials = relationship("ExternalCredential", back_populates="tenant")
     workflow_runs = relationship("WorkflowRun", back_populates="tenant")
     mcp_integrations = relationship("TenantMCPIntegration", back_populates="tenant")
+    skills = relationship("TenantSkill", back_populates="tenant")
+    workflows = relationship("TenantWorkflow", back_populates="tenant")
+    session_memory_summaries = relationship("SessionMemorySummary", back_populates="tenant")
 
 
 class UserRole(str, enum.Enum):
@@ -121,6 +124,9 @@ class Session(Base):
     summary_generated_at = Column(DateTime, nullable=True)
     message_count_at_summary = Column(Integer, default=0, nullable=False)
 
+    # Agent memory
+    session_working_memory = Column(JSON, nullable=True, default={})
+
     # Relationships
     tenant = relationship("Tenant", back_populates="sessions")
     user = relationship("User", back_populates="sessions")
@@ -140,6 +146,20 @@ class Message(Base):
 
     # Relationships
     session = relationship("Session", back_populates="messages")
+
+
+class SessionMemorySummary(Base):
+    """Historical memory summaries for cross-session context retrieval."""
+    __tablename__ = "session_memory_summaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="session_memory_summaries")
 
 
 class WorkflowEvent(Base):
@@ -337,3 +357,81 @@ class TenantMCPIntegration(Base):
 
     # Relationships
     tenant = relationship("Tenant", back_populates="mcp_integrations")
+
+
+class TenantSkill(Base):
+    """
+    Tenant-scoped custom skills/capabilities.
+
+    Each tenant can define their own skills that extend the agent's capabilities.
+    Skills are versioned to support iterative development and rollback.
+
+    Example skill_data structure:
+    {
+        "type": "workflow",
+        "triggers": ["on_chat_message"],
+        "steps": [
+            {"action": "approve_required", "gates": ["manager_approval"]},
+            {"action": "execute_tool", "tool": "github_pr_create"}
+        ]
+    }
+
+    Version tracking allows multiple versions of the same skill with only one active at a time.
+    """
+    __tablename__ = "tenant_skills"
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'skill_name', 'version', name='uq_tenant_skill_name_version'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    skill_name = Column(String(255), nullable=False)  # e.g., "club_creation_workflow"
+    description = Column(String(500), nullable=True)  # Skill documentation
+    skill_data = Column(JSON, nullable=False, default={})  # Skill definition (content, config, etc)
+    version = Column(Integer, nullable=False, default=1)  # Version number
+    is_active = Column(Boolean, nullable=False, default=False)  # Whether this version is active
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who created this skill
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="skills")
+
+
+class TenantWorkflow(Base):
+    """
+    Tenant-scoped workflow definitions.
+
+    Each tenant can define custom workflows with approval gates, tool requirements, and execution policies.
+    Workflows are versioned to support iterative refinement.
+
+    Example workflow_definition:
+    {
+        "name": "club_creation",
+        "approval_gates": ["manager"],
+        "tools_required": ["github", "jira"],
+        "max_retries": 3,
+        "timeout_seconds": 300
+    }
+
+    active_version tracks which version is currently in use for runtime resolution.
+    """
+    __tablename__ = "tenant_workflows"
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'workflow_name', 'version', name='uq_tenant_workflow_name_version'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    workflow_name = Column(String(255), nullable=False)
+    description = Column(String(500), nullable=True)
+    workflow_definition = Column(JSON, nullable=False, default={})  # Workflow steps, config
+    version = Column(Integer, nullable=False, default=1)  # Version number
+    is_active = Column(Boolean, nullable=False, default=False)  # Whether this version is active
+    active_version = Column(Integer, nullable=True)  # Pointer to active version
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who created this workflow
+
+    # Relationships
+    tenant = relationship("Tenant", back_populates="workflows")
