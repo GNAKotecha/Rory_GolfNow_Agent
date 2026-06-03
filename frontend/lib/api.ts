@@ -55,6 +55,90 @@ interface ModelListResponse {
   policy_note?: string;
 }
 
+// Trace types
+interface TraceFilters {
+  trace_id?: string;
+  user_id?: string;
+  session_id?: string;
+  name?: string;
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+  offset?: number;
+}
+
+interface TracePreview {
+  trace_id: string;
+  user_id: string | null;
+  session_id: string | null;
+  name: string | null;
+  status: string;
+  created_at: string;
+  duration_ms: number | null;
+  input_preview: string | null;
+  output_preview: string | null;
+}
+
+interface TraceListResponse {
+  traces: TracePreview[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+interface ObservationDetail {
+  id: string;
+  type: string;
+  name: string | null;
+  start_time: string;
+  end_time: string | null;
+  input: any;
+  output: any;
+  metadata: any;
+}
+
+interface TraceDetail {
+  trace_id: string;
+  user_id: string | null;
+  session_id: string | null;
+  name: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  duration_ms: number | null;
+  input: any;
+  output: any;
+  metadata: any;
+  observations: ObservationDetail[];
+}
+
+// Test result types
+interface TestResultFilters {
+  scenario_name?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+interface TestResult {
+  id: number;
+  test_run_id: number;
+  scenario_name: string;
+  status: string;
+  duration_seconds: number | null;
+  error_message: string | null;
+  trace_id: string | null;
+  created_at: string;
+}
+
+interface TestResultListResponse {
+  results: TestResult[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -170,6 +254,44 @@ class ApiClient {
   async getChatModels(): Promise<ModelListResponse> {
     return this.request<ModelListResponse>('/api/chat/models');
   }
+
+  // Admin trace endpoints
+  async getTraces(filters: TraceFilters = {}): Promise<TraceListResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.trace_id) params.append('trace_id', filters.trace_id);
+    if (filters.user_id) params.append('user_id', filters.user_id);
+    if (filters.session_id) params.append('session_id', filters.session_id);
+    if (filters.name) params.append('name', filters.name);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/api/admin/traces${queryString ? `?${queryString}` : ''}`;
+
+    return this.request<TraceListResponse>(endpoint);
+  }
+
+  async getTrace(traceId: string): Promise<TraceDetail> {
+    return this.request<TraceDetail>(`/api/admin/traces/${traceId}`);
+  }
+
+  async getTestResults(filters: TestResultFilters = {}): Promise<TestResultListResponse> {
+    const params = new URLSearchParams();
+
+    if (filters.scenario_name) params.append('scenario_name', filters.scenario_name);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/api/admin/test-results${queryString ? `?${queryString}` : ''}`;
+
+    return this.request<TestResultListResponse>(endpoint);
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -182,4 +304,12 @@ export type {
   ChatResponse,
   ModelOption,
   ModelListResponse,
+  TraceFilters,
+  TracePreview,
+  TraceListResponse,
+  TraceDetail,
+  ObservationDetail,
+  TestResultFilters,
+  TestResult,
+  TestResultListResponse,
 };

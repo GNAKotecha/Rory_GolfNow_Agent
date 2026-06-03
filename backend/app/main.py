@@ -15,6 +15,7 @@ from app.api.integrations import router as integrations_router
 from app.api.skills import router as skills_router
 from app.api.workflows import router as workflows_router
 from app.api.test_results import router as test_results_router
+from app.api.traces import router as traces_router
 
 app = FastAPI(
     title="Internal Agent MVP",
@@ -52,6 +53,7 @@ app.include_router(integrations_router, prefix="/api", tags=["integrations"])  #
 app.include_router(skills_router, prefix="/api", tags=["skills"])  # Skills management
 app.include_router(workflows_router, prefix="/api", tags=["workflows"])  # Workflows management
 app.include_router(test_results_router, tags=["test-results"])  # Test result tracking
+app.include_router(traces_router, prefix="/api", tags=["admin"])  # Langfuse trace exploration
 
 
 @app.on_event("startup")
