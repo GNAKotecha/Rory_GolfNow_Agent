@@ -238,6 +238,10 @@ create_tarball() {
     fi
 
     local size_bytes=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null)
+    if [[ -z "$size_bytes" ]]; then
+        log_error "Unable to determine file size - stat command not available on this platform"
+        return 1
+    fi
     local size_mb=$(echo "scale=2; $size_bytes / 1048576" | bc)
 
     log_success "Tarball created: ${OUTPUT_FILE} (${size_mb} MB)"
@@ -287,6 +291,13 @@ generate_report() {
 
     local report_file="${REPO_ROOT}/platform-core-export-${TIMESTAMP}.report"
 
+    # Get file size with proper error handling
+    local size_bytes=$(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null)
+    if [[ -z "$size_bytes" ]]; then
+        log_error "Unable to determine file size - stat command not available on this platform"
+        return 1
+    fi
+
     cat > "${report_file}" <<EOF
 Platform Core Export Report
 Generated: $(date)
@@ -298,7 +309,7 @@ EXPORT SUMMARY
 
 Tarball: $(basename "${OUTPUT_FILE}")
 Location: ${OUTPUT_FILE}
-Size: $(stat -f%z "${OUTPUT_FILE}" 2>/dev/null || stat -c%s "${OUTPUT_FILE}" 2>/dev/null) bytes
+Size: ${size_bytes} bytes
 Compressed Size: $(du -h "${OUTPUT_FILE}" | cut -f1)
 
 Checksum (SHA256):
