@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-06-03T15:28:48.454955",
+  "environment": "dev",
+  "total_scenarios": 1,
+  "passed": 0,
+  "failed": 1,
+  "duration_seconds": 7.489479064941406,
+  "tags": [
+    "all"
+  ],
+  "scenarios": [
+    {
+      "scenario_name": "greeting",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    }
+  ]
+}

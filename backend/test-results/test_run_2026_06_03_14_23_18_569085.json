@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-06-03T15:23:18.568932",
+  "environment": "dev",
+  "total_scenarios": 0,
+  "passed": 0,
+  "failed": 0,
+  "duration_seconds": 0.05761098861694336,
+  "tags": [
+    "core"
+  ],
+  "scenarios": []
+}

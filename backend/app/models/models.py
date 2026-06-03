@@ -31,6 +31,7 @@ class Tenant(Base):
     skills = relationship("TenantSkill", back_populates="tenant")
     workflows = relationship("TenantWorkflow", back_populates="tenant")
     session_memory_summaries = relationship("SessionMemorySummary", back_populates="tenant")
+    test_runs = relationship("TestRun", back_populates="tenant")
 
 
 class UserRole(str, enum.Enum):

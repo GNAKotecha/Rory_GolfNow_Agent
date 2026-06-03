@@ -22,7 +22,7 @@ def upgrade() -> None:
     inspector = sa.inspect(op.get_bind())
 
     # Add session_working_memory column to sessions table
-    if not inspector.has_column('sessions', 'session_working_memory'):
+    if 'session_working_memory' not in [c['name'] for c in inspector.get_columns('sessions')]:
         op.add_column('sessions', sa.Column('session_working_memory', sa.JSON(), nullable=True, server_default='{}'))
 
     # Create session_memory_summaries table

@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-06-03T15:30:18.902619",
+  "environment": "dev",
+  "total_scenarios": 1,
+  "passed": 1,
+  "failed": 0,
+  "duration_seconds": 9.2237868309021,
+  "tags": [
+    "all"
+  ],
+  "scenarios": [
+    {
+      "scenario_name": "greeting",
+      "success": true,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": null,
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": true,
+          "keywords_matched": true,
+          "tool_used": null
+        },
+        {
+          "turn": 2,
+          "success": true,
+          "keywords_matched": true,
+          "tool_used": null
+        }
+      ]
+    }
+  ]
+}

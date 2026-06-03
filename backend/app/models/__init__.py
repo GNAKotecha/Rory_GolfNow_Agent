@@ -27,6 +27,12 @@ from app.models.external_credential import (
     CredentialType
 )
 
+# Import test run models
+from app.models.test_run import (
+    TestRun,
+    TestScenarioResult
+)
+
 __all__ = [
     "WorkflowTemplate",
     "WorkflowRun",
@@ -39,4 +45,6 @@ __all__ = [
     "PromptTemplateVersion",
     "ExternalCredential",
     "CredentialType",
+    "TestRun",
+    "TestScenarioResult",
 ]

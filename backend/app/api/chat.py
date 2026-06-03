@@ -323,6 +323,7 @@ async def chat(
         # Classify workflow
         classification_result = classify_workflow(request.message)
         workflow_classification = WorkflowClassification(
+            tenant_id=current_user.tenant_id,
             session_id=request.session_id,
             message_id=user_message.id,
             user_id=current_user.id,
@@ -709,17 +710,20 @@ async def chat(
                 )
                 db.add(tool_call)
 
-        # Store workflow outcome in memory
-        memory.store_workflow_outcome(
-            user_id=current_user.id,
-            workflow_type=classification_result.category.value,
-            outcome=agentic_result.stopped_reason,
-            context={
-                "steps": agentic_result.total_steps,
-                "tool_calls": sum(len(step.tool_executions) for step in agentic_result.steps),
-                "classification": classification_result.category.value,
-            }
-        )
+        # Store workflow outcome in memory (non-critical, don't fail on error)
+        try:
+            memory.store_workflow_outcome(
+                user_id=current_user.id,
+                workflow_type=classification_result.category.value,
+                outcome=agentic_result.stopped_reason,
+                context={
+                    "steps": agentic_result.total_steps,
+                    "tool_calls": sum(len(step.tool_executions) for step in agentic_result.steps),
+                    "classification": classification_result.category.value,
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to store workflow outcome: {e}")
 
         # Save assistant message
         assistant_message = MessageModel(

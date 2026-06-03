@@ -1,0 +1,289 @@
+{
+  "timestamp": "2026-06-03T15:25:25.869120",
+  "environment": "dev",
+  "total_scenarios": 12,
+  "passed": 0,
+  "failed": 12,
+  "duration_seconds": 0.21560311317443848,
+  "tags": [
+    "core"
+  ],
+  "scenarios": [
+    {
+      "scenario_name": "greeting",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "club_setup",
+      "success": false,
+      "turn_count": 3,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 3,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "member_lookup",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "booking_query",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "context_retention",
+      "success": false,
+      "turn_count": 3,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 3,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "error_recovery",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "approval_flow",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "analytics",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "help",
+      "success": false,
+      "turn_count": 2,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "stress_test",
+      "success": false,
+      "turn_count": 6,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 2,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 3,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 4,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 5,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        },
+        {
+          "turn": 6,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "mcp_health",
+      "success": false,
+      "turn_count": 1,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    },
+    {
+      "scenario_name": "integration_discovery",
+      "success": false,
+      "turn_count": 1,
+      "tool_calls_count": 0,
+      "error_message": "{\"detail\":\"An internal error occurred. Please try again.\"}",
+      "turn_results": [
+        {
+          "turn": 1,
+          "success": false,
+          "keywords_matched": null,
+          "tool_used": false
+        }
+      ]
+    }
+  ]
+}
