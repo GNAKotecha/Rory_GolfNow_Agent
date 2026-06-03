@@ -19,11 +19,20 @@ from app.main import app
 from app.db.session import get_db, Base
 from app.models.models import User, Tenant, TenantWorkflow, UserRole, ApprovalStatus
 from app.services.auth import get_password_hash, create_access_token
-from app.services.agentic_service import AgenticService, AgenticConfig, AgenticResult, AgenticStep
+from app.services.agentic_service import (
+    AgenticService,
+    AgenticConfig,
+    AgenticResult,
+    AgenticStep,
+)
 from app.services.loop_budget_policy import LoopBudgetPolicy, BudgetProfile
 from app.services.headless_events import HeadlessEventBuilder, HeadlessEventType
 from app.services.ollama import OllamaClient
 from app.services.mcp_registry import MCPToolRegistry
+
+
+# Module-level constants
+TEST_TIMEOUT_SECONDS = 300
 
 
 @pytest.fixture
@@ -130,7 +139,7 @@ class TestBrowserHeavyWorkflowWith90StepBudget:
         )
         config = AgenticConfig(
             loop_budget_policy=budget_policy,
-            timeout_seconds=300,
+            timeout_seconds=TEST_TIMEOUT_SECONDS,
             enable_loop_detection=True,
         )
 
@@ -146,21 +155,16 @@ class TestBrowserHeavyWorkflowWith90StepBudget:
 
         # Verify budget policy is set correctly
         assert agentic.config.loop_budget_policy is not None
-        assert agentic.config.loop_budget_policy.profile == BudgetProfile.BROWSER_HEAVY
+        assert (
+            agentic.config.loop_budget_policy.profile
+            == BudgetProfile.BROWSER_HEAVY
+        )
         assert agentic.config.loop_budget_policy.max_steps == 90
-        assert agentic.config.loop_budget_policy.get_warning_step() == 72
 
         # Verify warning threshold calculation
         warning_step = agentic.config.loop_budget_policy.get_warning_step()
         assert warning_step == 72  # 80% of 90
         assert warning_step < agentic.config.loop_budget_policy.max_steps
-
-        # Verify budget can be retrieved
-        assert agentic.config.loop_budget_policy.max_steps == 90
-
-        # **ISSUE 1 FIX: Simulate workflow execution and verify budget warning capability**
-        # The budget warning should fire when step >= warning_step (72)
-        # Verify the policy can detect budget violations
 
         # Simulate workflow progress tracking
         simulated_steps = [
@@ -178,14 +182,24 @@ class TestBrowserHeavyWorkflowWith90StepBudget:
             max_steps = agentic.config.loop_budget_policy.max_steps
 
             # Verify budget enforcement logic
-            if current_step >= warning_step and current_step < max_steps:
-                assert step_data["status"] in ["approaching_budget", "budget_warning_fired", "approaching_limit"]
+            if warning_step <= current_step < max_steps:
+                allowed_statuses = [
+                    "approaching_budget",
+                    "budget_warning_fired",
+                    "approaching_limit",
+                ]
+                assert step_data["status"] in allowed_statuses
             if current_step >= max_steps:
                 assert step_data["status"] == "at_budget_limit"
 
         # Verify telemetry structure includes profile field
+        profile_value = (
+            BudgetProfile.BROWSER_HEAVY.value
+            if hasattr(BudgetProfile.BROWSER_HEAVY, "value")
+            else str(BudgetProfile.BROWSER_HEAVY)
+        )
         telemetry_structure = {
-            "profile": BudgetProfile.BROWSER_HEAVY.value if hasattr(BudgetProfile.BROWSER_HEAVY, 'value') else str(BudgetProfile.BROWSER_HEAVY),
+            "profile": profile_value,
             "max_steps": 90,
             "warning_threshold": 0.8,
             "warning_step": 72,
@@ -210,7 +224,7 @@ class TestPauseResumePreservesRunIdAndCursor:
         # Step 1: Create first service instance
         config1 = AgenticConfig(
             max_steps=10,
-            timeout_seconds=300,
+            timeout_seconds=TEST_TIMEOUT_SECONDS,
         )
         agentic1 = AgenticService(
             ollama_client=mock_ollama_client,
@@ -224,7 +238,6 @@ class TestPauseResumePreservesRunIdAndCursor:
         # Verify run_id is preserved
         assert agentic1.run_id == run_id
 
-        # **ISSUE 2 FIX: Verify pause/resume state preservation**
         # Simulate workflow execution state
         initial_execution_state = {
             "run_id": run_id,
@@ -248,7 +261,7 @@ class TestPauseResumePreservesRunIdAndCursor:
         # Step 3: Create second service instance with same run_id (simulating restart)
         config2 = AgenticConfig(
             max_steps=10,
-            timeout_seconds=300,
+            timeout_seconds=TEST_TIMEOUT_SECONDS,
         )
         agentic2 = AgenticService(
             ollama_client=mock_ollama_client,
@@ -298,10 +311,9 @@ class TestMultiTenantIsolation:
     ):
         """Validate tenant boundaries enforced."""
         # Setup: Two tenants with separate configs
-        config_a = AgenticConfig(max_steps=10, timeout_seconds=300)
-        config_b = AgenticConfig(max_steps=10, timeout_seconds=300)
+        config_a = AgenticConfig(max_steps=10, timeout_seconds=TEST_TIMEOUT_SECONDS)
+        config_b = AgenticConfig(max_steps=10, timeout_seconds=TEST_TIMEOUT_SECONDS)
 
-        # **ISSUE 3 FIX: Mock setup for tool and credential isolation**
         # Setup mock registry to return different tools per tenant
         def get_tools_for_tenant_a(tenant_id):
             if tenant_id == tenant_a.id:
@@ -361,7 +373,6 @@ class TestMultiTenantIsolation:
         # Verify run_ids are different
         assert agentic_a.run_id != agentic_b.run_id
 
-        # **ISSUE 3 FIX: Verify tool and credential isolation**
         # Call get_tools_for_tenant on each registry
         tools_tenant_a = mock_registry_a.get_tools_for_tenant(tenant_a.id)
         tools_tenant_b = mock_registry_b.get_tools_for_tenant(tenant_b.id)
@@ -402,9 +413,6 @@ class TestConcurrentMultiTenantLoad:
         mock_ollama_client, mock_mcp_registry
     ):
         """Validate stability under concurrent load."""
-        # **ISSUE 4 FIX: Create 10 concurrent sessions (spec requires 10, not 5)**
-        # **ISSUE 4 FIX: Add 3rd tenant for better multi-tenant distribution**
-
         # Create 3rd tenant for load distribution
         tenant_c = Tenant(id=3, name="Tenant C", slug="tenant-c")
         db_session.add(tenant_c)
@@ -413,7 +421,6 @@ class TestConcurrentMultiTenantLoad:
 
         services = []
 
-        # **ISSUE 4 FIX: Create 10 concurrent services (was 5)**
         # Distribution: 4 for Tenant A, 3 for Tenant B, 3 for Tenant C
         for i in range(10):
             if i < 4:
@@ -427,7 +434,7 @@ class TestConcurrentMultiTenantLoad:
 
             config = AgenticConfig(
                 max_steps=10,
-                timeout_seconds=300,
+                timeout_seconds=TEST_TIMEOUT_SECONDS,
             )
 
             service = AgenticService(
@@ -457,7 +464,6 @@ class TestConcurrentMultiTenantLoad:
         run_ids = [s.run_id for s in services]
         assert len(run_ids) == len(set(run_ids))  # All unique
 
-        # **ISSUE 4 FIX: Verify isolation under load with concurrent service instances**
         # Create execution state for each service (simulating concurrent execution)
         execution_states = {}
 
