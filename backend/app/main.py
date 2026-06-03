@@ -12,6 +12,8 @@ from app.api.ollama_compat import router as ollama_compat_router
 from app.api.credentials import router as credentials_router
 from app.api.tenants import router as tenants_router
 from app.api.integrations import router as integrations_router
+from app.api.skills import router as skills_router
+from app.api.workflows import router as workflows_router
 
 app = FastAPI(
     title="Internal Agent MVP",
@@ -46,6 +48,8 @@ app.include_router(ollama_compat_router)  # Ollama-compatible endpoints for Open
 app.include_router(credentials_router, prefix="/api")  # Credential management
 app.include_router(tenants_router, prefix="/api/admin", tags=["admin"])  # Tenant management
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])  # MCP integrations management
+app.include_router(skills_router, prefix="/api", tags=["skills"])  # Skills management
+app.include_router(workflows_router, prefix="/api", tags=["workflows"])  # Workflows management
 
 
 @app.on_event("startup")

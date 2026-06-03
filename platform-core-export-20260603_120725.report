@@ -1,0 +1,172 @@
+Platform Core Export Report
+Generated: Wed Jun  3 12:07:27 BST 2026
+Export ID: 20260603_120725
+
+=============================================================================
+EXPORT SUMMARY
+=============================================================================
+
+Tarball: platform-core-export-20260603_120725.tar.gz
+Location: /Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/platform-core-export-20260603_120725.tar.gz
+Size: 280159 bytes
+Compressed Size: 276K
+
+Checksum (SHA256):
+bc7fa69bf8cebb191017dc6068f1c14158958dfa1e81b14e04c5d169cb382b85  platform-core-export-20260603_120725.tar.gz
+
+=============================================================================
+MANIFEST
+=============================================================================
+
+Generated: 2026-06-03 11:07:25 UTC
+Export ID: 20260603_120725
+
+=============================================================================
+INCLUDED COMPONENTS
+=============================================================================
+
+Core Harness:
+  - app/core/                     (Core agent logic)
+  - app/services/                 (Generic services, BRS-specific excluded)
+  - app/workflows/                (Generic workflows, BRS-specific excluded)
+  - app/models/                   (Database models)
+  - app/schemas/                  (Request/response schemas)
+  - app/api/                       (REST API endpoints)
+  - app/db/                        (Database utilities)
+  - app/config/                    (Configuration)
+  - app/workers/                   (Background workers)
+
+Gateway MCP:
+  - gateway_mcp/core/             (MCP server core)
+  - gateway_mcp/tools/            (Generic tool implementations)
+  - gateway_mcp/configs/          (MCP configurations)
+
+Database:
+  - alembic/                       (Migrations, generic only)
+  - Generic tenant models
+  - Generic skill/workflow models
+
+Tests:
+  - Excluded
+
+Documentation:
+  - README.md
+  - GATEWAY_MCP.md
+  - Generic deployment guides
+
+=============================================================================
+EXCLUDED COMPONENTS (BRS-SPECIFIC)
+=============================================================================
+
+Excluded:
+  - backend/app/services/brs_tools/
+  - backend/gateway_mcp/tools/clubs.py
+  - backend/gateway_mcp/tools/users.py
+  - backend/gateway_mcp/tools/teesheet/
+  - backend/gateway_mcp/core/brs_auth.py
+  - backend/app/workflows/teesheet_onboarding.py
+  - BRS-specific migrations
+  - BRS-specific tests
+  - BRS API reference documentation
+  - Infrastructure and deployment configs
+  - Project-specific planning documents
+
+=============================================================================
+DEPLOYMENT INSTRUCTIONS
+=============================================================================
+
+1. Extract the tarball:
+   tar -xzf platform-core-export-20260603_120725.tar.gz -C /target/directory
+
+2. Configure the environment:
+   cp .env.example .env
+   # Edit .env with your operator-specific values
+
+3. Set up database:
+   python -m alembic upgrade head
+
+4. Configure MCP servers:
+   Edit gateway_mcp/configs/ with your tool implementations
+
+5. Start the service:
+   python app/main.py
+
+=============================================================================
+NOTES
+=============================================================================
+
+- This export contains ONLY the generic harness infrastructure
+- No BRS-specific code or configurations included
+- No sensitive credentials or API keys
+- Ready for deployment in clean environments
+- Can be extended with operator-specific tools and workflows
+
+=============================================================================
+
+=============================================================================
+FILES INCLUDED
+=============================================================================
+
+./
+./backend/
+./README.md
+./scripts/
+./.exportignore
+./scripts/validate_export.sh
+./scripts/build-docker.sh
+./scripts/push-docker.sh
+./scripts/export_platform_core.sh
+./scripts/create-admin-user.py
+./scripts/runpod-smoke-test.sh
+./scripts/run-local-docker.sh
+./backend/migrations/
+./backend/app/
+./backend/pytest.ini
+./backend/requirements.txt
+./backend/gateway_mcp/
+./backend/alembic.ini
+./backend/Dockerfile
+./backend/start-runpod-native.sh
+./backend/README.md
+./backend/create_base_schema.py
+./backend/.dockerignore
+./backend/create_admin_user.py
+./backend/APPROVAL_AND_BATCHING.md
+./backend/scripts/
+./backend/start-runpod.sh
+./backend/alembic/
+./backend/requirements-worker.txt
+./backend/.env.example
+./backend/manual_test_tenants.py
+./backend/SECURITY_FIXES.md
+./backend/Dockerfile.gateway
+./backend/Dockerfile.worker
+./backend/run_migration.py
+./backend/alembic/script.py.mako
+./backend/alembic/env.py
+./backend/alembic/versions/
+./backend/alembic/README
+./backend/alembic/versions/f0e912a4580d_add_integration_id_to_external_.py
+./backend/alembic/versions/c57565c485d3_add_workflow_and_metrics_models.py
+./backend/alembic/versions/h4i5j6k7l8m9_add_tenant_workflows.py
+./backend/alembic/versions/b2c3d4e5f607_add_external_credentials_table.py
+./backend/alembic/versions/f2g3h4i5j6k7_add_mcp_integrations.py
+./backend/alembic/versions/a1b2c3d4e5f6_add_approval_fields_to_workflow_runs.py
+./backend/alembic/versions/d4e5f6g7h8i9_add_session_tool_approvals.py
+./backend/alembic/versions/i5j6k7l8m9n0_add_agent_memory.py
+./backend/alembic/versions/e1f2g3h4i5j6_add_tenant_isolation.py
+./backend/alembic/versions/0942e34b4c43_add_prompt_templates_and_versions.py
+./backend/alembic/versions/g3h4i5j6k7l8_add_tenant_skills.py
+... (and      182 total files)
+
+=============================================================================
+QUICK VERIFICATION
+=============================================================================
+
+To verify the export:
+  1. Check checksum: sha256sum -c platform-core-export-20260603_120725.sha256
+  2. Extract to temp: tar -xzf platform-core-export-20260603_120725.tar.gz -C /tmp
+  3. Run validation: ./scripts/validate_export.sh platform-core-export-20260603_120725.tar.gz
+  4. Review manifest: cat platform-core-export-20260603_120725.manifest
+
+=============================================================================

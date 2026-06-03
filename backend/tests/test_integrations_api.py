@@ -165,7 +165,8 @@ class TestIntegrationsCreate:
         }
         response = client.post("/api/integrations", json=payload)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        # 401 Unauthorized for missing auth (not 403 Forbidden)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 class TestIntegrationsList:
@@ -238,7 +239,8 @@ class TestIntegrationsList:
         """Fail to list integrations without authentication."""
         response = client.get("/api/integrations")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        # 401 Unauthorized for missing auth (not 403 Forbidden)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 class TestIntegrationsGet:
@@ -298,7 +300,8 @@ class TestIntegrationsGet:
         """Fail to get integration without authentication."""
         response = client.get("/api/integrations/1")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        # 401 Unauthorized for missing auth (not 403 Forbidden)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 class TestIntegrationsUpdate:

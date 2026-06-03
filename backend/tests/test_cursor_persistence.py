@@ -93,7 +93,8 @@ class TestCursorValidation:
             user_id=400,
         )
 
-        assert not run_state.validate_cursor()
+        # validate_cursor requires tenant_id but returns False when no cursor exists
+        assert not run_state.validate_cursor(current_tenant_id=1)
 
     def test_validate_cursor_success(self):
         """Test validation succeeds with valid cursor."""
@@ -129,7 +130,7 @@ class TestCursorValidation:
         assert not run_state.validate_cursor(current_tenant_id=2)
 
     def test_validate_cursor_no_tenant_check(self):
-        """Test validation succeeds when no tenant check provided."""
+        """Test validation requires current_tenant_id parameter."""
         run_state = RunState(
             run_id="test-run-7",
             session_id=7,
@@ -142,8 +143,10 @@ class TestCursorValidation:
             tenant_id=1
         )
 
-        # No current_tenant_id provided - validation passes
-        assert run_state.validate_cursor()
+        # current_tenant_id is now required - ValueError if not provided
+        import pytest
+        with pytest.raises(ValueError, match="current_tenant_id is required"):
+            run_state.validate_cursor(current_tenant_id=None)
 
     def test_validate_cursor_expired(self):
         """Test validation fails for expired cursor."""
@@ -206,7 +209,8 @@ class TestCursorValidation:
         # Corrupt timestamp
         run_state.cursor['timestamp'] = "invalid-timestamp"
 
-        assert not run_state.validate_cursor()
+        # Must pass tenant_id; invalid timestamp should return False
+        assert not run_state.validate_cursor(current_tenant_id=1)
 
 
 class TestCursorResume:
@@ -336,7 +340,8 @@ class TestBackwardCompatibility:
         # Should work without cursor
         assert run_state.cursor is None
         assert run_state.get_cursor() is None
-        assert not run_state.validate_cursor()
+        # validate_cursor requires tenant_id param, returns False when no cursor
+        assert not run_state.validate_cursor(current_tenant_id=1)
 
     def test_serialization_without_cursor(self):
         """Test serialization works when cursor is None."""
