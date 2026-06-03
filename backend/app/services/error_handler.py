@@ -758,9 +758,9 @@ class AgentErrorHandler:
         if "no such container" in msg_lower or "container not running" in msg_lower:
             issue = "Required container is not running"
             remediation = (
-                "1. Start the required BRS containers: `docker-compose up -d brs-teesheet`\n"
-                "2. Verify the container is healthy: `docker ps | grep brs-teesheet`\n"
-                "3. Check container logs for startup errors: `docker logs brs-teesheet`"
+                "1. Start the required containers: `docker-compose up -d`\n"
+                "2. Verify the container is healthy: `docker ps`\n"
+                "3. Check container logs for startup errors: `docker logs <container-name>`"
             )
         elif "docker daemon" in msg_lower:
             issue = "Docker daemon is not accessible"

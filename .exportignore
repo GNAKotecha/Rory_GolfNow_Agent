@@ -1,0 +1,162 @@
+# Exportignore: Patterns to exclude from sanitized platform core export
+# Prevents BRS-specific code from leaking into distribution
+
+# =============================================================================
+# BRS-SPECIFIC DIRECTORIES AND TOOLS
+# =============================================================================
+
+# BRS tools and implementations
+backend/app/services/brs_tools/
+backend/gateway_mcp/tools/clubs.py
+backend/gateway_mcp/tools/users.py
+backend/gateway_mcp/tools/teesheet/
+backend/gateway_mcp/tools/schemas.py
+backend/gateway_mcp/tools/parser.py
+backend/gateway_mcp/tools/api.py
+backend/gateway_mcp/tools/config.py
+backend/gateway_mcp/core/brs_auth.py
+
+# BRS-specific workflows
+backend/app/workflows/teesheet_onboarding.py
+
+# BRS-specific migrations
+backend/alembic/versions/*brs*.py
+
+# All test files (development-only, not part of production distribution)
+backend/tests/
+backend/gateway_mcp/tests/
+
+# BRS-specific scripts
+backend/scripts/smoke_onboarding_e2e.py
+
+# BRS API reference and documentation (operator-specific)
+.claude/rules/brs-api-reference.md
+
+# =============================================================================
+# BUILD ARTIFACTS AND CACHE
+# =============================================================================
+
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.deepeval/
+.tox/
+
+# Git and VCS
+.git/
+.gitignore
+.github/
+.gitattributes
+
+# =============================================================================
+# SENSITIVE AND OPERATIONAL FILES
+# =============================================================================
+
+# Secrets and credentials (keep .env.example template only)
+.env
+.env.local
+.env.*.local
+.env.production
+secrets/
+credentials/
+
+# Tenant-specific data and configurations
+tenant_configs/
+*.db
+*.sqlite
+
+# Local development overrides and project-specific configs
+.claude/
+.mcp.json
+
+# =============================================================================
+# PROJECT-SPECIFIC AND NON-CORE CONTENT
+# =============================================================================
+
+# Infrastructure and deployment (operator-specific)
+infrastructure/
+docker-compose.*.yml
+Dockerfile.local
+
+# Documentation specific to GolfNow/BRS integration and project planning
+CLUB_CREATION_E2E.md
+BOOKING_INFO.md
+PHASE_1_HANDOVER.md
+PHASE_2_HANDOVER.md
+PHASE_3_HANDOVER.md
+PHASE_4_HANDOVER.md
+PHASE_5_HANDOVER.md
+GATEWAY_MCP.md
+AGENTS.md
+backend/PHASE_*.md
+backend/CRITICAL_SECURITY_FIXES_*.md
+backend/CLAUDE.md
+
+# Superpowers and development tooling
+.superpowers/
+docs/superpowers/
+
+# Excel/data utilities
+read_excel.py
+
+# Operator-specific plans and documentation
+docs/
+
+# =============================================================================
+# TEMPORARY AND BUILD OUTPUT
+# =============================================================================
+
+# Temporary files and exports
+*.tar.gz
+*.zip
+platform-core-export-*/
+temp/
+tmp/
+
+# Log files
+*.log
+logs/
+
+# Frontend (operator-specific UI, should be in separate distribution)
+frontend/
+
+# Node modules (frontend may be included separately)
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+
+# =============================================================================
+# MIGRATION VERSIONS THAT ARE BRS-SPECIFIC
+# =============================================================================
+
+# Pattern: Any migration with 'brs', 'club', 'course', 'teesheet' in filename
+# These should be excluded via individual patterns or this catch-all:
+backend/alembic/versions/*club*.py
+backend/alembic/versions/*course*.py
+backend/alembic/versions/*teesheet*.py
+backend/alembic/versions/*golf*.py

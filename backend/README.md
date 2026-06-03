@@ -1,15 +1,17 @@
-# GolfNow Agent Backend
+# Platform Agent Backend
 
-Custom backend service for workflow orchestration, observability, and BRS tool integration.
+Generic backend service for workflow orchestration, observability, and tool integration.
+
+This harness can be extended with operator-specific tools and integrations.
 
 ## Architecture
 
 - **Framework**: FastAPI (async Python)
 - **Database**: PostgreSQL (SQLAlchemy ORM, Alembic migrations)
-- **LLM Runtime**: Ollama (via custom client wrapper)
+- **LLM Runtime**: Anthropic Claude (via SDK)
 - **Observability**: Self-hosted Langfuse
 - **Structured Outputs**: Instructor (Pydantic validation)
-- **Tools**: BRS Tool Gateway (subprocess execution)
+- **Tools**: Extensible Gateway MCP (multiple executors: docker, k8s, http, mock)
 
 ## Quick Start
 
@@ -56,15 +58,15 @@ docker-compose -f docker-compose.langfuse.yml up -d
 
 **See**: `docs/phase-1-complete.md`
 
-### Phase 2: BRS Tools + Core Observability ✅
+### Phase 2: Gateway MCP + Core Observability ✅
 
 **Completed**: 2026-05-01
 
 - ✅ Self-hosted Langfuse for workflow tracing
 - ✅ Instructor for structured LLM outputs
-- ✅ BRS Tool Gateway (registry → executor → parser)
+- ✅ Gateway MCP architecture (registry → executor → parser)
 - ✅ Mock mode for development/testing
-- ✅ 3 BRS tools registered (init, superuser, validate)
+- ✅ Example tools registered (can be extended per operator)
 
 **See**: `docs/phase-2-complete.md`
 
