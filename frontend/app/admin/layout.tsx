@@ -60,6 +60,12 @@ export default function AdminLayout({
                   Trace Explorer
                 </a>
                 <a
+                  href="/admin/integrations"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+                >
+                  Integrations
+                </a>
+                <a
                   href="/admin/mcp-connections"
                   className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md"
                 >
