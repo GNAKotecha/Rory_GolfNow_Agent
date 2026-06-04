@@ -190,21 +190,23 @@ class AgentMemoryService:
 
 class AgentMemory:
     """
-    Manages cross-session memory storage for user preferences, 
+    Manages cross-session memory storage for user preferences,
     workflow outcomes, and domain knowledge.
-    
+
     This is the original implementation for backwards compatibility.
     For working memory and historical context, use AgentMemoryService.
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, tenant_id: Optional[int] = None):
         """
         Initialize agent memory.
 
         Args:
             db: SQLAlchemy database session
+            tenant_id: Tenant ID for multi-tenant logging context
         """
         self.db = db
+        self.tenant_id = tenant_id
         self._batch_mode = False
 
     @contextmanager
@@ -227,7 +229,7 @@ class AgentMemory:
             logger.debug("Batch commit successful")
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Batch rollback due to error: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Batch rollback due to error: {e}")
             raise
         finally:
             self._batch_mode = False
@@ -260,7 +262,7 @@ class AgentMemory:
                 self.db.commit()
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Failed to store user preference: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to store user preference for user {user_id}: {e}")
             raise
 
     def get_user_preferences(self, user_id: int) -> Dict[str, Any]:
@@ -286,7 +288,7 @@ class AgentMemory:
                 preferences[row.key] = json.loads(row.value)
             return preferences
         except Exception as e:
-            logger.error(f"Failed to get user preferences: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to get user preferences for user {user_id}: {e}")
             return {}
 
     def store_workflow_outcome(
@@ -324,7 +326,7 @@ class AgentMemory:
                 self.db.commit()
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Failed to store workflow outcome: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to store workflow outcome for user {user_id}: {e}")
             raise
 
     def get_relevant_past_outcomes(
@@ -368,7 +370,7 @@ class AgentMemory:
                 })
             return outcomes
         except Exception as e:
-            logger.error(f"Failed to get past outcomes: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to get past outcomes for user {user_id}, workflow {workflow_type}: {e}")
             return []
 
     def store_domain_knowledge(
@@ -406,7 +408,7 @@ class AgentMemory:
                 self.db.commit()
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Failed to store domain knowledge: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to store domain knowledge for user {user_id}, domain {domain}: {e}")
             raise
 
     def get_domain_knowledge(
@@ -443,5 +445,5 @@ class AgentMemory:
             )
             return [row.knowledge for row in result]
         except Exception as e:
-            logger.error(f"Failed to get domain knowledge: {e}")
+            logger.error(f"[tenant_id={self.tenant_id}] Failed to get domain knowledge for user {user_id}, domain {domain}: {e}")
             return []

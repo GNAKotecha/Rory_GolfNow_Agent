@@ -417,7 +417,7 @@ async def chat(
                 )
 
         # Load user memory
-        memory = AgentMemory(db)
+        memory = AgentMemory(db, tenant_id=current_user.tenant_id)
         preferences = memory.get_user_preferences(current_user.id)
 
         # Add preferences to system prompt if available (with sanitization)

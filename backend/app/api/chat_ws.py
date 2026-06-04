@@ -469,7 +469,7 @@ async def chat_websocket(websocket: WebSocket):
             ]
 
             # Load user preferences
-            memory = AgentMemory(db)
+            memory = AgentMemory(db, tenant_id=authenticated_user.tenant_id)
             preferences = memory.get_user_preferences(authenticated_user.id)
 
             if preferences and ollama_messages:
