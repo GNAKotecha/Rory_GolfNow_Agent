@@ -139,6 +139,72 @@ interface TestResultListResponse {
   offset: number;
 }
 
+// Integration management types
+interface TenantMCPIntegration {
+  id: number;
+  tenant_id: number;
+  integration_name: string;
+  auth_type: 'oauth' | 'api_key' | 'pat';
+  config: Record<string, any>;
+  is_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TenantMCPIntegrationCreate {
+  integration_name: string;
+  auth_type: 'oauth' | 'api_key' | 'pat';
+  config?: Record<string, any>;
+}
+
+interface HealthCheckResponse {
+  status: 'healthy' | 'unhealthy' | 'unknown';
+  message: string;
+  timestamp: string;
+}
+
+interface OAuthInitiateResponse {
+  authorizationUrl: string;
+  state: string;
+}
+
+interface MCPToolSchema {
+  name: string;
+  description: string;
+  inputSchema: Record<string, any>;
+}
+
+// Skills management types
+interface TenantSkill {
+  id: number;
+  tenant_id: number;
+  skill_name: string;
+  description: string;
+  skill_data: Record<string, any>;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+}
+
+interface TenantSkillCreate {
+  skill_name: string;
+  description: string;
+  skill_data: Record<string, any>;
+}
+
+interface TenantSkillUpdate extends Partial<TenantSkillCreate> {
+  is_active?: boolean;
+}
+
+interface SkillListResponse {
+  skills: TenantSkill[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -190,6 +256,23 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Wrapper for API calls with consistent error handling
+   */
+  private async apiCall<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    errorMessage: string
+  ): Promise<T> {
+    try {
+      return await this.request<T>(endpoint, options);
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : errorMessage
+      );
+    }
   }
 
   // Auth endpoints
@@ -292,6 +375,227 @@ class ApiClient {
 
     return this.request<TestResultListResponse>(endpoint);
   }
+
+  // Integration management endpoints
+  async getIntegrations(): Promise<TenantMCPIntegration[]> {
+    return this.apiCall<TenantMCPIntegration[]>(
+      '/api/integrations',
+      {},
+      'Failed to fetch integrations'
+    );
+  }
+
+  async getIntegration(id: number): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      `/api/integrations/${id}`,
+      {},
+      `Failed to fetch integration ${id}`
+    );
+  }
+
+  async createIntegration(
+    data: TenantMCPIntegrationCreate
+  ): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      '/api/integrations',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      'Failed to create integration'
+    );
+  }
+
+  async updateIntegration(
+    id: number,
+    data: Partial<TenantMCPIntegration>
+  ): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      `/api/integrations/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+      `Failed to update integration ${id}`
+    );
+  }
+
+  async deleteIntegration(id: number): Promise<void> {
+    await this.apiCall<void>(
+      `/api/integrations/${id}`,
+      { method: 'DELETE' },
+      `Failed to delete integration ${id}`
+    );
+  }
+
+  async enableIntegration(id: number): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      `/api/integrations/${id}/enable`,
+      { method: 'POST' },
+      `Failed to enable integration ${id}`
+    );
+  }
+
+  async disableIntegration(id: number): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      `/api/integrations/${id}/disable`,
+      { method: 'POST' },
+      `Failed to disable integration ${id}`
+    );
+  }
+
+  async testIntegrationHealth(id: number): Promise<HealthCheckResponse> {
+    return this.apiCall<HealthCheckResponse>(
+      `/api/integrations/${id}/health`,
+      { method: 'POST' },
+      `Failed to check integration health ${id}`
+    );
+  }
+
+  async testConnection(id: number): Promise<HealthCheckResponse> {
+    return this.apiCall<HealthCheckResponse>(
+      `/api/integrations/${id}/test`,
+      { method: 'POST' },
+      `Failed to test integration connection ${id}`
+    );
+  }
+
+  async storeApiKey(
+    integrationId: number,
+    apiKey: string,
+    baseUrl?: string
+  ): Promise<void> {
+    const body: Record<string, any> = { api_key: apiKey };
+    if (baseUrl) {
+      body.base_url = baseUrl;
+    }
+
+    await this.apiCall<void>(
+      `/api/integrations/${integrationId}/credentials/api-key`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+      `Failed to store API key for integration ${integrationId}`
+    );
+  }
+
+  async storePAT(
+    integrationId: number,
+    token: string,
+    baseUrl?: string
+  ): Promise<void> {
+    const body: Record<string, any> = { token };
+    if (baseUrl) {
+      body.base_url = baseUrl;
+    }
+
+    await this.apiCall<void>(
+      `/api/integrations/${integrationId}/credentials/pat`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+      `Failed to store PAT for integration ${integrationId}`
+    );
+  }
+
+  async initiateOAuth(integrationId: number): Promise<OAuthInitiateResponse> {
+    return this.apiCall<OAuthInitiateResponse>(
+      `/api/integrations/${integrationId}/oauth/initiate`,
+      { method: 'POST' },
+      `Failed to initiate OAuth for integration ${integrationId}`
+    );
+  }
+
+  async completeOAuthCallback(
+    integrationId: number,
+    code: string,
+    state: string
+  ): Promise<TenantMCPIntegration> {
+    return this.apiCall<TenantMCPIntegration>(
+      `/api/integrations/${integrationId}/oauth/callback`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ code, state }),
+      },
+      `Failed to complete OAuth for integration ${integrationId}`
+    );
+  }
+
+  async listAvailableTools(): Promise<MCPToolSchema[]> {
+    return this.apiCall<MCPToolSchema[]>(
+      '/api/integrations/tools',
+      {},
+      'Failed to list available tools'
+    );
+  }
+
+  // Skills management endpoints
+  async getSkills(limit?: number, offset?: number): Promise<SkillListResponse> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/api/skills${queryString ? `?${queryString}` : ''}`;
+
+    return this.apiCall<SkillListResponse>(endpoint, {}, 'Failed to fetch skills');
+  }
+
+  async getSkill(id: number): Promise<TenantSkill> {
+    return this.apiCall<TenantSkill>(
+      `/api/skills/${id}`,
+      {},
+      `Failed to fetch skill ${id}`
+    );
+  }
+
+  async createSkill(data: TenantSkillCreate): Promise<TenantSkill> {
+    return this.apiCall<TenantSkill>(
+      '/api/skills',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      'Failed to create skill'
+    );
+  }
+
+  async updateSkill(id: number, data: TenantSkillUpdate): Promise<TenantSkill> {
+    return this.apiCall<TenantSkill>(
+      `/api/skills/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+      `Failed to update skill ${id}`
+    );
+  }
+
+  async deleteSkill(id: number): Promise<void> {
+    await this.apiCall<void>(
+      `/api/skills/${id}`,
+      { method: 'DELETE' },
+      `Failed to delete skill ${id}`
+    );
+  }
+
+  async activateSkill(id: number): Promise<TenantSkill> {
+    return this.apiCall<TenantSkill>(
+      `/api/skills/${id}/activate`,
+      { method: 'POST' },
+      `Failed to activate skill ${id}`
+    );
+  }
+
+  async deactivateSkill(id: number): Promise<TenantSkill> {
+    return this.apiCall<TenantSkill>(
+      `/api/skills/${id}/deactivate`,
+      { method: 'POST' },
+      `Failed to deactivate skill ${id}`
+    );
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -312,4 +616,13 @@ export type {
   TestResultFilters,
   TestResult,
   TestResultListResponse,
+  TenantMCPIntegration,
+  TenantMCPIntegrationCreate,
+  HealthCheckResponse,
+  OAuthInitiateResponse,
+  MCPToolSchema,
+  TenantSkill,
+  TenantSkillCreate,
+  TenantSkillUpdate,
+  SkillListResponse,
 };
