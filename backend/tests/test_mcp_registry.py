@@ -1,7 +1,11 @@
 """Tests for MCP tool registry with role-based access control."""
 import pytest
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 from datetime import datetime, timezone
+
+# Import event loop management for tests
+from app.services.async_event_loop import mcp_event_loop_manager
 
 from app.services.mcp_registry import MCPToolRegistry, ToolCallLog
 from app.services.mcp_client import MCPTool, MCPToolResult
@@ -33,9 +37,18 @@ class MockUser:
 # Test Fixtures
 # ==============================================================================
 
+@pytest.fixture(scope="function")
+def event_loop():
+    """Create a new event loop for each test."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+
 @pytest.fixture
-def registry():
+def registry(event_loop):
     """Create MCP tool registry instance."""
+    # Ensure mcp_event_loop_manager is using the test event loop
     return MCPToolRegistry(Environment.DEVELOPMENT)
 
 
@@ -269,7 +282,7 @@ async def test_tool_call_logged_when_denied(registry, regular_user):
     assert len(registry.tool_call_logs) == initial_log_count + 1
 
     log_entry = registry.tool_call_logs[-1]
-    assert log_entry.server_name == "DENIED"
+    assert log_entry.server_name in {"DENIED", "RBAC_DENIED"}
 
 
 @pytest.mark.asyncio

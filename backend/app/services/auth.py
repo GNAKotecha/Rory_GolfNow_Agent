@@ -32,9 +32,21 @@ def get_password_hash(password: str) -> str:
     return hashed.decode('utf-8')
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    data: Optional[dict] = None,
+    user_id: Optional[int] = None,
+    tenant_id: Optional[int] = None,
+    expires_delta: Optional[timedelta] = None
+) -> str:
     """Create a JWT access token."""
-    to_encode = data.copy()
+    to_encode = data or {}
+
+    # Prioritize passed user_id and tenant_id
+    if user_id is not None:
+        to_encode['sub'] = str(user_id)
+    if tenant_id is not None:
+        to_encode['tenant_id'] = tenant_id
+
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:

@@ -229,6 +229,258 @@ python scripts/scenario_runner.py --verbose
 
 ---
 
+# Demo Workflow Scenarios (Manual Natural Language)
+
+These scenarios are intended for manual demo-readiness testing through natural language, ideally using Claude with `/test-qa-loop` in a custom/dry-run style. They should not require code changes or dynamic tool registration. If Rory cannot complete an action because a tool or source document is missing, record that as a useful test result rather than implementing the missing capability during the run.
+
+**Primary test seam:** chat with Rory in natural language and capture the response quality, tool usage, approval behavior, and any missing knowledge/tool gaps.
+
+**LLM runtime assumption:** Phase 5 testing uses the Anthropic-compatible API-key mode, not local Ollama.
+
+**Source documents:**
+- `/Users/206887576@bwt3.com/Downloads/WorkFlowForChatBot.docx`
+- `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/Onboarding Info/Teesheet/Teesheet Onboarding Agenda.docx`
+- `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/Onboarding Info/Activation Questions UK-IRE.xlsx`
+- `/Users/206887576@bwt3.com/Documents/GitHub/Rory_GolfNow_Agent/Onboarding Info/ePos/BRS ePoS Teesheet - What's different.docx`
+
+## Scenario 16: Reinstate Deleted User
+
+**Tags:** `demo_workflow`, `support`, `members`, `knowledge`
+**Goal:** Rory explains the correct support workflow for a returning member whose deleted profile still holds the old username.
+**Source:** `WorkFlowForChatBot.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "A member left the club and their profile was deleted. They have joined again, but the system says their old username is still in use. What should we do?" | Rory should explain that deleted profiles can still reserve usernames in the background and that BRS needs to locate the deleted profile. |
+| 2 | "The club does not use Club Systems. What are the exact steps?" | Rory should advise BRS to edit the deleted BRS username to a safe variant such as appending `-deleted`, then have the club create a new user profile with the original details. |
+| 3 | "What changes if they do use Club Systems?" | Rory should add that after the club creates the new BRS user, they should go to `Tools > Club Systems Membership Data Preview` and import/sync the new BRS record with the Club Systems record. |
+
+### Pass Criteria
+- [ ] Identifies the root cause: deleted profile still holds username.
+- [ ] Distinguishes Club Systems vs non-Club Systems paths.
+- [ ] Mentions changing the deleted username, commonly by appending `-deleted`.
+- [ ] Mentions Club Systems membership data preview/import when applicable.
+- [ ] Does not claim the club can use the deleted-user checkbox if that is BRS-only.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 17: Bill Creation
+
+**Tags:** `demo_workflow`, `memberships`, `billing`, `knowledge`
+**Goal:** Rory guides an admin through creating or troubleshooting a member bill.
+**Source:** `WorkFlowForChatBot.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "We are coming up to renewal period and need to create bills for members. Some subscriptions are not appearing in bill creation. How do we troubleshoot this?" | Rory should explain that the member needs an active subscription and that the selected bill period/cycle must include subscriptions tied to the member profile. |
+| 2 | "Where should the admin check or add subscriptions?" | Rory should direct them to `Memberships > Members > Billing > Subscriptions`. |
+| 3 | "How do they create the bill after that?" | Rory should describe creating a bill either from the member profile Bills tab or from `Memberships > Billing/Payments > Create Bill` for batch billing. |
+| 4 | "Which bill creation steps usually cause issues?" | Rory should identify Step 2 bill period selection and Step 3 subscription selection/discounts as the common issue points. |
+| 5 | "What happens before the bill is published?" | Rory should mention previewing the bill summary and that the bill is not published immediately, allowing edits/payments before sending. |
+
+### Pass Criteria
+- [ ] Explains active subscription requirement.
+- [ ] Explains bill period/cycle impact on Step 3 subscriptions.
+- [ ] Gives the correct navigation paths.
+- [ ] Mentions Step 1 reference/due date, Step 2 period, Step 3 subscription/discount, Step 4 payment scheme.
+- [ ] Mentions preview and unpublished state before final send.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 18: User and Member Creation
+
+**Tags:** `demo_workflow`, `users`, `memberships`, `knowledge`
+**Goal:** Rory chooses the right profile creation path based on whether the club uses Memberships.
+**Source:** `WorkFlowForChatBot.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "A club needs to create a new person in BRS. When should they use Users versus Memberships?" | Rory should explain that login/staff/admin/superuser profiles live on the Users tab, while clubs with Memberships typically create members through the create member wizard. |
+| 2 | "What is the Users tab process?" | Rory should describe `Users > Add New`, complete required `*` fields, choose the correct user group/access, then create the new user. |
+| 3 | "What is the Memberships tab process?" | Rory should describe `Memberships > Members > Create Member`, choose member/non-member, fill required fields, and proceed through the wizard. |
+| 4 | "What should happen after step 4 in the member wizard?" | Rory should explain `Save & Exit` versus `Save & Continue`, the prompt to assign wallet/subscriptions/create bill, and automatic sync to the Users tab. |
+
+### Pass Criteria
+- [ ] Clearly distinguishes user profile/login creation from Memberships member creation.
+- [ ] Mentions user group/access as important in Users tab creation.
+- [ ] Mentions member/non-member choice in Memberships wizard.
+- [ ] Mentions wallet/subscription/bill handoff after member creation.
+- [ ] Mentions automatic sync to Users tab.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 19: Configure Timesheet
+
+**Tags:** `demo_workflow`, `teesheet`, `configuration`, `knowledge`
+**Goal:** Rory guides an admin through correcting missing tee times, sunset coverage, or interval changes.
+**Source:** `WorkFlowForChatBot.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "A club is missing tee times near sunset and wants to change tee time intervals. How should they configure the timesheet?" | Rory should direct them to `Tools > Configure Timesheet` and explain selecting operation, year/date range, time range, days of week, then configure. |
+| 2 | "Should they delete existing tee times first?" | Rory should explain that deleting tee times first is often recommended to avoid intervals becoming out of sync, while noting deletion skips tee times with booking information. |
+| 3 | "They get an error saying tee times already exist when trying to add up to sunset. What should they do?" | Rory should explain sunset changes over the year and recommend configuring smaller date batches, adjusting the last tee time by the interval for each batch/week. |
+
+### Pass Criteria
+- [ ] Gives the correct navigation path.
+- [ ] Lists the main configuration inputs: operation, year/date range, time range, days of week.
+- [ ] Explains why deleting existing tee times can help.
+- [ ] Notes deletion skips tee times with booking information.
+- [ ] Explains the sunset/duplicate-times issue and smaller-batch workaround.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 20: Process and Refund Competition Purse Payments
+
+**Tags:** `demo_workflow`, `competitions`, `payments`, `knowledge`
+**Goal:** Rory explains how staff process competition purse charges and when BRS Support handles refunds.
+**Source:** `WorkFlowForChatBot.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "A club uses competition purse. Members booked into a competition but only show pending charges. How do staff process those charges?" | Rory should explain that purse-enabled competitions create pending charges until staff process them through `Tools > Process Competition Charges`. |
+| 2 | "What should staff expect on the process screen?" | Rory should mention selecting year, seeing processed/unprocessed competitions, pressing `Process`, reviewing details/timesheet, choosing members to charge, messaging insufficient-fund members, and committing charges. |
+| 3 | "How do we refund those purse charges?" | Rory should explain that BRS Support needs to use the refund competition URL pattern with the club BRS ID and competition ID. |
+
+### Pass Criteria
+- [ ] Explains pending charge behavior.
+- [ ] Gives the correct `Tools > Process Competition Charges` path.
+- [ ] Distinguishes `Process` for unprocessed competitions and `View` for processed competitions.
+- [ ] Mentions insufficient-funds messaging and commit charges.
+- [ ] Identifies refunds as BRS Support action requiring club ID and competition ID.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 21: Green Fee Rates Setup
+
+**Tags:** `demo_workflow`, `onboarding`, `teesheet`, `green_fees`, `knowledge`
+**Goal:** Rory helps set up or explain a club's green fee rates using onboarding information.
+**Sources:** `Teesheet Onboarding Agenda.docx`, `Activation Questions UK-IRE.xlsx`, `BRS ePoS Teesheet - What's different.docx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "For a new club onboarding, what information do we need to set up green fee rates?" | Rory should identify green fee/rates setup as part of teesheet onboarding and ask for rate categories, visitor/member applicability, holes, date range, availability/time bands, default rate needs, and whether rates are already set up. |
+| 2 | "The club needs visitor rates for weekdays and weekends, plus a default rate. What should Rory ask before configuring?" | Rory should ask for standard/reduced/package rates, start/end dates, time bands, days of week, 9/18-hole applicability, VAT/payment implications if ePOS/payments are involved, and whether one default rate should be set. |
+| 3 | "What should Rory explain about multiple availabilities and overrides?" | Rory should explain that green fee rates can have multiple availabilities for different times of day, overrides can supersede a rate for particular dates/times, and only one default rate should be active. |
+
+### Pass Criteria
+- [ ] Connects green fee setup to teesheet onboarding.
+- [ ] Asks for enough rate details before pretending to configure anything.
+- [ ] Mentions visitor green fee rate types such as standard/reduced/packages where relevant.
+- [ ] Mentions multiple availabilities/time bands.
+- [ ] Mentions overrides and one-default-rate constraint.
+- [ ] Notes missing data rather than hallucinating exact rates.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Scenario 22: Casual Booking Rules Setup
+
+**Tags:** `demo_workflow`, `onboarding`, `teesheet`, `casual_booking_rules`, `knowledge`
+**Goal:** Rory gathers the right onboarding inputs and explains the configuration approach for member casual booking rules.
+**Sources:** `Teesheet Onboarding Agenda.docx`, `Activation Questions UK-IRE.xlsx`
+
+### Conversation
+
+| Turn | User Message | Expected Response |
+|------|--------------|-------------------|
+| 1 | "During onboarding, we need to set up a club's casual booking rules. What should Rory ask the club?" | Rory should ask for member booking access rules, booking window, days/times covered, member categories, guest rules, restrictions, tee sheet intervals, first/last tee times, and whether online member/member-guest payments apply. |
+| 2 | "The club wants members to book casual golf online but only within certain times. How should Rory guide the setup?" | Rory should explain gathering date/time/day restrictions, applicable member groups, guest allowances, payment requirements, and any website/member booking link readiness. |
+| 3 | "What should Rory record if the club cannot answer everything yet?" | Rory should mark casual rules as discussed but incomplete, list missing decisions, and avoid claiming setup is complete until the rule details are confirmed. |
+
+### Pass Criteria
+- [ ] Treats casual booking rules as an onboarding configuration discussion.
+- [ ] Asks for booking-window, member group, guest, time/day, and restriction details.
+- [ ] Connects to tee sheet basics such as first/last tee times and intervals where relevant.
+- [ ] Mentions member green fee/member guest payment questions if payments are in scope.
+- [ ] Records missing decisions clearly instead of inventing rules.
+
+### Result Capture
+- Status: `not_run`
+- Demo readiness: `unknown`
+- Missing tools/knowledge:
+- Notes:
+
+---
+
+## Manual Demo Results Format
+
+Use this status scale when adding results to the test-results record:
+
+| Status | Meaning |
+|--------|---------|
+| `pass` | Rory gives a demo-ready answer and handles follow-up context. |
+| `partial` | Rory understands the workflow but misses details, asks weak questions, or lacks a non-critical tool. |
+| `fail` | Rory gives incorrect guidance, hallucinates, loses context, or takes unsafe action. |
+| `blocked` | The scenario cannot be completed because required docs, data, auth, or tools are unavailable. |
+| `not_run` | Scenario has not been tested yet. |
+
+Suggested result fields:
+
+```json
+{
+  "scenario_name": "reinstate_deleted_user",
+  "success": false,
+  "status": "not_run",
+  "demo_readiness": "unknown",
+  "turn_count": 0,
+  "tool_calls_count": 0,
+  "error_message": null,
+  "missing_tools_or_knowledge": [],
+  "notes": "",
+  "turn_results": []
+}
+```
+
+---
+
 # Infrastructure Scenarios (MCP Connectivity via API)
 
 These scenarios verify MCP server health and integration connectivity through the backend API - no OAuth required for core checks.

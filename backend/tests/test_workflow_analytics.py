@@ -13,6 +13,7 @@ from app.services.workflow_analytics import (
     log_unknown_workflow,
 )
 from app.models.models import (
+    Tenant,
     User,
     Session as SessionModel,
     Message as MessageModel,
@@ -48,9 +49,20 @@ def db_session(tmp_path):
 
 
 @pytest.fixture
-def test_user(db_session):
+def tenant(db_session):
+    """Create a test tenant."""
+    tenant = Tenant(name="Test Tenant", slug="test-tenant")
+    db_session.add(tenant)
+    db_session.commit()
+    db_session.refresh(tenant)
+    return tenant
+
+
+@pytest.fixture
+def test_user(db_session, tenant):
     """Create a test user."""
     user = User(
+        tenant_id=tenant.id,
         email="test@example.com",
         name="Test User",
         password_hash="hashed",
@@ -64,9 +76,10 @@ def test_user(db_session):
 
 
 @pytest.fixture
-def test_session(db_session, test_user):
+def test_session(db_session, test_user, tenant):
     """Create a test session."""
     session = SessionModel(
+        tenant_id=tenant.id,
         user_id=test_user.id,
         title="Test Session",
     )
@@ -102,6 +115,7 @@ def create_classification(
 ) -> WorkflowClassification:
     """Helper to create a workflow classification."""
     classification = WorkflowClassification(
+        tenant_id=test_session.tenant_id,
         session_id=test_session.id,
         message_id=test_message.id,
         user_id=test_user.id,

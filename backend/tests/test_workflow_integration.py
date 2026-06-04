@@ -5,7 +5,9 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.session import Base
+from app.api.auth_deps import get_approved_user
 from app.models.models import (
+    Tenant,
     User,
     Session as SessionModel,
     WorkflowClassification,
@@ -46,13 +48,24 @@ def db_session(tmp_path):
     yield session
     session.close()
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture
-def test_user(db_session):
+def tenant(db_session):
+    """Create a test tenant."""
+    tenant = Tenant(name="Test Tenant", slug="test-tenant")
+    db_session.add(tenant)
+    db_session.commit()
+    db_session.refresh(tenant)
+    return tenant
+
+
+@pytest.fixture
+def test_user(db_session, tenant):
     """Create and authenticate a test user."""
     user = User(
+        tenant_id=tenant.id,
         email="test@example.com",
         name="Test User",
         password_hash="hashed",
@@ -66,9 +79,10 @@ def test_user(db_session):
 
 
 @pytest.fixture
-def test_session(db_session, test_user):
+def test_session(db_session, test_user, tenant):
     """Create a test session."""
     session = SessionModel(
+        tenant_id=tenant.id,
         user_id=test_user.id,
         title="Test Session",
     )
@@ -84,45 +98,49 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture
+def auth_as_user(test_user):
+    """Override auth dependency to return test user."""
+    app.dependency_overrides[get_approved_user] = lambda: test_user
+    yield
+    app.dependency_overrides.pop(get_approved_user, None)
+
+
 # ==============================================================================
 # Integration Tests
 # ==============================================================================
 
 @pytest.mark.asyncio
-async def test_chat_creates_classification(db_session, test_user, test_session, client):
+async def test_chat_creates_classification(db_session, test_user, test_session, auth_as_user, client):
     """Test that chat endpoint creates workflow classification."""
-    # Mock authentication
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        # Mock Ollama client
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            # Send chat request
-            response = client.post(
-                "/api/v1/chat",
-                json={
-                    "session_id": test_session.id,
-                    "message": "Fix the login bug",
-                }
-            )
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "session_id": test_session.id,
+                "message": "Fix the login bug",
+            }
+        )
 
-            assert response.status_code == 200
+        assert response.status_code == 200
 
-            # Check that classification was created
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification is not None
-            assert classification.user_id == test_user.id
-            assert classification.session_id == test_session.id
-            assert classification.category == WorkflowCategory.BUG_FIX
-            assert classification.outcome == WorkflowOutcome.SUCCESS
-            assert classification.request_text == "Fix the login bug"
-            assert classification.confidence > 0
+        # Check that classification was created
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification is not None
+        assert classification.user_id == test_user.id
+        assert classification.session_id == test_session.id
+        assert classification.category == WorkflowCategory.BUG_FIX
+        assert classification.outcome == WorkflowOutcome.SUCCESS
+        assert classification.request_text == "Fix the login bug"
+        assert classification.confidence > 0
 
 
 @pytest.mark.asyncio
-async def test_chat_classification_categories(db_session, test_user, test_session, client):
+async def test_chat_classification_categories(db_session, test_user, test_session, auth_as_user, client):
     """Test different workflow categories are classified correctly."""
     test_cases = [
         ("Fix the authentication error", WorkflowCategory.BUG_FIX),
@@ -131,196 +149,187 @@ async def test_chat_classification_categories(db_session, test_user, test_sessio
         ("What is the current status?", WorkflowCategory.QUESTION),
     ]
 
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            for message, expected_category in test_cases:
-                response = client.post(
-                    "/api/v1/chat",
-                    json={
-                        "session_id": test_session.id,
-                        "message": message,
-                    }
-                )
-
-                assert response.status_code == 200
-
-                # Get the latest classification
-                classification = (
-                    db_session.query(WorkflowClassification)
-                    .filter(WorkflowClassification.request_text == message)
-                    .first()
-                )
-
-                assert classification is not None
-                assert classification.category == expected_category
-                assert classification.outcome == WorkflowOutcome.SUCCESS
-
-
-@pytest.mark.asyncio
-async def test_chat_failure_marks_outcome_failed(db_session, test_user, test_session, client):
-    """Test that failed chat marks outcome as FAILED."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        # Mock Ollama client to raise error
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            from app.services.ollama import OllamaError
-            mock_client.generate_chat_completion = AsyncMock(
-                side_effect=OllamaError("Ollama service unavailable")
-            )
-            mock_ollama.return_value = mock_client
-
-            # Send chat request (should fail)
+        for message, expected_category in test_cases:
             response = client.post(
                 "/api/v1/chat",
                 json={
                     "session_id": test_session.id,
-                    "message": "Fix the bug",
+                    "message": message,
                 }
             )
 
-            assert response.status_code == 503
+            assert response.status_code == 200
 
-            # Check that classification was marked as FAILED
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification is not None
-            assert classification.outcome == WorkflowOutcome.FAILED
-            assert classification.completed_at is not None
-
-
-@pytest.mark.asyncio
-async def test_repeated_requests_increment_count(db_session, test_user, test_session, client):
-    """Test that repeated requests are tracked."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
-
-            # Send same type of request multiple times
-            for _ in range(3):
-                response = client.post(
-                    "/api/v1/chat",
-                    json={
-                        "session_id": test_session.id,
-                        "message": "Fix the login bug",
-                    }
-                )
-                assert response.status_code == 200
-
-            # Check count
-            count = (
+            # Get the latest classification
+            classification = (
                 db_session.query(WorkflowClassification)
-                .filter(WorkflowClassification.category == WorkflowCategory.BUG_FIX)
-                .count()
+                .filter(WorkflowClassification.request_text == message)
+                .first()
             )
-            assert count == 3
+
+            assert classification is not None
+            assert classification.category == expected_category
+            assert classification.outcome == WorkflowOutcome.SUCCESS
 
 
 @pytest.mark.asyncio
-async def test_unknown_workflow_logged(db_session, test_user, test_session, client, caplog):
+async def test_chat_failure_marks_outcome_failed(db_session, test_user, test_session, auth_as_user, client):
+    """Test that failed chat marks outcome as FAILED."""
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        from app.services.ollama import OllamaError
+        mock_client.generate_chat_completion = AsyncMock(
+            side_effect=OllamaError("Ollama service unavailable")
+        )
+        mock_ollama.return_value = mock_client
+
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "session_id": test_session.id,
+                "message": "Fix the bug",
+            }
+        )
+
+        assert response.status_code == 503
+
+        # Check that classification was marked as FAILED
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification is not None
+        assert classification.outcome == WorkflowOutcome.FAILED
+        assert classification.completed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_repeated_requests_increment_count(db_session, test_user, test_session, auth_as_user, client):
+    """Test that repeated requests are tracked."""
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
+
+        # Send same type of request multiple times
+        for _ in range(3):
+            response = client.post(
+                "/api/v1/chat",
+                json={
+                    "session_id": test_session.id,
+                    "message": "Fix the login bug",
+                }
+            )
+            assert response.status_code == 200
+
+        # Check count
+        count = (
+            db_session.query(WorkflowClassification)
+            .filter(WorkflowClassification.category == WorkflowCategory.BUG_FIX)
+            .count()
+        )
+        assert count == 3
+
+
+@pytest.mark.asyncio
+async def test_unknown_workflow_logged(db_session, test_user, test_session, auth_as_user, client, caplog):
     """Test that unknown workflows are logged."""
     import logging
 
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            # Send ambiguous request
-            with caplog.at_level(logging.WARNING):
-                response = client.post(
-                    "/api/v1/chat",
-                    json={
-                        "session_id": test_session.id,
-                        "message": "asdfghjkl",  # Random text
-                    }
-                )
+        # Send ambiguous request
+        with caplog.at_level(logging.WARNING):
+            response = client.post(
+                "/api/v1/chat",
+                json={
+                    "session_id": test_session.id,
+                    "message": "asdfghjkl",  # Random text
+                }
+            )
 
-                assert response.status_code == 200
+            assert response.status_code == 200
 
-            # Check classification
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification.category == WorkflowCategory.UNKNOWN
+        # Check classification
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification.category == WorkflowCategory.UNKNOWN
 
-            # Check that warning was logged
-            assert "Unknown workflow detected" in caplog.text
+        # Check that warning was logged
+        assert "Unknown workflow detected" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_subcategory_tracked(db_session, test_user, test_session, client):
+async def test_subcategory_tracked(db_session, test_user, test_session, auth_as_user, client):
     """Test that subcategories are tracked."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            response = client.post(
-                "/api/v1/chat",
-                json={
-                    "session_id": test_session.id,
-                    "message": "Debug the authentication error",
-                }
-            )
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "session_id": test_session.id,
+                "message": "Debug the authentication error",
+            }
+        )
 
-            assert response.status_code == 200
+        assert response.status_code == 200
 
-            # Check subcategory
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification.subcategory in ["error_investigation", "debugging"]
+        # Check subcategory
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification.subcategory in ["error_investigation", "debugging"]
 
 
 @pytest.mark.asyncio
-async def test_keywords_stored(db_session, test_user, test_session, client):
+async def test_keywords_stored(db_session, test_user, test_session, auth_as_user, client):
     """Test that keywords are stored."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            response = client.post(
-                "/api/v1/chat",
-                json={
-                    "session_id": test_session.id,
-                    "message": "Fix the bug in the error handler",
-                }
-            )
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "session_id": test_session.id,
+                "message": "Fix the bug in the error handler",
+            }
+        )
 
-            assert response.status_code == 200
+        assert response.status_code == 200
 
-            # Check keywords
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification.keywords is not None
-            assert len(classification.keywords) > 0
-            assert "fix" in classification.keywords or "bug" in classification.keywords
+        # Check keywords
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification.keywords is not None
+        assert len(classification.keywords) > 0
+        assert "fix" in classification.keywords or "bug" in classification.keywords
 
 
 @pytest.mark.asyncio
-async def test_confidence_stored(db_session, test_user, test_session, client):
+async def test_confidence_stored(db_session, test_user, test_session, auth_as_user, client):
     """Test that confidence scores are stored."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=test_user):
-        with patch("app.api.chat.OllamaClient") as mock_ollama:
-            mock_client = AsyncMock()
-            mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
-            mock_ollama.return_value = mock_client
+    with patch("app.api.chat.OllamaClient") as mock_ollama:
+        mock_client = AsyncMock()
+        mock_client.generate_chat_completion = AsyncMock(return_value="Test response")
+        mock_ollama.return_value = mock_client
 
-            response = client.post(
-                "/api/v1/chat",
-                json={
-                    "session_id": test_session.id,
-                    "message": "Fix the critical bug in authentication",
-                }
-            )
+        response = client.post(
+            "/api/v1/chat",
+            json={
+                "session_id": test_session.id,
+                "message": "Fix the critical bug in authentication",
+            }
+        )
 
-            assert response.status_code == 200
+        assert response.status_code == 200
 
-            # Check confidence
-            classification = db_session.query(WorkflowClassification).first()
-            assert classification.confidence > 0
-            assert classification.confidence <= 100
+        # Check confidence
+        classification = db_session.query(WorkflowClassification).first()
+        assert classification.confidence > 0
+        assert classification.confidence <= 100

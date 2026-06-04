@@ -1,7 +1,7 @@
 """Admin analytics API endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -192,8 +192,8 @@ def get_tool_usage_statistics(db: Session, days: int = 30) -> List[ToolUsageStat
     query = db.query(
         ToolCall.tool_name,
         func.count(ToolCall.id).label("call_count"),
-        func.sum(func.case((ToolCall.error.is_(None), 1), else_=0)).label("success_count"),
-        func.sum(func.case((ToolCall.error.isnot(None), 1), else_=0)).label("error_count"),
+        func.sum(case((ToolCall.error.is_(None), 1), else_=0)).label("success_count"),
+        func.sum(case((ToolCall.error.isnot(None), 1), else_=0)).label("error_count"),
     ).filter(
         ToolCall.created_at >= start_date
     ).group_by(
@@ -228,9 +228,9 @@ def get_approval_statistics(db: Session, days: int = 30) -> List[ApprovalStat]:
     query = db.query(
         Approval.request_type,
         func.count(Approval.id).label("total"),
-        func.sum(func.case((Approval.approved == 1, 1), else_=0)).label("approved"),
-        func.sum(func.case((Approval.approved == 0, 1), else_=0)).label("rejected"),
-        func.sum(func.case((Approval.approved.is_(None), 1), else_=0)).label("pending"),
+        func.sum(case((Approval.approved == 1, 1), else_=0)).label("approved"),
+        func.sum(case((Approval.approved == 0, 1), else_=0)).label("rejected"),
+        func.sum(case((Approval.approved.is_(None), 1), else_=0)).label("pending"),
     ).filter(
         Approval.created_at >= start_date
     ).group_by(

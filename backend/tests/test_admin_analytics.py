@@ -2,11 +2,12 @@
 import pytest
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
-from unittest.mock import patch
 
 from app.main import app
 from app.db.session import Base, get_db
+from app.api.auth_deps import get_approved_user
 from app.models.models import (
+    Tenant,
     User,
     Session as SessionModel,
     Message as MessageModel,
@@ -49,13 +50,24 @@ def db_session(tmp_path):
     yield session
     session.close()
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture
-def admin_user(db_session):
+def tenant(db_session):
+    """Create a test tenant."""
+    tenant = Tenant(name="Test Tenant", slug="test-tenant")
+    db_session.add(tenant)
+    db_session.commit()
+    db_session.refresh(tenant)
+    return tenant
+
+
+@pytest.fixture
+def admin_user(db_session, tenant):
     """Create an admin user."""
     user = User(
+        tenant_id=tenant.id,
         email="admin@example.com",
         name="Admin User",
         password_hash="hashed",
@@ -69,9 +81,10 @@ def admin_user(db_session):
 
 
 @pytest.fixture
-def regular_user(db_session):
+def regular_user(db_session, tenant):
     """Create a regular user."""
     user = User(
+        tenant_id=tenant.id,
         email="user@example.com",
         name="Regular User",
         password_hash="hashed",
@@ -85,9 +98,10 @@ def regular_user(db_session):
 
 
 @pytest.fixture
-def pending_user(db_session):
+def pending_user(db_session, tenant):
     """Create a pending user."""
     user = User(
+        tenant_id=tenant.id,
         email="pending@example.com",
         name="Pending User",
         password_hash="hashed",
@@ -101,12 +115,13 @@ def pending_user(db_session):
 
 
 @pytest.fixture
-def seeded_data(db_session, admin_user, regular_user, pending_user):
+def seeded_data(db_session, admin_user, regular_user, pending_user, tenant):
     """Seed database with sample analytics data."""
     # Create sessions
     sessions = []
     for i in range(5):
         session = SessionModel(
+            tenant_id=tenant.id,
             user_id=regular_user.id,
             title=f"Test Session {i}",
         )
@@ -158,6 +173,7 @@ def seeded_data(db_session, admin_user, regular_user, pending_user):
             db_session.refresh(message)
 
             classification = WorkflowClassification(
+                tenant_id=tenant.id,
                 session_id=sessions[0].id,
                 message_id=message.id,
                 user_id=regular_user.id,
@@ -182,6 +198,7 @@ def seeded_data(db_session, admin_user, regular_user, pending_user):
     for tool_name, total, success_count in tool_calls_data:
         for i in range(total):
             tool_call = ToolCall(
+                tenant_id=tenant.id,
                 session_id=sessions[0].id,
                 tool_name=tool_name,
                 parameters={"test": "param"},
@@ -202,6 +219,7 @@ def seeded_data(db_session, admin_user, regular_user, pending_user):
     for request_type, total, approved_count, rejected_count in approval_data:
         for i in range(total):
             approval = Approval(
+                tenant_id=tenant.id,
                 session_id=sessions[0].id,
                 request_type=request_type,
                 request_data={"test": "data"},
@@ -225,296 +243,299 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture
+def auth_as_admin(admin_user):
+    """Override auth dependency to return admin user."""
+    app.dependency_overrides[get_approved_user] = lambda: admin_user
+    yield
+    app.dependency_overrides.pop(get_approved_user, None)
+
+
+@pytest.fixture
+def auth_as_regular(regular_user):
+    """Override auth dependency to return regular user."""
+    app.dependency_overrides[get_approved_user] = lambda: regular_user
+    yield
+    app.dependency_overrides.pop(get_approved_user, None)
+
+
 # ==============================================================================
 # Test Admin Access Control
 # ==============================================================================
 
-def test_admin_analytics_requires_admin(db_session, regular_user, client):
+def test_admin_analytics_requires_admin(db_session, regular_user, auth_as_regular, client):
     """Test that non-admin users cannot access analytics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=regular_user):
-        response = client.get("/api/admin/analytics")
-        assert response.status_code == 403
-        assert "Admin access required" in response.json()["detail"]
+    response = client.get("/api/admin/analytics")
+    assert response.status_code == 403
+    assert "Admin access required" in response.json()["detail"]
 
 
-def test_admin_analytics_allows_admin(db_session, admin_user, seeded_data, client):
+def test_admin_analytics_allows_admin(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test that admin users can access analytics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics")
+    assert response.status_code == 200
 
 
 # ==============================================================================
 # Test User Statistics
 # ==============================================================================
 
-def test_get_user_statistics(db_session, admin_user, seeded_data, client):
+def test_get_user_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test user statistics endpoint."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/users")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/users")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert data["total_users"] == 3  # admin + regular + pending
-        assert data["approved_users"] == 2  # admin + regular
-        assert data["pending_users"] == 1
-        assert data["admin_users"] == 1
+    data = response.json()
+    assert data["total_users"] == 3  # admin + regular + pending
+    assert data["approved_users"] == 2  # admin + regular
+    assert data["pending_users"] == 1
+    assert data["admin_users"] == 1
 
 
 # ==============================================================================
 # Test Session Statistics
 # ==============================================================================
 
-def test_get_session_statistics(db_session, admin_user, seeded_data, client):
+def test_get_session_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test session statistics endpoint."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/sessions")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/sessions")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert data["total_sessions"] == 5
-        assert data["active_sessions_7d"] == 3  # Recent sessions
-        assert data["active_sessions_30d"] == 3  # Recent sessions
-        assert data["avg_messages_per_session"] > 0
+    data = response.json()
+    assert data["total_sessions"] == 5
+    assert data["active_sessions_7d"] == 3  # Recent sessions
+    assert data["active_sessions_30d"] == 3  # Recent sessions
+    assert data["avg_messages_per_session"] > 0
 
 
 # ==============================================================================
 # Test Category Statistics
 # ==============================================================================
 
-def test_get_category_statistics(db_session, admin_user, seeded_data, client):
+def test_get_category_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test workflow category statistics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/categories")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/categories")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert len(data) > 0
+    data = response.json()
+    assert len(data) > 0
 
-        # Check that categories are present
-        categories = [item["category"] for item in data]
-        assert "question" in categories
-        assert "feature" in categories
-        assert "bug_fix" in categories
+    # Check that categories are present
+    categories = [item["category"] for item in data]
+    assert "question" in categories
+    assert "feature" in categories
+    assert "bug_fix" in categories
 
-        # Check that most common category is first (sorted by count)
-        assert data[0]["count"] >= data[-1]["count"]
+    # Check that most common category is first (sorted by count)
+    assert data[0]["count"] >= data[-1]["count"]
 
 
 # ==============================================================================
 # Test Outcome Statistics
 # ==============================================================================
 
-def test_get_outcome_statistics(db_session, admin_user, seeded_data, client):
+def test_get_outcome_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test workflow outcome statistics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/outcomes")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/outcomes")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert len(data) > 0
+    data = response.json()
+    assert len(data) > 0
 
-        # Check structure
-        for item in data:
-            assert "category" in item
-            assert "success" in item
-            assert "failed" in item
-            assert "success_rate" in item
-            assert item["total"] == (
-                item["success"] + item["partial"] + item["failed"] +
-                item["escalated"] + item["pending"]
-            )
+    # Check structure
+    for item in data:
+        assert "category" in item
+        assert "success" in item
+        assert "failed" in item
+        assert "success_rate" in item
+        assert item["total"] == (
+            item["success"] + item["partial"] + item["failed"] +
+            item["escalated"] + item["pending"]
+        )
 
-        # Check that success rates are calculated
-        for item in data:
-            if item["total"] > 0:
-                expected_rate = round(item["success"] / item["total"] * 100, 2)
-                assert item["success_rate"] == expected_rate
+    # Check that success rates are calculated
+    for item in data:
+        if item["total"] > 0:
+            expected_rate = round(item["success"] / item["total"] * 100, 2)
+            assert item["success_rate"] == expected_rate
 
 
 # ==============================================================================
 # Test Repeated Workflows (Trends)
 # ==============================================================================
 
-def test_get_workflow_trends(db_session, admin_user, seeded_data, client):
+def test_get_workflow_trends(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test repeated workflow trends."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/trends?min_count=3")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/trends?min_count=3")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert len(data) > 0
+    data = response.json()
+    assert len(data) > 0
 
-        # Check that trends have required fields
-        for item in data:
-            assert "category" in item
-            assert "count" in item
-            assert item["count"] >= 3  # Min count filter
-            assert "first_seen" in item
-            assert "last_seen" in item
-            assert "unique_users" in item
-            assert "avg_confidence" in item
+    # Check that trends have required fields
+    for item in data:
+        assert "category" in item
+        assert "count" in item
+        assert item["count"] >= 3  # Min count filter
+        assert "first_seen" in item
+        assert "last_seen" in item
+        assert "unique_users" in item
+        assert "avg_confidence" in item
 
-        # Check that trends are sorted by count (descending)
-        counts = [item["count"] for item in data]
-        assert counts == sorted(counts, reverse=True)
+    # Check that trends are sorted by count (descending)
+    counts = [item["count"] for item in data]
+    assert counts == sorted(counts, reverse=True)
 
 
-def test_get_workflow_trends_custom_min_count(db_session, admin_user, seeded_data, client):
+def test_get_workflow_trends_custom_min_count(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test trends with custom minimum count."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        # Get trends with min_count=5
-        response = client.get("/api/admin/analytics/trends?min_count=5")
-        assert response.status_code == 200
+    # Get trends with min_count=5
+    response = client.get("/api/admin/analytics/trends?min_count=5")
+    assert response.status_code == 200
 
-        data = response.json()
-        # All returned trends should have count >= 5
-        for item in data:
-            assert item["count"] >= 5
+    data = response.json()
+    # All returned trends should have count >= 5
+    for item in data:
+        assert item["count"] >= 5
 
 
 # ==============================================================================
 # Test Tool Usage Statistics
 # ==============================================================================
 
-def test_get_tool_usage_statistics(db_session, admin_user, seeded_data, client):
+def test_get_tool_usage_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test tool usage statistics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/tools")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/tools")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert len(data) == 3  # calculate, database_query, api_call
+    data = response.json()
+    assert len(data) == 3  # calculate, database_query, api_call
 
-        # Check structure
-        for item in data:
-            assert "tool_name" in item
-            assert "call_count" in item
-            assert "success_count" in item
-            assert "error_count" in item
-            assert "success_rate" in item
-            assert item["call_count"] == item["success_count"] + item["error_count"]
+    # Check structure
+    for item in data:
+        assert "tool_name" in item
+        assert "call_count" in item
+        assert "success_count" in item
+        assert "error_count" in item
+        assert "success_rate" in item
+        assert item["call_count"] == item["success_count"] + item["error_count"]
 
-        # Check specific tools
-        tool_names = [item["tool_name"] for item in data]
-        assert "calculate" in tool_names
-        assert "database_query" in tool_names
-        assert "api_call" in tool_names
+    # Check specific tools
+    tool_names = [item["tool_name"] for item in data]
+    assert "calculate" in tool_names
+    assert "database_query" in tool_names
+    assert "api_call" in tool_names
 
-        # Check api_call has 100% success rate
-        api_call_stat = next(item for item in data if item["tool_name"] == "api_call")
-        assert api_call_stat["success_rate"] == 100.0
+    # Check api_call has 100% success rate
+    api_call_stat = next(item for item in data if item["tool_name"] == "api_call")
+    assert api_call_stat["success_rate"] == 100.0
 
 
 # ==============================================================================
 # Test Approval Statistics
 # ==============================================================================
 
-def test_get_approval_statistics(db_session, admin_user, seeded_data, client):
+def test_get_approval_statistics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test approval statistics."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics/approvals")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics/approvals")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert len(data) == 3  # database_write, file_delete, api_post
+    data = response.json()
+    assert len(data) == 3  # database_write, file_delete, api_post
 
-        # Check structure
-        for item in data:
-            assert "request_type" in item
-            assert "total" in item
-            assert "approved" in item
-            assert "rejected" in item
-            assert "pending" in item
-            assert "approval_rate" in item
-            assert item["total"] == item["approved"] + item["rejected"] + item["pending"]
+    # Check structure
+    for item in data:
+        assert "request_type" in item
+        assert "total" in item
+        assert "approved" in item
+        assert "rejected" in item
+        assert "pending" in item
+        assert "approval_rate" in item
+        assert item["total"] == item["approved"] + item["rejected"] + item["pending"]
 
-        # Check specific approval types
-        request_types = [item["request_type"] for item in data]
-        assert "database_write" in request_types
-        assert "file_delete" in request_types
-        assert "api_post" in request_types
+    # Check specific approval types
+    request_types = [item["request_type"] for item in data]
+    assert "database_write" in request_types
+    assert "file_delete" in request_types
+    assert "api_post" in request_types
 
 
 # ==============================================================================
 # Test Complete Analytics
 # ==============================================================================
 
-def test_get_complete_analytics(db_session, admin_user, seeded_data, client):
+def test_get_complete_analytics(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test complete analytics endpoint."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics")
+    assert response.status_code == 200
 
-        data = response.json()
+    data = response.json()
 
-        # Check all sections are present
-        assert "user_stats" in data
-        assert "session_stats" in data
-        assert "top_categories" in data
-        assert "outcomes" in data
-        assert "repeated_workflows" in data
-        assert "workflow_maturity" in data
-        assert "tool_usage" in data
-        assert "approval_stats" in data
-        assert "generated_at" in data
+    # Check all sections are present
+    assert "user_stats" in data
+    assert "session_stats" in data
+    assert "top_categories" in data
+    assert "outcomes" in data
+    assert "repeated_workflows" in data
+    assert "workflow_maturity" in data
+    assert "tool_usage" in data
+    assert "approval_stats" in data
+    assert "generated_at" in data
 
-        # Check user stats
-        assert data["user_stats"]["total_users"] == 3
-        assert data["user_stats"]["approved_users"] == 2
+    # Check user stats
+    assert data["user_stats"]["total_users"] == 3
+    assert data["user_stats"]["approved_users"] == 2
 
-        # Check session stats
-        assert data["session_stats"]["total_sessions"] == 5
+    # Check session stats
+    assert data["session_stats"]["total_sessions"] == 5
 
-        # Check categories
-        assert len(data["top_categories"]) > 0
+    # Check categories
+    assert len(data["top_categories"]) > 0
 
-        # Check outcomes
-        assert len(data["outcomes"]) > 0
+    # Check outcomes
+    assert len(data["outcomes"]) > 0
 
-        # Check repeated workflows
-        assert len(data["repeated_workflows"]) > 0
+    # Check repeated workflows
+    assert len(data["repeated_workflows"]) > 0
 
-        # Check workflow maturity
-        assert data["workflow_maturity"]["total_workflows"] > 0
-        assert data["workflow_maturity"]["known_workflows"] > 0
-        assert data["workflow_maturity"]["emerging_workflows"] >= 0
+    # Check workflow maturity
+    assert data["workflow_maturity"]["total_workflows"] > 0
+    assert data["workflow_maturity"]["known_workflows"] > 0
+    assert data["workflow_maturity"]["emerging_workflows"] >= 0
 
-        # Check tool usage
-        assert len(data["tool_usage"]) == 3
+    # Check tool usage
+    assert len(data["tool_usage"]) == 3
 
-        # Check approvals
-        assert len(data["approval_stats"]) == 3
+    # Check approvals
+    assert len(data["approval_stats"]) == 3
 
 
 # ==============================================================================
 # Test Date Range Filtering
 # ==============================================================================
 
-def test_analytics_with_custom_days(db_session, admin_user, seeded_data, client):
+def test_analytics_with_custom_days(db_session, admin_user, auth_as_admin, seeded_data, client):
     """Test analytics with custom date range."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        # Get analytics for last 7 days
-        response = client.get("/api/admin/analytics?days=7")
-        assert response.status_code == 200
+    # Get analytics for last 7 days
+    response = client.get("/api/admin/analytics?days=7")
+    assert response.status_code == 200
 
-        data = response.json()
-        assert "generated_at" in data
+    data = response.json()
+    assert "generated_at" in data
 
 
 # ==============================================================================
 # Test Empty Database
 # ==============================================================================
 
-def test_analytics_with_empty_database(db_session, admin_user, client):
+def test_analytics_with_empty_database(db_session, admin_user, auth_as_admin, client):
     """Test analytics with no data (except admin user)."""
-    with patch("app.api.auth_deps.get_approved_user", return_value=admin_user):
-        response = client.get("/api/admin/analytics")
-        assert response.status_code == 200
+    response = client.get("/api/admin/analytics")
+    assert response.status_code == 200
 
-        data = response.json()
-        # Should return zeros/empty lists, not error
-        assert data["user_stats"]["total_users"] >= 1  # At least admin
-        assert data["session_stats"]["total_sessions"] == 0
-        assert data["top_categories"] == []
-        assert data["tool_usage"] == []
+    data = response.json()
+    # Should return zeros/empty lists, not error
+    assert data["user_stats"]["total_users"] >= 1  # At least admin
+    assert data["session_stats"]["total_sessions"] == 0
+    assert data["top_categories"] == []
+    assert data["tool_usage"] == []

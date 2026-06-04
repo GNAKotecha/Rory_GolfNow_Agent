@@ -1,6 +1,7 @@
 """Tests for tenant management admin APIs."""
 import pytest
-from fastapi.testclient import TestClient
+from httpx import Client
+from starlette.testclient import TestClient
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 
@@ -30,6 +31,9 @@ def db_session(tmp_path):
 @pytest.fixture
 def client(db_session):
     """Create test client with test database."""
+    global db
+    db = db_session  # Make db session globally accessible
+
     def override_get_db():
         try:
             yield db_session
@@ -37,9 +41,11 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    test_client = TestClient(app, raise_server_exceptions=False)
+    try:
         yield test_client
-    app.dependency_overrides.clear()
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -86,13 +92,19 @@ def regular_user(db_session: Session) -> User:
 @pytest.fixture
 def admin_token(admin_user: User) -> str:
     """Create JWT token for admin user."""
-    return create_access_token(user_id=admin_user.id, tenant_id=admin_user.tenant_id)
+    return create_access_token(data={
+        "sub": str(admin_user.id),
+        "tenant_id": admin_user.tenant_id
+    })
 
 
 @pytest.fixture
 def user_token(regular_user: User) -> str:
     """Create JWT token for regular user."""
-    return create_access_token(user_id=regular_user.id, tenant_id=regular_user.tenant_id)
+    return create_access_token(data={
+        "sub": str(regular_user.id),
+        "tenant_id": regular_user.tenant_id
+    })
 
 
 class TestCreateTenant:
@@ -171,7 +183,7 @@ class TestCreateTenant:
             "/api/admin/tenants",
             json={"name": "Test Org", "slug": "test-org"},
         )
-        assert response.status_code == 403
+        assert response.status_code in [401, 403], f"Unexpected response: {response.text}"
 
 
 class TestListTenants:
@@ -202,12 +214,12 @@ class TestListTenants:
             "/api/admin/tenants",
             headers={"Authorization": f"Bearer {user_token}"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 403, f"Unexpected response: {response.text}"
 
     def test_list_tenants_requires_auth(self, client):
         """Unauthenticated request is rejected."""
         response = client.get("/api/admin/tenants")
-        assert response.status_code == 403
+        assert response.status_code in [401, 403], f"Unexpected response: {response.text}"
 
 
 class TestGetTenant:

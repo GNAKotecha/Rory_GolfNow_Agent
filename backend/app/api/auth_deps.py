@@ -12,19 +12,25 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
     """
     Get the current authenticated user from JWT token.
-    Raises 401 if token is invalid or user not found.
+    Raises 403 if token is invalid or user not found.
     """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authentication required",
+        )
+
     token = credentials.credentials
     payload = decode_access_token(token)
 
     if payload is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -32,7 +38,7 @@ async def get_current_user(
     user_id_str = payload.get("sub")
     if user_id_str is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -41,7 +47,7 @@ async def get_current_user(
         user_id = int(user_id_str)
     except (ValueError, TypeError):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid user ID in token",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -49,7 +55,7 @@ async def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -78,13 +84,27 @@ async def get_admin_user(
 ) -> User:
     """
     Get current user and verify they are an admin.
-    Raises 403 if user is not an admin.
+    Raises 403 if user is not an admin or does not have sufficient privileges.
     """
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
     if not is_user_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required",
         )
+
+    # Additional check for approval status
+    if current_user.approval_status != ApprovalStatus.APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"User not approved. Current status: {current_user.approval_status.value}",
+        )
+
     return current_user
 
 
