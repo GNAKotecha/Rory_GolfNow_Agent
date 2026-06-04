@@ -24,8 +24,8 @@ instructor==1.5.2
 litellm==1.70.0
 
 # Workflow testing / evaluation
-deepeval==3.9.9
+deepeval==2.9.7
 
 # DeepEval Gemini judge model (avoids OpenAI dependency for test scoring)
-google-genai==1.75.0
-google-auth==2.51.0
+google-genai==1.47.0
+google-auth==2.25.2
