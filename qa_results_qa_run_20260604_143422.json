@@ -1,0 +1,150 @@
+{
+  "execution_id": "qa_run_20260604_143422",
+  "start_time": "2026-06-04T14:34:22.358839",
+  "scenarios": [
+    {
+      "scenario_num": 1,
+      "name": "Basic Greeting & Capabilities",
+      "start_time": "2026-06-04T14:34:22.358842",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Hello, who are you and what can you do?",
+          "timestamp": "2026-06-04T14:34:22.377144",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "List all available tools",
+          "timestamp": "2026-06-04T14:34:26.210304",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 58,
+      "end_time": "2026-06-04T14:34:29.717153"
+    },
+    {
+      "scenario_num": 2,
+      "name": "Club Setup (Existing Club)",
+      "start_time": "2026-06-04T14:34:29.717190",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Show information about brsgolfclubsales club",
+          "timestamp": "2026-06-04T14:34:29.730398",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "What configuration options are available?",
+          "timestamp": "2026-06-04T14:34:39.350111",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 59,
+      "end_time": "2026-06-04T14:34:41.993613"
+    },
+    {
+      "scenario_num": 4,
+      "name": "Booking Query",
+      "start_time": "2026-06-04T14:34:41.993637",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "What tee times are available next Saturday?",
+          "timestamp": "2026-06-04T14:34:42.005941",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "Show times between 9am and 11am",
+          "timestamp": "2026-06-04T14:34:44.748583",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 60,
+      "end_time": "2026-06-04T14:34:47.501667"
+    },
+    {
+      "scenario_num": 16,
+      "name": "Reinstate Deleted User",
+      "start_time": "2026-06-04T14:34:47.501682",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "How do I reinstate a deleted user?",
+          "timestamp": "2026-06-04T14:34:47.511893",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "Walk me through the approval workflow",
+          "timestamp": "2026-06-04T14:34:51.726882",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 61,
+      "end_time": "2026-06-04T14:34:54.451407"
+    },
+    {
+      "scenario_num": 999,
+      "name": "Infrastructure: MCP Health Check",
+      "start_time": "2026-06-04T14:34:54.451426",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Check if all MCP servers are healthy and connected",
+          "timestamp": "2026-06-04T14:34:54.463354",
+          "ai_response": "N/A",
+          "trace_id": null,
+          "status": "PASSED",
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 62,
+      "end_time": "2026-06-04T14:34:59.085353"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 5,
+    "passed": 5,
+    "failed": 0,
+    "total_turns": 9,
+    "total_tool_calls": 0
+  },
+  "end_time": "2026-06-04T14:34:59.085366"
+}

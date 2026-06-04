@@ -1,0 +1,120 @@
+{
+  "run_id": "qa_run_1780582771559",
+  "timestamp": "2026-06-04T14:19:31.559073",
+  "scope": "critical",
+  "scenarios_run": 10,
+  "scenarios_passed": 10,
+  "scenarios_failed": 0,
+  "test_results": [
+    {
+      "scenario_name": "basic_greeting",
+      "status": "passed",
+      "duration_ms": 101.08327865600586,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_basic_greeting_1780582771660",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for basic_greeting"
+    },
+    {
+      "scenario_name": "club_setup",
+      "status": "passed",
+      "duration_ms": 101.26590728759766,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_club_setup_1780582771761",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for club_setup"
+    },
+    {
+      "scenario_name": "member_lookup",
+      "status": "passed",
+      "duration_ms": 101.2411117553711,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_member_lookup_1780582771863",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for member_lookup"
+    },
+    {
+      "scenario_name": "booking_query",
+      "status": "passed",
+      "duration_ms": 100.71706771850586,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_booking_query_1780582771963",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for booking_query"
+    },
+    {
+      "scenario_name": "context_retention",
+      "status": "passed",
+      "duration_ms": 101.18985176086426,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_context_retention_1780582772065",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for context_retention"
+    },
+    {
+      "scenario_name": "error_recovery",
+      "status": "passed",
+      "duration_ms": 101.29690170288086,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_error_recovery_1780582772166",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for error_recovery"
+    },
+    {
+      "scenario_name": "approval_flow",
+      "status": "passed",
+      "duration_ms": 101.17912292480469,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_approval_flow_1780582772267",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for approval_flow"
+    },
+    {
+      "scenario_name": "analytics_query",
+      "status": "passed",
+      "duration_ms": 101.13000869750977,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_analytics_query_1780582772369",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for analytics_query"
+    },
+    {
+      "scenario_name": "help_documentation",
+      "status": "passed",
+      "duration_ms": 100.90112686157227,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_help_documentation_1780582772470",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for help_documentation"
+    },
+    {
+      "scenario_name": "stress_test_long_conversation",
+      "status": "passed",
+      "duration_ms": 101.10068321228027,
+      "tool_calls": 2,
+      "langfuse_trace_id": "trace_stress_test_long_conversation_1780582772571",
+      "assertions": 5,
+      "error": null,
+      "db_state": null,
+      "response_snippet": "Mock response for stress_test_long_conversation"
+    }
+  ]
+}

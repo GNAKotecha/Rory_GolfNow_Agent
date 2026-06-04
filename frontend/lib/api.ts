@@ -596,6 +596,72 @@ class ApiClient {
       `Failed to deactivate skill ${id}`
     );
   }
+
+  // Workflows management endpoints
+  async getWorkflows(limit?: number, offset?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/api/workflows${queryString ? `?${queryString}` : ''}`;
+
+    return this.apiCall<any>(endpoint, {}, 'Failed to fetch workflows');
+  }
+
+  async getWorkflow(id: number): Promise<any> {
+    return this.apiCall<any>(
+      `/api/workflows/${id}`,
+      {},
+      `Failed to fetch workflow ${id}`
+    );
+  }
+
+  async createWorkflow(data: any): Promise<any> {
+    return this.apiCall<any>(
+      '/api/workflows',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      'Failed to create workflow'
+    );
+  }
+
+  async updateWorkflow(id: number, data: any): Promise<any> {
+    return this.apiCall<any>(
+      `/api/workflows/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+      `Failed to update workflow ${id}`
+    );
+  }
+
+  async deleteWorkflow(id: number): Promise<void> {
+    await this.apiCall<void>(
+      `/api/workflows/${id}`,
+      { method: 'DELETE' },
+      `Failed to delete workflow ${id}`
+    );
+  }
+
+  async activateWorkflow(id: number): Promise<any> {
+    return this.apiCall<any>(
+      `/api/workflows/${id}/activate`,
+      { method: 'POST' },
+      `Failed to activate workflow ${id}`
+    );
+  }
+
+  async deactivateWorkflow(id: number): Promise<any> {
+    return this.apiCall<any>(
+      `/api/workflows/${id}/deactivate`,
+      { method: 'POST' },
+      `Failed to deactivate workflow ${id}`
+    );
+  }
 }
 
 export const apiClient = new ApiClient();

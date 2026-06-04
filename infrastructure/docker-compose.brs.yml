@@ -1,0 +1,108 @@
+version: '3.8'
+
+# Local BRS Development Stack
+# Purpose: Provides a complete BRS (Teesheet API) environment for testing Gateway MCP tools
+#
+# Usage:
+#   docker-compose -f infrastructure/docker-compose.brs.yml up
+#
+# Services:
+#   - brs_postgres: PostgreSQL database for BRS (port 5433 to avoid conflicts)
+#   - brs_api: BRS Teesheet API server (port 8056)
+#
+# Environment Variables Required:
+#   - BRS_DOCKER_IMAGE: Docker image for BRS API (e.g., ghcr.io/company/brs-api:latest)
+#   - BRS_DB_PASSWORD: PostgreSQL password for BRS database
+#   - BRS_API_KEY: API key for BRS authentication
+#
+# Pre-requisites:
+#   1. Clone BRS repository locally (see docs/brs_dev_setup.md)
+#   2. Build BRS Docker image: docker build -t ghcr.io/company/brs-api:latest -f Dockerfile .
+#   3. Set environment variables (or use .env file)
+
+services:
+  brs_postgres:
+    image: postgres:15-alpine
+    container_name: brs_postgres
+    environment:
+      POSTGRES_DB: brs_dev
+      POSTGRES_USER: brs_user
+      POSTGRES_PASSWORD: ${BRS_DB_PASSWORD:-brs_dev_password}
+      # Initial setup: create test database and schemas
+      POSTGRES_INITDB_ARGS: "-c max_connections=100"
+    ports:
+      - "5433:5432"
+    volumes:
+      - brs_postgres_data:/var/lib/postgresql/data
+      # Optional: mount SQL init scripts for test data seeding
+      # - ./sql/brs_init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brs_user -d brs_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - brs_network
+    restart: unless-stopped
+
+  brs_api:
+    image: ${BRS_DOCKER_IMAGE:-ghcr.io/company/brs-api:latest}
+    container_name: brs_api
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://brs_user:${BRS_DB_PASSWORD:-brs_dev_password}@brs_postgres:5432/brs_dev
+      DB_HOST: brs_postgres
+      DB_PORT: 5432
+      DB_NAME: brs_dev
+      DB_USER: brs_user
+      DB_PASSWORD: ${BRS_DB_PASSWORD:-brs_dev_password}
+
+      # BRS API Configuration
+      BRS_ENV: development
+      BRS_API_PORT: 8056
+      BRS_API_KEY: ${BRS_API_KEY:-dev-api-key-12345}
+
+      # Optional: OAuth/Auth configuration
+      # OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
+      # OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:-}
+
+      # Logging
+      LOG_LEVEL: INFO
+
+      # TLS (disabled in dev)
+      TLS_ENABLED: "false"
+
+    ports:
+      - "8056:8056"
+
+    depends_on:
+      brs_postgres:
+        condition: service_healthy
+
+    volumes:
+      # Development: mount code for hot-reload if supported
+      # - ../brs:/app/brs
+      - brs_logs:/var/log/brs
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8056/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - brs_network
+
+    restart: unless-stopped
+
+networks:
+  brs_network:
+    driver: bridge
+
+volumes:
+  brs_postgres_data:
+    driver: local
+  brs_logs:
+    driver: local

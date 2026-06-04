@@ -137,13 +137,16 @@ class AuthService:
 def create_auth_service_from_settings(settings) -> AuthService:
     """
     Factory to create AuthService from gateway settings.
-    
+
     Args:
         settings: Gateway settings object with service_tokens dict
-        
+
     Returns:
         Configured AuthService
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Preferred format: explicit token->scopes map.
     service_tokens = getattr(settings, "service_tokens", {}) or {}
 
@@ -153,9 +156,12 @@ def create_auth_service_from_settings(settings) -> AuthService:
         single_token = getattr(settings, "service_token", "")
         if single_token:
             service_tokens = {single_token: ["operator", "admin"]}
+            logger.info(f"✅ Configured service token (first 20 chars): {single_token[:20]}...")
+        else:
+            logger.warning("❌ No service token configured (GATEWAY_SERVICE_TOKEN env var not set)")
 
     require_user_id = getattr(settings, "require_user_id", True)
-    
+
     return AuthService(
         service_tokens=service_tokens,
         require_user_id=require_user_id,

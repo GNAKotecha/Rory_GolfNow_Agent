@@ -20,6 +20,11 @@ import aiohttp
 from enum import Enum
 
 from app.config.mcp_config import MCPServerConfig
+from .async_event_loop import (
+    mcp_event_loop_manager,
+    safe_async_call,
+    mcp_async_method
+)
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +147,7 @@ class MCPClient:
         self._cache_timestamp: Optional[datetime] = None
         self._cache_ttl_seconds = 300  # 5 minutes
 
+    @mcp_async_method
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
@@ -149,11 +155,13 @@ class MCPClient:
             self.session = aiohttp.ClientSession(timeout=timeout)
         return self.session
 
+    @mcp_async_method
     async def close(self):
         """Close client session."""
         if self.session and not self.session.closed:
             await self.session.close()
 
+    @mcp_async_method
     async def health_check(self) -> bool:
         """
         Check if MCP server is reachable.
@@ -162,7 +170,7 @@ class MCPClient:
             True if server is healthy, False otherwise
         """
         try:
-            session = await self._get_session()
+            session = await safe_async_call(self._get_session)
             url = f"{self.config.url}/health"
 
             async with session.get(url) as response:
@@ -175,6 +183,7 @@ class MCPClient:
             )
             return False
 
+    @mcp_async_method
     async def list_tools(self, force_refresh: bool = False) -> List[MCPTool]:
         """
         List available tools from MCP server.
@@ -191,7 +200,7 @@ class MCPClient:
 
         try:
             session = await self._get_session()
-            url = f"{self.config.url}/tools/list"
+            url = f"{self.config.url}/mcp/tools/list"
             
             # Build auth headers (gateway-mcp requires service token)
             headers = self._build_auth_headers(user_id=None)
@@ -313,7 +322,7 @@ class MCPClient:
         for attempt in range(self.config.max_retries + 1):
             try:
                 session = await self._get_session()
-                url = f"{self.config.url}/tools/call"
+                url = f"{self.config.url}/mcp/tools/call"
 
                 payload = {
                     "name": tool_name,

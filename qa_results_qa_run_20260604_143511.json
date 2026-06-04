@@ -1,0 +1,258 @@
+{
+  "execution_id": "qa_run_20260604_143511",
+  "start_time": "2026-06-04T14:35:11.376118",
+  "scenarios": [
+    {
+      "scenario_num": 1,
+      "name": "Basic Greeting & Capabilities",
+      "start_time": "2026-06-04T14:35:11.376124",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Hello, who are you and what can you do?",
+          "timestamp": "2026-06-04T14:35:11.416833",
+          "ai_response": "{'session_id': 63, 'user_message_id': 295, 'assistant_message_id': 296, 'assistant_message': \"Hello! I'm **Rory**, your helpful AI assistant here to support you with your work tasks and questions.\\n\\n",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 63,
+            "user_message_id": 295,
+            "assistant_message_id": 296,
+            "assistant_message": "Hello! I'm **Rory**, your helpful AI assistant here to support you with your work tasks and questions.\n\nHere's what I can do for you:\n\n**Work Support:**\n- Help you with tasks and problems you're working on\n- Answer questions and provide clear, accurate information\n- Assist with analysis and decision-making\n- Ask clarifying questions to better understand what you need\n\n**Technical Capabilities:**\n- **Calculations** \u2013 I can perform math operations to help with numbers and analysis\n- **Memory Management** \u2013 I can store and retrieve information from our conversation, so I remember important details across our chats\n- **Historical Context** \u2013 I can search through past session information to help inform current decisions and provide relevant background\n- **Code & Explanations** \u2013 I can help with technical tasks and explain my reasoning\n\n**My Approach:**\n- I'm professional but friendly\n- I keep responses concise and focused on what you need\n- If I don't know something, I'll tell you honestly rather than guessing\n- I'm here to make your work easier and more efficient\n\n**What would you like help with today?** Whether it's a specific task, calculation, information lookup, or anything else work-related, just let me know and I'll do my best to assist!",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "e6a83a1c-ba32-4d68-bc82-04d6487d3baf",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "List all available tools",
+          "timestamp": "2026-06-04T14:35:14.998980",
+          "ai_response": "{'session_id': 63, 'user_message_id': 297, 'assistant_message_id': 298, 'assistant_message': \"Here are all the tools available to me:\\n\\n1. **store_memory**\\n   - Store information in memory for later",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 63,
+            "user_message_id": 297,
+            "assistant_message_id": 298,
+            "assistant_message": "Here are all the tools available to me:\n\n1. **store_memory**\n   - Store information in memory for later retrieval\n   - Use case: Remember facts, calculations, or intermediate results for future reference\n   - Parameters: `key` (required), `value` (required)\n\n2. **retrieve_memory**\n   - Retrieve previously stored information from memory\n   - Use case: Look up facts or results you've stored before\n   - Parameters: `key` (required)\n\n3. **list_memory_keys**\n   - List all keys currently stored in memory\n   - Use case: See everything that's been saved in our conversation memory\n   - Parameters: None required\n\n4. **calculate**\n   - Perform mathematical calculations\n   - Supports: +, -, *, /, and parentheses\n   - Use case: Run calculations, evaluate expressions\n   - Parameters: `expression` (required)\n\n5. **retrieve_historical_context**\n   - Search for relevant keywords in historical context from previous sessions\n   - Returns summaries from past session memory to inform current decisions\n   - Use case: Find background information or past work related to a topic\n   - Parameters: `query` (required), `limit` (optional, default 5, max 20)\n\n---\n\nIs there a specific task you'd like help with, or would you like me to demonstrate any of these tools?",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "e1e4b4c9-f2b4-42ee-9dbc-e8bff7c5e50f",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 63,
+      "end_time": "2026-06-04T14:35:18.648475"
+    },
+    {
+      "scenario_num": 2,
+      "name": "Club Setup (Existing Club)",
+      "start_time": "2026-06-04T14:35:18.648503",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Show information about brsgolfclubsales club",
+          "timestamp": "2026-06-04T14:35:18.660354",
+          "ai_response": "{'session_id': 64, 'user_message_id': 299, 'assistant_message_id': 300, 'assistant_message': 'I don\\'t have any stored information about \"brsgolfclubsales club\" in my current memory or historical cont",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 64,
+            "user_message_id": 299,
+            "assistant_message_id": 300,
+            "assistant_message": "I don't have any stored information about \"brsgolfclubsales club\" in my current memory or historical context. \n\nCould you provide more details about what you're looking for? For example:\n- Is this a golf club/facility name?\n- Are you looking for sales data, club information, membership details, or something else?\n- Is there specific information you'd like me to help you find or store about this club?\n\nIf you have information about this club that you'd like me to store for future reference, I'd be happy to help with that as well.",
+            "agentic_steps": 4,
+            "tool_calls_count": 3,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "aa2df4e9-41c8-40c4-a958-79ab78bc92a3",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "What configuration options are available?",
+          "timestamp": "2026-06-04T14:35:29.340994",
+          "ai_response": "{'session_id': 64, 'user_message_id': 301, 'assistant_message_id': 302, 'assistant_message': \"I'd be happy to help you explore configuration options! However, I need a bit more context to give you the",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 64,
+            "user_message_id": 301,
+            "assistant_message_id": 302,
+            "assistant_message": "I'd be happy to help you explore configuration options! However, I need a bit more context to give you the most relevant information.\n\nCould you clarify what you're looking to configure? For example:\n\n- **System/Software**: Are you configuring a software system, application, or platform?\n- **Golf Club Operations**: If this relates to a golf club system, are you looking to configure membership, bookings, pricing, tee times, etc.?\n- **Account/Profile Settings**: Personal or organizational settings?\n- **Something else**: Please describe what area you need to configure\n\nOnce you provide more details, I can either:\n1. Search my historical context for past configuration discussions\n2. Explain available options based on what system you're working with\n3. Help you document or store configuration choices for future reference\n\nWhat area would you like to configure?",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "99cb61b8-a3a0-4cbb-be95-dcbcbcc89d5e",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 64,
+      "end_time": "2026-06-04T14:35:32.292535"
+    },
+    {
+      "scenario_num": 4,
+      "name": "Booking Query",
+      "start_time": "2026-06-04T14:35:32.292551",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "What tee times are available next Saturday?",
+          "timestamp": "2026-06-04T14:35:32.303143",
+          "ai_response": "{'session_id': 65, 'user_message_id': 303, 'assistant_message_id': 304, 'assistant_message': \"I don't have access to a tee time booking system or calendar to check availability for next Saturday. \\n\\n",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 65,
+            "user_message_id": 303,
+            "assistant_message_id": 304,
+            "assistant_message": "I don't have access to a tee time booking system or calendar to check availability for next Saturday. \n\nTo help you find available tee times, I'd need to know:\n\n1. **Which golf club or facility** you're referring to?\n2. **What time range** are you interested in?\n3. **How many players** will be in your group?\n\nOnce you provide these details, I can either:\n- Help you navigate your booking system\n- Guide you on how to check availability if you have access to an online portal\n- Assist with anything else related to your booking\n\nIs there a specific club system or booking process you use that I can help you with?",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "b579fdb4-6ef0-4723-a8ef-151da07cd702",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "Show times between 9am and 11am",
+          "timestamp": "2026-06-04T14:35:34.758887",
+          "ai_response": "{'session_id': 65, 'user_message_id': 305, 'assistant_message_id': 306, 'assistant_message': 'I appreciate the additional detail! However, I still need to know **which golf club or facility** you\\'re ",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 65,
+            "user_message_id": 305,
+            "assistant_message_id": 306,
+            "assistant_message": "I appreciate the additional detail! However, I still need to know **which golf club or facility** you're looking to book at in order to check tee times.\n\nCould you please tell me:\n1. **The name of the golf club** (e.g., \"St. Andrews,\" \"Pebble Beach,\" etc.)\n2. **The location** (city/region)\n\nOnce you provide that, I can help you find available tee times between 9am and 11am for next Saturday.",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "f3df129f-162a-496a-a1bf-eac5118289d6",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 65,
+      "end_time": "2026-06-04T14:35:36.995585"
+    },
+    {
+      "scenario_num": 16,
+      "name": "Reinstate Deleted User",
+      "start_time": "2026-06-04T14:35:36.995603",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "How do I reinstate a deleted user?",
+          "timestamp": "2026-06-04T14:35:37.008068",
+          "ai_response": "{'session_id': 66, 'user_message_id': 307, 'assistant_message_id': 308, 'assistant_message': 'I\\'d be happy to help you reinstate a deleted user! However, I need a bit more information to give you the",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 66,
+            "user_message_id": 307,
+            "assistant_message_id": 308,
+            "assistant_message": "I'd be happy to help you reinstate a deleted user! However, I need a bit more information to give you the most accurate guidance:\n\n1. **What system are you referring to?** (e.g., Active Directory, a specific application, your company's user management system, etc.)\n\n2. **Do you have admin access** to the system where the user was deleted?\n\n3. **How long ago was the user deleted?** (This can affect recovery options)\n\n4. **Do you know the user's details** (username, email, employee ID, etc.)?\n\nIn general, the process typically involves:\n- Accessing your user management system's admin panel or tools\n- Searching for the deleted user (often in a \"trash\" or \"inactive users\" section)\n- Selecting an option to restore or reactivate the account\n- Possibly resetting their password\n- Verifying their permissions/groups are correct\n\nIf you can provide more details about which system you're working with, I can give you more specific steps!",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "a4a58022-8415-46cd-851a-81a4e0734b44",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        },
+        {
+          "turn": 2,
+          "user_message": "Walk me through the approval workflow",
+          "timestamp": "2026-06-04T14:35:39.978490",
+          "ai_response": "{'session_id': 66, 'user_message_id': 309, 'assistant_message_id': 310, 'assistant_message': \"I'd be happy to walk you through an approval workflow! However, I need a bit more context to give you the ",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 66,
+            "user_message_id": 309,
+            "assistant_message_id": 310,
+            "assistant_message": "I'd be happy to walk you through an approval workflow! However, I need a bit more context to give you the most relevant guidance:\n\n1. **What type of approval workflow?** (e.g., user reinstatement, purchase request, time off, document review, expense report, etc.)\n\n2. **Which system or process?** (e.g., your company's HR system, procurement software, email-based approvals, etc.)\n\n3. **Are you:**\n   - Setting up a new approval workflow?\n   - Following an existing workflow as a requester?\n   - Approving something as a manager/admin?\n   - Troubleshooting an issue with a workflow?\n\nBased on your previous question about reinstating a deleted user, I'm guessing this might be related to that process? If so, let me know:\n- **Who needs to approve it?** (IT manager, HR, department head, etc.)\n- **What steps need approval?** (Request \u2192 Review \u2192 Approval \u2192 Implementation, etc.)\n\nOnce you clarify these details, I can walk you through the specific workflow step-by-step!",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "97686742-f93e-4e7d-8055-7a7e8903dc43",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 66,
+      "end_time": "2026-06-04T14:35:43.372409"
+    },
+    {
+      "scenario_num": 999,
+      "name": "Infrastructure: MCP Health Check",
+      "start_time": "2026-06-04T14:35:43.372417",
+      "turns": [
+        {
+          "turn": 1,
+          "user_message": "Check if all MCP servers are healthy and connected",
+          "timestamp": "2026-06-04T14:35:43.382118",
+          "ai_response": "{'session_id': 67, 'user_message_id': 311, 'assistant_message_id': 312, 'assistant_message': \"I don't have access to tools that can check the health status or connection state of MCP (Model Context Pr",
+          "trace_id": null,
+          "status": "PASSED",
+          "full_response": {
+            "session_id": 67,
+            "user_message_id": 311,
+            "assistant_message_id": 312,
+            "assistant_message": "I don't have access to tools that can check the health status or connection state of MCP (Model Context Protocol) servers. My available functions are focused on memory management, calculations, and historical context retrieval.\n\nTo check if all MCP servers are healthy and connected, you would typically need:\n\n1. **A monitoring dashboard or tool** - Most organizations use monitoring solutions like:\n   - Prometheus/Grafana\n   - Datadog\n   - New Relic\n   - Custom health check endpoints\n\n2. **Direct server health checks** - You could:\n   - Check server endpoints (e.g., `/health` or `/status` endpoints)\n   - Use command-line tools like `curl` or `ping`\n   - Review server logs\n   - Check your infrastructure monitoring console\n\n3. **MCP-specific tools** - Depending on your setup, there may be:\n   - An admin panel for MCP server management\n   - CLI tools provided by your MCP implementation\n   - Status pages or dashboards\n\nCould you let me know:\n- What monitoring tools or systems your company uses for MCP servers?\n- Do you have access to a specific dashboard or admin interface?\n- Are you looking for a specific MCP server or all servers in your environment?\n\nI'd be happy to help guide you through the process once I understand your setup better!",
+            "agentic_steps": 1,
+            "tool_calls_count": 0,
+            "stopped_reason": "completed",
+            "pending_approval": null,
+            "run_id": "97c11c9e-5362-4673-bb33-3ab8af76a66c",
+            "degraded_mode": false
+          },
+          "tool_calls": []
+        }
+      ],
+      "status": "PASSED",
+      "errors": [],
+      "session_id": 67,
+      "end_time": "2026-06-04T14:35:50.642884"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 5,
+    "passed": 5,
+    "failed": 0,
+    "total_turns": 9,
+    "total_tool_calls": 0
+  },
+  "end_time": "2026-06-04T14:35:50.642896"
+}

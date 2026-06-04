@@ -82,14 +82,21 @@ export default function ChatPage() {
               setPendingAskUser(null);
             }
             setStreamingStatus('');
-            const assistantMessage: Message = {
-              id: Date.now(),
-              session_id: currentSessionIdRef.current,
-              role: 'assistant',
-              content: event.message,
-              created_at: new Date().toISOString(),
-            };
-            setMessages(prev => [...prev, assistantMessage]);
+
+            // Only add message if not an error
+            if (event.stopped_reason !== 'error' && event.message) {
+              const assistantMessage: Message = {
+                id: Date.now(),
+                session_id: currentSessionIdRef.current,
+                role: 'assistant',
+                content: event.message,
+                created_at: new Date().toISOString(),
+              };
+              setMessages(prev => [...prev, assistantMessage]);
+            } else if (event.stopped_reason === 'error') {
+              // Show error message in status
+              setStreamingStatus(`Error: ${event.message || 'Workflow failed'}`);
+            }
             setLoading(false);
           } else if (event.type === 'error') {
             setStreamingStatus(`Error: ${event.error}`);
@@ -373,12 +380,44 @@ export default function ChatPage() {
             </h1>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-gray-400">Haiku 4.5</span>
             {useStreaming && (
               <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
                 Live
               </span>
+            )}
+            {user?.role === 'admin' && (
+              <div className="flex items-center gap-2 border-l border-gray-200 pl-3 ml-3">
+                <a
+                  href="/admin/skills"
+                  className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  title="Manage Skills"
+                >
+                  Skills
+                </a>
+                <a
+                  href="/admin/mcp-connections"
+                  className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  title="Configure MCP Connections"
+                >
+                  MCPs
+                </a>
+                <a
+                  href="/admin/workflows"
+                  className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  title="Manage Workflows"
+                >
+                  Workflows
+                </a>
+                <a
+                  href="/admin/traces"
+                  className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  title="Trace Explorer"
+                >
+                  Traces
+                </a>
+              </div>
             )}
           </div>
         </div>

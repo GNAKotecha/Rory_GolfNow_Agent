@@ -110,6 +110,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings is None:
         settings = get_settings()
 
+    logger.info(f"Service token from settings: {settings.service_token[:20] if settings.service_token else 'EMPTY'}...")
+
     app = FastAPI(
         title="Gateway MCP",
         description="Business-level MCP tools with policy, auth, and audit",
@@ -119,11 +121,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Store settings on app state
     app.state.settings = settings
-    
+
     # Initialize tool registry with ALL 9 MVP tools (BRS + Atlassian)
     registry = create_full_registry()
     app.state.registry = registry
-    
+
     # Create executor router for per-tool backend selection
     executor_router, credential_fetcher = _create_executor_router(settings)
     
