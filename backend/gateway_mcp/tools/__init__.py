@@ -11,6 +11,12 @@ BRS Tools (6):
 - call_internal_api
 - verify_club_setup
 
+Agent Memory Tools (4):
+- get_working_memory
+- update_working_memory
+- store_session_summary
+- get_historical_context
+
 Atlassian Tools (3):
 - create_ticket
 - get_ticket_status
@@ -170,6 +176,9 @@ from gateway_mcp.tools.config import CONFIG_TOOLS
 from gateway_mcp.tools.users import USER_TOOLS
 from gateway_mcp.tools.api import API_TOOLS
 
+# Import Agent Memory tools
+from gateway_mcp.tools.memory import MEMORY_TOOLS
+
 # Import Atlassian/Jira tools
 from gateway_mcp.tools.jira import JIRA_TOOLS
 
@@ -204,11 +213,14 @@ def create_brs_registry() -> ToolRegistry:
 # All BRS tools combined for convenience
 BRS_TOOLS = CLUB_TOOLS + CONFIG_TOOLS + USER_TOOLS + API_TOOLS
 
+# All memory tools combined for convenience
+AGENT_MEMORY_TOOLS = MEMORY_TOOLS
+
 
 def create_full_registry() -> ToolRegistry:
     """
     Create a registry with all Gateway tools registered.
-    
+
     BRS Tools (7):
     - create_club
     - get_club_by_name
@@ -217,29 +229,36 @@ def create_full_registry() -> ToolRegistry:
     - create_admin_user
     - authenticate_club (secure credential handling)
     - call_internal_api
-    
+
+    Agent Memory Tools (4):
+    - get_working_memory
+    - update_working_memory
+    - store_session_summary
+    - get_historical_context
+
     Teesheet Tools (4):
     - list_routes (discover API routes)
     - call_api (generic HTTP client)
     - run_sql (read-only SQL queries)
     - get_config (configuration lookup)
-    
+
     Atlassian Tools (3):
     - create_ticket
     - get_ticket_status
     - add_comment
-    
+
     Returns:
-        ToolRegistry with all 14 tools
+        ToolRegistry with all 18 tools
     """
     registry = create_brs_registry()
+    registry.register_all(MEMORY_TOOLS)
     registry.register_all(TEESHEET_TOOLS)
     registry.register_all(JIRA_TOOLS)
     return registry
 
 
 # All tools combined
-ALL_TOOLS = BRS_TOOLS + JIRA_TOOLS
+ALL_TOOLS = BRS_TOOLS + AGENT_MEMORY_TOOLS + JIRA_TOOLS
 
 
 # Exports
@@ -261,6 +280,9 @@ __all__ = [
     "CONFIG_TOOLS",
     "USER_TOOLS",
     "API_TOOLS",
+    # Agent Memory tool collections
+    "AGENT_MEMORY_TOOLS",
+    "MEMORY_TOOLS",
     # Atlassian tool collections
     "JIRA_TOOLS",
     "ALL_TOOLS",
