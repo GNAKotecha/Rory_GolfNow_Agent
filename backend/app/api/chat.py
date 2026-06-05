@@ -539,6 +539,8 @@ async def chat(
             rate_limiter=rate_limiter,
             health_checker=health_checker,
             run_id=run_id,
+            session=db,
+            tenant_id=current_user.tenant_id,
         )
 
         logger.info(
