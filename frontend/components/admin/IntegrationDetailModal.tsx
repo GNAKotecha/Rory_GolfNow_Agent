@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TenantMCPIntegration, HealthCheckResponse } from '@/lib/api';
 
 interface IntegrationDetailModalProps {
@@ -21,6 +21,11 @@ export default function IntegrationDetailModal({
   isLoading,
 }: IntegrationDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'credentials' | 'health'>('details');
+
+  // Reset tab when modal opens
+  useEffect(() => {
+    setActiveTab('details');
+  }, []);
 
   if (!integration) return null;
 
@@ -47,11 +52,11 @@ export default function IntegrationDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 id="detail-modal-title" className="text-xl font-semibold text-gray-900">
             {integration.integration_name}
           </h2>
           <button

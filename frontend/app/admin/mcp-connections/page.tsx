@@ -8,6 +8,12 @@ import TestConnectionModal from '@/components/admin/TestConnectionModal';
 import DiscoverToolsModal from '@/components/admin/DiscoverToolsModal';
 import DeleteConnectionConfirm from '@/components/admin/DeleteConnectionConfirm';
 
+interface Filters {
+  search: string;
+  auth_type: 'oauth' | 'api_key' | 'pat' | 'all';
+  enabled: 'all' | 'true' | 'false';
+}
+
 const DEFAULT_LIMIT = 20;
 
 export default function MCPConnectionsPage() {
@@ -27,6 +33,13 @@ export default function MCPConnectionsPage() {
 
   const [operationLoading, setOperationLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Filter state
+  const [filters, setFilters] = useState<Filters>({
+    search: '',
+    auth_type: 'all',
+    enabled: 'all',
+  });
 
   // Fetch connections when page changes
   useEffect(() => {
@@ -137,6 +150,22 @@ export default function MCPConnectionsPage() {
     } finally {
       setOperationLoading(false);
     }
+  };
+
+  const handleFilterChange = (newFilters: Filters) => {
+    if (operationLoading || loading) return;
+    setFilters(newFilters);
+    setPage(1); // Reset to first page on filter change
+  };
+
+  const handleClearFilters = () => {
+    if (operationLoading || loading) return;
+    setFilters({
+      search: '',
+      auth_type: 'all',
+      enabled: 'all',
+    });
+    setPage(1);
   };
 
   const totalPages = Math.ceil(total / DEFAULT_LIMIT);

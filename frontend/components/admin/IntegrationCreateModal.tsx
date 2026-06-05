@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TenantMCPIntegrationCreate } from '@/lib/api';
 
 interface IntegrationCreateModalProps {
@@ -18,6 +18,11 @@ export default function IntegrationCreateModal({
   const [authType, setAuthType] = useState<'oauth' | 'api_key' | 'pat'>('api_key');
   const [configJson, setConfigJson] = useState('{}');
   const [error, setError] = useState<string | null>(null);
+
+  // Clear error state when modal opens
+  useEffect(() => {
+    setError(null);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +58,11 @@ export default function IntegrationCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-labelledby="create-modal-title">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Create Integration</h2>
+          <h2 id="create-modal-title" className="text-xl font-semibold text-gray-900">Create Integration</h2>
           <button
             onClick={onClose}
             disabled={isLoading}

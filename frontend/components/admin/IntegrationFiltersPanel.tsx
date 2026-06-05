@@ -1,14 +1,16 @@
 'use client';
 
-import { ChangeEvent } from 'react';
+import { useEffect } from 'react';
+
+interface Filters {
+  search: string;
+  auth_type: 'oauth' | 'api_key' | 'pat' | 'all';
+  enabled: 'all' | 'true' | 'false';
+}
 
 interface IntegrationFiltersPanelProps {
-  filters: {
-    search: string;
-    auth_type: 'oauth' | 'api_key' | 'pat' | 'all';
-    enabled: 'all' | 'true' | 'false';
-  };
-  onFilterChange: (filters: any) => void;
+  filters: Filters;
+  onFilterChange: (filters: Filters) => void;
   onClearFilters: () => void;
   loading: boolean;
 }
