@@ -215,6 +215,7 @@ class ApiClient {
     // Load token from localStorage if available
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('access_token');
+      console.log('[ApiClient] Constructor - Token loaded from localStorage:', !!this.token);
     }
   }
 
@@ -222,6 +223,7 @@ class ApiClient {
     this.token = token;
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', token);
+      console.log('[ApiClient] Token set in localStorage');
     }
   }
 
@@ -229,6 +231,7 @@ class ApiClient {
     this.token = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
+      console.log('[ApiClient] Token cleared from localStorage');
     }
   }
 
@@ -243,19 +246,30 @@ class ApiClient {
 
     if (this.token) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
+      console.log('[ApiClient] Request to', endpoint, '- Authorization header added');
+    } else {
+      console.log('[ApiClient] Request to', endpoint, '- No token available');
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const url = `${this.baseURL}${endpoint}`;
+    console.log('[ApiClient] Making request:', options.method || 'GET', url);
+
+    const response = await fetch(url, {
       ...options,
       headers,
     });
 
+    console.log('[ApiClient] Response status:', response.status, response.statusText);
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      console.error('[ApiClient] Request failed:', error);
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('[ApiClient] Response data received');
+    return data;
   }
 
   /**
@@ -277,6 +291,7 @@ class ApiClient {
 
   // Auth endpoints
   async login(email: string, password: string): Promise<LoginResponse> {
+    console.log('[ApiClient] Login attempt for:', email);
     const response = await fetch(`${this.baseURL}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -287,19 +302,23 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Login failed' }));
+      console.error('[ApiClient] Login failed:', error);
       throw new Error(error.detail || 'Login failed');
     }
 
     const data = await response.json();
+    console.log('[ApiClient] Login successful, setting token');
     this.setToken(data.access_token);
     return data;
   }
 
   async getCurrentUser(): Promise<User> {
+    console.log('[ApiClient] Getting current user');
     return this.request<User>('/api/auth/me');
   }
 
   logout() {
+    console.log('[ApiClient] Logging out');
     this.clearToken();
   }
 

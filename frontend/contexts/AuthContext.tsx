@@ -20,13 +20,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const loadUser = async () => {
       try {
+        console.log('[AuthContext] Loading user...');
+        console.log('[AuthContext] Token present:', !!apiClient['token']);
+
         const currentUser = await apiClient.getCurrentUser();
+        console.log('[AuthContext] User loaded successfully:', currentUser);
         setUser(currentUser);
       } catch (error) {
         // Not logged in or token expired
+        console.error('[AuthContext] Failed to load user:', error);
+        console.log('[AuthContext] Clearing token');
         apiClient.clearToken();
       } finally {
         setLoading(false);
+        console.log('[AuthContext] Loading complete');
       }
     };
 

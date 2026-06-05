@@ -2,7 +2,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.models.models import User, UserRole, ApprovalStatus
+from app.models.models import User, UserRole, ApprovalStatus, Tenant
 from app.services.auth import get_password_hash
 
 
@@ -10,6 +10,18 @@ def create_admin_user():
     """Create default admin user if it doesn't exist."""
     db: Session = SessionLocal()
     try:
+        # Create default tenant if it doesn't exist
+        tenant = db.query(Tenant).filter(Tenant.slug == "default").first()
+        if not tenant:
+            tenant = Tenant(
+                name="Default Organization",
+                slug="default"
+            )
+            db.add(tenant)
+            db.commit()
+            db.refresh(tenant)
+            print("✅ Created default tenant")
+
         # Check if admin already exists
         admin = db.query(User).filter(User.email == "admin@example.com").first()
         if admin:
@@ -18,6 +30,7 @@ def create_admin_user():
 
         # Create admin user
         admin = User(
+            tenant_id=tenant.id,
             email="admin@example.com",
             name="Admin User",
             password_hash=get_password_hash("admin123"),  # Change this in production!
