@@ -113,13 +113,13 @@ class ApiClient {
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
         const errorMsg = error.detail || `HTTP error! status: ${response.status}`;
-        console.error(`[ApiClient] ${method} ${endpoint} failed:`, errorMsg);
+        logger.error(`[ApiClient] ${method} ${endpoint} failed:`, errorMsg);
         throw new Error(errorMsg);
       }
 
       return response.json();
     } catch (error) {
-      console.error(`[ApiClient] ${method} ${endpoint} failed:`, error);
+      logger.error(`[ApiClient] ${method} ${endpoint} failed:`, error);
       throw error;
     }
   }
@@ -140,7 +140,7 @@ class ApiClient {
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Login failed' }));
         const errorMsg = error.detail || 'Login failed';
-        console.error('[ApiClient] POST /api/auth/login failed:', errorMsg);
+        logger.error('[ApiClient] POST /api/auth/login failed:', errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -149,7 +149,7 @@ class ApiClient {
       logger.log('[ApiClient] Login successful');
       return data;
     } catch (error) {
-      console.error('[ApiClient] POST /api/auth/login failed:', error);
+      logger.error('[ApiClient] POST /api/auth/login failed:', error);
       throw error;
     }
   }
