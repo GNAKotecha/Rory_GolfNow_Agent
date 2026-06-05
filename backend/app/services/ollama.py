@@ -267,14 +267,36 @@ class OllamaClient:
         try:
             client = await self._get_client()
             if self.use_api_key:
-                response = await client.get(
-                    f"{self.base_url}/v1/models",
-                    headers=self._api_headers(),
-                    timeout=5.0,
-                )
+                # For API key backend (Keystone), try /v1/models first
+                # Fall back to /health if that doesn't exist
+                try:
+                    response = await client.get(
+                        f"{self.base_url}/v1/models",
+                        headers=self._api_headers(),
+                        timeout=5.0,
+                    )
+                    return response.status_code == 200
+                except:
+                    # Fallback: try a health endpoint or just check connectivity
+                    try:
+                        response = await client.get(
+                            f"{self.base_url}/health",
+                            headers=self._api_headers(),
+                            timeout=5.0,
+                        )
+                        return response.status_code == 200
+                    except:
+                        # If neither endpoint exists, just verify we can reach the server
+                        # by trying to connect (will raise if unreachable)
+                        response = await client.head(
+                            self.base_url,
+                            headers=self._api_headers(),
+                            timeout=5.0,
+                        )
+                        return response.status_code in (200, 404, 405)
             else:
                 response = await client.get(f"{self.base_url}/api/tags", timeout=5.0)
-            return response.status_code == 200
+                return response.status_code == 200
         except Exception as e:
             provider = "API key backend" if self.use_api_key else "Ollama"
             print(f"{provider} connection failed: {e}")
