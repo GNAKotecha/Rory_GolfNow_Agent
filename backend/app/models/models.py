@@ -391,6 +391,7 @@ class TenantSkill(Base):
     skill_data = Column(JSON, nullable=False, default={})  # Skill definition (content, config, etc)
     version = Column(Integer, nullable=False, default=1)  # Version number
     is_active = Column(Boolean, nullable=False, default=False)  # Whether this version is active
+    intent_patterns = Column(JSON, nullable=True, default=list)  # Semantic matching patterns for skill invocation
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who created this skill
