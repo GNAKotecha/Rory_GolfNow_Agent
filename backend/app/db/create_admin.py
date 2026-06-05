@@ -1,5 +1,6 @@
 """Create default admin user for initial setup."""
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import SessionLocal
 from app.models.models import User, UserRole, ApprovalStatus
@@ -25,11 +26,17 @@ def create_admin_user():
             approval_status=ApprovalStatus.APPROVED,
         )
         db.add(admin)
-        db.commit()
-        print("✅ Created default admin user:")
-        print("   Email: admin@example.com")
-        print("   Password: admin123")
-        print("   ⚠️  CHANGE THIS PASSWORD IN PRODUCTION!")
+
+        try:
+            db.commit()
+            print("✅ Created default admin user:")
+            print("   Email: admin@example.com")
+            print("   Password: admin123")
+            print("   ⚠️  CHANGE THIS PASSWORD IN PRODUCTION!")
+        except IntegrityError:
+            # Handle race condition: another process created the user between check and commit
+            db.rollback()
+            print("Admin user already exists (created by concurrent process)")
 
     finally:
         db.close()

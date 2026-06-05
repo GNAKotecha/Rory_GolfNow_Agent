@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface LoginResponse {
@@ -82,10 +84,15 @@ class ApiClient {
     }
   }
 
+  hasToken(): boolean {
+    return this.token !== null;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    const method = options.method || 'GET';
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -95,37 +102,56 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    logger.debug(`[ApiClient] ${method} ${endpoint}`);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        const errorMsg = error.detail || `HTTP error! status: ${response.status}`;
+        console.error(`[ApiClient] ${method} ${endpoint} failed:`, errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`[ApiClient] ${method} ${endpoint} failed:`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   // Auth endpoints
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await fetch(`${this.baseURL}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    logger.debug('[ApiClient] POST /api/auth/login');
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Login failed' }));
-      throw new Error(error.detail || 'Login failed');
+    try {
+      const response = await fetch(`${this.baseURL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Login failed' }));
+        const errorMsg = error.detail || 'Login failed';
+        console.error('[ApiClient] POST /api/auth/login failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      this.setToken(data.access_token);
+      logger.log('[ApiClient] Login successful');
+      return data;
+    } catch (error) {
+      console.error('[ApiClient] POST /api/auth/login failed:', error);
+      throw error;
     }
-
-    const data = await response.json();
-    this.setToken(data.access_token);
-    return data;
   }
 
   async getCurrentUser(): Promise<User> {
