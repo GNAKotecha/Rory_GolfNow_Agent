@@ -170,7 +170,7 @@ class MCPClient:
             True if server is healthy, False otherwise
         """
         try:
-            session = await safe_async_call(self._get_session)
+            session = safe_async_call(self._get_session)
             url = f"{self.config.url}/health"
 
             async with session.get(url) as response:

@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Please use the" [ref=e49]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e19]
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - generic [ref=e23]: E2E Tester
+          - generic [ref=e24]: user
+        - button "Logout" [ref=e25]:
+          - img [ref=e26]
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - button [ref=e30]:
+          - img [ref=e31]
+        - heading "I need to reinstate user 98765432. Please use the" [level=1] [ref=e50] [cursor=pointer]
+        - generic [ref=e34]:
+          - generic [ref=e35]: Haiku 4.5
+          - generic [ref=e36]: Live
+      - generic [ref=e38]:
+        - generic [ref=e51]:
+          - img [ref=e53]
+          - generic [ref=e55]:
+            - generic [ref=e56]: You
+            - paragraph [ref=e58]: I need to reinstate user 98765432. Please use the Reinstate User skill.
+        - generic [ref=e65]:
+          - img [ref=e67]
+          - generic [ref=e69]:
+            - generic [ref=e70]: Assistant
+            - generic [ref=e73]:
+              - paragraph [ref=e74]: "I appreciate you reaching out, but I don't have access to a \"Reinstate User\" skill or function. The tools available to me are:"
+              - list [ref=e75]:
+                - listitem [ref=e76]:
+                  - strong [ref=e77]: store_memory
+                  - text: "- Store information for later retrieval"
+                - listitem [ref=e78]:
+                  - strong [ref=e79]: retrieve_memory
+                  - text: "- Retrieve previously stored information"
+                - listitem [ref=e80]:
+                  - strong [ref=e81]: list_memory_keys
+                  - text: "- List all stored memory keys"
+                - listitem [ref=e82]:
+                  - strong [ref=e83]: calculate
+                  - text: "- Perform mathematical calculations"
+                - listitem [ref=e84]:
+                  - strong [ref=e85]: retrieve_historical_context
+                  - text: "- Search for relevant historical context from past sessions"
+              - paragraph [ref=e86]: "To reinstate user 98765432, you would need to:"
+              - list [ref=e87]:
+                - listitem [ref=e88]:
+                  - strong [ref=e89]: Contact your system administrator
+                  - text: or use your application's admin panel directly
+                - listitem [ref=e90]:
+                  - strong [ref=e91]: Access the user management system
+                  - text: in your application
+                - listitem [ref=e92]:
+                  - strong [ref=e93]: Use your organization's user management tool or CRM
+                  - text: that has the reinstate/reactivate user functionality
+              - paragraph [ref=e94]: If you need help with something else that I can assist with using my available tools, please let me know! Or if you'd like to store information about this user 98765432 for reference, I can help with that.
+      - generic [ref=e44]:
+        - textbox "Message Assistant..." [ref=e45]
+        - button [disabled] [ref=e46]:
+          - img [ref=e47]

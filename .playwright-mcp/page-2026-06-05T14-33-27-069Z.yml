@@ -1,0 +1,42 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Please execute" [ref=e52]
+        - button "I need to reinstate user 98765432. Can you use the" [ref=e48]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e49]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e50]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e51]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: E2E Tester
+          - generic [ref=e23]: user
+        - button "Logout" [ref=e24]:
+          - img [ref=e25]
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - heading "I need to reinstate user 98765432. Please execute" [level=1] [ref=e53] [cursor=pointer]
+        - generic [ref=e33]:
+          - generic [ref=e34]: Haiku 4.5
+          - generic [ref=e35]: Live
+      - generic [ref=e37]:
+        - generic [ref=e54]:
+          - img [ref=e56]
+          - generic [ref=e58]:
+            - generic [ref=e59]: You
+            - paragraph [ref=e61]: I need to reinstate user 98765432. Please execute the Reinstate User skill to restore this account.
+        - generic [ref=e65]:
+          - generic [ref=e66]: Assistant
+          - generic [ref=e67]: "Error: Workflow failed"
+      - generic [ref=e43]:
+        - textbox "Message Assistant..." [ref=e44]
+        - button [disabled] [ref=e45]:
+          - img [ref=e46]

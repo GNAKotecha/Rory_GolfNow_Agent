@@ -346,14 +346,28 @@ class OllamaClient:
         try:
             client = await self._get_client()
             if self.use_api_key:
-                response = await client.post(
-                    f"{self.base_url}/v1/chat/completions",
-                    headers=self._api_headers(),
-                    json={
+                url = f"{self.base_url}/v1/chat/completions"
+                payload = {
+                    "model": model_name,
+                    "messages": messages,
+                    "stream": False,
+                }
+                headers = self._api_headers()
+
+                logger.debug(
+                    "Making API request",
+                    extra={
+                        "url": url,
                         "model": model_name,
-                        "messages": messages,
-                        "stream": False,
-                    },
+                        "headers": {k: v[:20] + '...' if len(str(v)) > 20 else v for k, v in headers.items()},
+                        "message_count": len(messages),
+                    }
+                )
+
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json=payload,
                     timeout=60.0,
                 )
             else:
@@ -369,6 +383,23 @@ class OllamaClient:
                 )
 
             if response.status_code == 404:
+                # Log the full response for debugging
+                try:
+                    error_detail = response.json()
+                except:
+                    error_detail = response.text
+
+                logger.error(
+                    f"API returned 404 for model",
+                    extra={
+                        "model": model_name,
+                        "endpoint": f"{self.base_url}/v1/chat/completions" if self.use_api_key else f"{self.base_url}/api/chat",
+                        "response_status": response.status_code,
+                        "response_body": error_detail,
+                        "use_api_key": self.use_api_key,
+                    }
+                )
+
                 if self.use_api_key:
                     raise OllamaError(f"Model '{model_name}' not found on API backend")
                 raise OllamaError(

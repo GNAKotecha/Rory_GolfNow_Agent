@@ -1,0 +1,36 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Please execute" [ref=e19]
+        - button "I need to reinstate user 98765432. Can you use the" [ref=e20]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e21]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e22]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e23]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: E2E Tester
+          - generic [ref=e28]: user
+        - button "Logout" [ref=e29]:
+          - img [ref=e30]
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - button [ref=e34]:
+          - img [ref=e35]
+        - heading "New Chat" [level=1] [ref=e37] [cursor=pointer]
+        - generic [ref=e38]:
+          - generic [ref=e39]: Haiku 4.5
+          - generic [ref=e40]: Live
+      - generic [ref=e43]:
+        - heading "How can I help you today?" [level=2] [ref=e44]
+        - paragraph [ref=e45]: Ask me anything about BRS teesheet management.
+      - generic [ref=e48]:
+        - textbox "Message Assistant..." [ref=e49]
+        - button [disabled] [ref=e50]:
+          - img [ref=e51]

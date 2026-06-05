@@ -158,12 +158,20 @@ def safe_async_call(
         Result of the async function or None on failure
     """
     try:
-        loop = mcp_event_loop_manager.get_event_loop()
-
-        async def _wrapped_call():
-            return await asyncio.wait_for(func(*args, **kwargs), timeout=timeout)
-
-        return loop.run_until_complete(_wrapped_call())
+        # Check if there's already a running event loop
+        try:
+            asyncio.get_running_loop()
+            # If we're already in an async context, run in a thread pool
+            logger.debug(f"Running in existing event loop, using ThreadPoolExecutor for {func.__name__}")
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, func(*args, **kwargs))
+                return future.result(timeout=timeout)
+        except RuntimeError:
+            # No running loop, create one
+            logger.debug(f"No running loop, creating new loop for {func.__name__}")
+            coro = func(*args, **kwargs)
+            return asyncio.run(coro)
 
     except asyncio.TimeoutError:
         logger.warning(f"Async call to {func.__name__} timed out after {timeout} seconds")
