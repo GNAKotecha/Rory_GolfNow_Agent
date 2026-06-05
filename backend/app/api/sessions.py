@@ -2,6 +2,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.models.models import Session as SessionModel, Message as MessageModel, User as UserModel
@@ -13,6 +14,9 @@ from app.api.schemas import (
     MessageResponse,
 )
 from app.api.auth_deps import get_approved_user, get_current_user_tenant_id
+
+class AbortRequest(BaseModel):
+    run_id: str
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -155,3 +159,28 @@ def update_session(
     db.commit()
     db.refresh(session)
     return session
+
+
+@router.post("/{session_id}/abort")
+def abort_session(
+    session_id: int,
+    request: AbortRequest,
+    current_user: UserModel = Depends(get_approved_user),
+    tenant_id: int = Depends(get_current_user_tenant_id),
+    db: Session = Depends(get_db),
+):
+    """Abort the current workflow run in a session."""
+    session = db.query(SessionModel).filter(
+        SessionModel.id == session_id,
+        SessionModel.tenant_id == tenant_id,
+        SessionModel.user_id == current_user.id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Abort workflow via WebSocket service or task queue
+    # This will be handled by the chat service to cancel the active run
+    from app.services.chat_service import abort_workflow_run
+    success = abort_workflow_run(request.run_id, session_id)
+
+    return {"status": "aborted" if success else "not_found", "run_id": request.run_id}

@@ -7,6 +7,7 @@ import { apiClient, Session, Message } from '@/lib/api';
 import { ChatWebSocket, StreamEvent } from '@/lib/websocket';
 import { MessageRenderer } from '@/components/MessageRenderer';
 import { parseMessageContent } from '@/lib/message-types';
+import { NewSessionModal } from '@/components/NewSessionModal';
 
 export default function ChatPage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -23,6 +24,9 @@ export default function ChatPage() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [isAbortingRunId, setIsAbortingRunId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ChatWebSocket | null>(null);
   const currentSessionIdRef = useRef<number>(0);
@@ -153,14 +157,39 @@ export default function ChatPage() {
     }
   };
 
-  const handleNewChat = async () => {
+  const handleNewChat = () => {
+    setShowNewSessionModal(true);
+  };
+
+  const handleCreateSession = async (title: string) => {
+    setCreatingSession(true);
     try {
-      const newSession = await apiClient.createSession();
+      const newSession = await apiClient.createSession(title);
       setSessions([newSession, ...sessions]);
       setCurrentSession(newSession);
       setMessages([]);
+      setShowNewSessionModal(false);
     } catch (error) {
       console.error('Failed to create session:', error);
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  const handleAbortRun = async () => {
+    if (!currentSession?.id || !activeRunId) return;
+
+    setIsAbortingRunId(activeRunId);
+    try {
+      await apiClient.abortSession(currentSession.id, activeRunId);
+      wsRef.current?.disconnect();
+      setLoading(false);
+      setStreamingStatus('');
+      setActiveRunId(null);
+    } catch (error) {
+      console.error('Failed to abort run:', error);
+    } finally {
+      setIsAbortingRunId(null);
     }
   };
 
@@ -207,11 +236,32 @@ export default function ChatPage() {
 
     const userMessage = input.trim();
     setInput('');
+
+    // Auto-create session if needed
+    let sessionId = currentSession?.id;
+    if (!sessionId) {
+      try {
+        setCreatingSession(true);
+        const titlePreview = userMessage.substring(0, 50);
+        const newSession = await apiClient.createSession(titlePreview);
+        setSessions([newSession, ...sessions]);
+        setCurrentSession(newSession);
+        sessionId = newSession.id;
+      } catch (error) {
+        console.error('Failed to create session:', error);
+        alert('Failed to create session');
+        setInput(userMessage);
+        return;
+      } finally {
+        setCreatingSession(false);
+      }
+    }
+
     setLoading(true);
 
     const optimisticUserMessage: Message = {
       id: Date.now(),
-      session_id: currentSession?.id || 0,
+      session_id: sessionId,
       role: 'user',
       content: userMessage,
       created_at: new Date().toISOString(),
@@ -220,7 +270,6 @@ export default function ChatPage() {
 
     try {
       if (useStreaming && wsRef.current?.isConnected()) {
-        const sessionId = currentSession?.id || 0;
         if (pendingAskUser?.resume_token) {
           setStreamingStatus('Resuming...');
           wsRef.current.sendUserResponse(
@@ -507,28 +556,45 @@ export default function ChatPage() {
                 )}
               </div>
             )}
-            <form onSubmit={handleSendMessage} className="flex gap-3">
+            <form onSubmit={loading ? (e) => { e.preventDefault(); handleAbortRun(); } : handleSendMessage} className="flex gap-3">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={isAwaitingResumeInput ? 'Provide details to continue...' : 'Message Assistant...'}
                 className="flex-1 bg-gray-100 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-400 placeholder-gray-500"
-                disabled={loading}
+                disabled={loading && !isAwaitingResumeInput}
               />
               <button
                 type="submit"
-                disabled={loading || !input.trim()}
-                className="bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium px-5 py-3 rounded-xl transition-colors"
+                disabled={(!loading && !input.trim())}
+                className={`text-white font-medium px-5 py-3 rounded-xl transition-colors ${
+                  loading
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed'
+                }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                {loading ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
               </button>
             </form>
           </div>
         </div>
       </div>
+
+      <NewSessionModal
+        isOpen={showNewSessionModal}
+        onClose={() => setShowNewSessionModal(false)}
+        onCreate={handleCreateSession}
+        loading={creatingSession}
+      />
     </div>
   );
 }

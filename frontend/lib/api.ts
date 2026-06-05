@@ -326,6 +326,13 @@ class ApiClient {
     });
   }
 
+  async abortSession(sessionId: number, runId: string): Promise<{ status: string; run_id: string }> {
+    return this.request<{ status: string; run_id: string }>(`/api/sessions/${sessionId}/abort`, {
+      method: 'POST',
+      body: JSON.stringify({ run_id: runId }),
+    });
+  }
+
   // Chat endpoint
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     return this.request<ChatResponse>('/api/chat', {

@@ -32,6 +32,16 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
       setError('Connection name is required');
       return;
     }
+    if (!formData.config?.server_url?.trim()) {
+      setError('Server URL is required');
+      return;
+    }
+
+    // Validate credentials are provided for selected auth type
+    if (!formData.config?.credentials?.trim()) {
+      setError('Credentials are required for the selected authentication method');
+      return;
+    }
 
     try {
       await onAdd({
@@ -92,6 +102,30 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
             </p>
           </div>
 
+          {/* Server URL */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-900">Server URL</label>
+            <input
+              type="url"
+              value={formData.config?.server_url || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  config: {
+                    ...formData.config,
+                    server_url: e.target.value,
+                  },
+                })
+              }
+              placeholder="http://localhost:3000 or https://api.example.com"
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={loading}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Full URL to the MCP server endpoint
+            </p>
+          </div>
+
           {/* Auth Type */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-900">Authentication Type</label>
@@ -116,6 +150,40 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
               Select how to authenticate with the MCP server
             </p>
           </div>
+
+          {/* Credentials */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-900">
+              {formData.auth_type === 'api_key' && 'API Key'}
+              {formData.auth_type === 'pat' && 'Personal Access Token'}
+              {formData.auth_type === 'oauth' && 'OAuth Client ID:Secret'}
+            </label>
+              <input
+                type="password"
+                value={formData.config?.credentials || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    config: {
+                      ...formData.config,
+                      credentials: e.target.value,
+                    },
+                  })
+                }
+                placeholder={
+                  formData.auth_type === 'oauth'
+                    ? 'client_id:client_secret'
+                    : formData.auth_type === 'api_key'
+                      ? 'Your API key'
+                      : 'Your personal access token'
+                }
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Credentials are encrypted and stored securely
+              </p>
+            </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-4">

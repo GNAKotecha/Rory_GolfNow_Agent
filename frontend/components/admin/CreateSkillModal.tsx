@@ -6,7 +6,10 @@ import {
   resetSkillForm,
   validateSkillJSON,
   SkillFormData,
+  stepsToSkillData,
+  WorkflowStep,
 } from './skillFormUtils';
+import WorkflowStepsBuilder from '@/components/WorkflowStepsBuilder';
 
 interface CreateSkillModalProps {
   isOpen: boolean;
@@ -22,6 +25,7 @@ export default function CreateSkillModal({
   loading,
 }: CreateSkillModalProps) {
   const [formData, setFormData] = useState<SkillFormData>(resetSkillForm());
+  const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [jsonValidated, setJsonValidated] = useState(false);
@@ -51,6 +55,19 @@ export default function CreateSkillModal({
       return;
     }
 
+    // Validate workflow steps if any exist
+    if (steps.length > 0) {
+      const emptySteps = steps.filter((step) => !step.action.trim());
+      if (emptySteps.length > 0) {
+        setError('All steps must have an action');
+        return;
+      }
+      // Auto-generate skill_data from steps
+      const generatedJSON = stepsToSkillData(steps);
+      setFormData({ ...formData, skill_data: generatedJSON });
+      setJsonValidated(false);
+    }
+
     // Skip JSON validation on submit if already validated on blur
     if (!jsonValidated && !handleValidateJSON()) {
       return;
@@ -63,6 +80,7 @@ export default function CreateSkillModal({
         skill_data: JSON.parse(formData.skill_data),
       });
       setFormData(resetSkillForm());
+      setSteps([]);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create skill');
@@ -71,6 +89,7 @@ export default function CreateSkillModal({
 
   const handleClose = () => {
     setFormData(resetSkillForm());
+    setSteps([]);
     setError(null);
     setValidationError(null);
     setJsonValidated(false);
@@ -128,6 +147,11 @@ export default function CreateSkillModal({
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+
+          {/* Workflow Steps Builder */}
+          <div className="border-t border-gray-200 pt-4">
+            <WorkflowStepsBuilder steps={steps} onStepsChange={setSteps} />
           </div>
 
           {/* Skill Data JSON */}

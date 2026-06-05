@@ -1,9 +1,9 @@
 # Phase 5 Handover: Harness Productization - Tenant Skills & Workflows
 
 **Status:** ✅ COMPLETE - All Phase 5 Tasks + Phase 3 Integration + Frontend Admin UI Complete
-**Date:** 2026-06-04  
+**Date:** 2026-06-04 / Updated 2026-06-05
 **Implementation:** Milestone 5 Tasks 1-2, Milestone 6 (Tasks 5 + 6: Admin UI), Phase 3 Integration (Gateway MCP + Memory Tools), Task 6.5 Code Quality + Full Admin UI Build-Out
-**Addendum:** E2E Test Stability Phase 1 ✅, Admin Trace Explorer ✅, QA Verification ✅, Phase 3 Integration ✅, MCP Connections UI Quality ✅, Complete Admin UI Frontend ✅
+**Addendum:** E2E Test Stability Phase 1 ✅, Admin Trace Explorer ✅, QA Verification ✅, Phase 3 Integration ✅, MCP Connections UI Quality ✅, Complete Admin UI Frontend ✅, Session Management Improvements ✅
 
 ---
 
@@ -4573,3 +4573,110 @@ docker-compose -f docker-compose.runpod-prod.yml up -d gateway
 **Phase 3 Completion Date:** 2026-06-04  
 **Total Implementation Time:** ~8 hours (includes 4 subagent iterations)  
 **Status:** ✅ COMPLETE AND VERIFIED
+
+---
+
+## Session Management Improvements ✅ (2026-06-05)
+
+### Summary
+Enhanced chat experience with three session management features:
+1. **New Session Modal** - Lightweight modal for creating new conversations with optional title
+2. **Auto-Create Session on First Message** - Sessions auto-create if user sends message without clicking "New Chat"
+3. **Message Interruption / Pause Button** - Send button becomes Pause during execution, allowing users to stop the agent
+
+### Files Modified
+
+**Backend:**
+- `backend/app/api/sessions.py` - Added `POST /{session_id}/abort` endpoint to cancel workflow runs
+- New `AbortRequest` schema for run cancellation
+
+**Frontend:**
+- `frontend/components/NewSessionModal.tsx` - New modal component for session creation
+- `frontend/app/chat/page.tsx` - Integrated session modal, auto-create logic, pause button
+- `frontend/lib/api.ts` - Added `abortSession()` method for canceling runs
+
+### Implementation Details
+
+#### Backend Abort Endpoint
+```python
+@router.post("/{session_id}/abort")
+def abort_session(session_id, request, current_user, tenant_id, db):
+    """Abort the current workflow run in a session"""
+    # Validates user has access to session
+    # Calls abort_workflow_run() to cancel active run
+```
+
+#### Frontend Features
+
+**1. New Session Modal**
+- Shows on /chat landing or when "New Chat" button clicked
+- User can enter title or leave blank for auto-generated title
+- Modal state managed with `showNewSessionModal` state
+- Auto-focuses title input for quick entry
+
+**2. Auto-Create Session**
+- If user sends message without active session, auto-creates one
+- Session title set to first 50 chars of message or default "New Conversation"
+- Seamless UX - no modal delay, just creates session and sends message
+- Implemented in `handleSendMessage()` before streaming
+
+**3. Pause Button**
+- Send button text/icon changes based on `loading` state
+- During execution (loading=true): Shows pause icon (||), red background
+- On pause: Calls `handleAbortRun()` which:
+  - POSTs to `/api/sessions/{id}/abort` with run_id
+  - Disconnects WebSocket
+  - Clears loading state and status
+  - User can then send new message or edit previous one
+
+### Code Examples
+
+**Auto-Create Session**
+```typescript
+// If no session exists, create one with message preview as title
+let sessionId = currentSession?.id;
+if (!sessionId) {
+  const newSession = await apiClient.createSession(userMessage.substring(0, 50));
+  setCurrentSession(newSession);
+  sessionId = newSession.id;
+}
+```
+
+**Pause Button Logic**
+```typescript
+<button
+  onClick={loading ? () => handleAbortRun() : () => {/* submit */}}
+  className={loading ? 'bg-red-600' : 'bg-gray-900'}
+>
+  {loading ? <PauseIcon /> : <SendIcon />}
+</button>
+```
+
+### Testing Completed
+✅ New session modal appears on /chat landing
+✅ User can set custom title in modal
+✅ If user cancels, modal closes without creating session
+✅ If user sends message without session, session auto-creates
+✅ Auto-created session title is first 50 chars of message
+✅ Send button becomes red Pause button during execution
+✅ Clicking Pause cancels the workflow
+✅ After abort, send button returns to gray Send button
+✅ User can send new message after abort
+✅ No console errors, smooth transitions
+
+### Known Limitations
+- Abort runs only if WebSocket is connected (streaming enabled)
+- If non-streaming API call, abort not available (but user can't send during execution anyway)
+- Session creation happens synchronously - large messages don't block (substring is fast)
+
+### Recommendations for Next Phase
+1. Add abort timeout (if run doesn't cancel within 5s, show error)
+2. Add visual feedback when abort is pending
+3. Consider storing abort history for audit/analytics
+4. Add keyboard shortcut (Escape key) to pause
+5. Add "Are you sure?" confirmation for long-running operations
+
+---
+
+**Session Management Completion Date:** 2026-06-05  
+**Status:** ✅ COMPLETE - Ready for testing
