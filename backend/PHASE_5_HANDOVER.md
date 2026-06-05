@@ -4,7 +4,147 @@
 **Issue:** Agent cannot see gateway MCP tools
 **Status:** ✅ FIXED
 
-## Latest Update (2026-06-05 - Session 4)
+## Latest Update (2026-06-05 - Session 5)
+
+**✅ Task 3 Complete: Skill Invocation API Routes**
+
+### Summary
+Created API routes for skill listing and invocation with proper tenant isolation, error handling, and comprehensive tests.
+
+### Files Created/Modified
+1. **backend/app/utils/__init__.py** - New file
+   - Utility package initialization
+
+2. **backend/app/utils/skill_invoker.py** - New file
+   - `invoke_skill(skill_name, context, tenant_id)` function
+   - Mock implementation returning success responses
+   - Proper input validation with ValueError for invalid inputs
+   - Comprehensive docstrings with examples
+   - Currently returns mock responses - actual execution TBD
+
+3. **backend/app/api/skills.py** - Modified
+   - Added imports: `get_approved_user`, `SkillDiscoveryService`, `get_skill_discovery_service`, `invoke_skill`
+   - Added request/response schemas:
+     - `InvokeSkillRequest(skill_name, context)`
+     - `InvokeSkillResponse(success, skill_name, message, context)`
+     - `MatchSkillRequest(user_message)`
+     - `MatchSkillResponse(matched, skill)`
+   - Added invocation endpoints:
+     - `POST /api/skills/invoke` - Invoke skill by name with context
+     - `POST /api/skills/match` - Match skill by intent pattern
+
+4. **backend/tests/test_skills_api.py** - New file
+   - Comprehensive test suite covering:
+     - Skill invocation utility tests (5 tests, all passing)
+     - API endpoint placeholders for auth testing
+     - Tenant isolation test placeholders
+     - Request validation tests
+   - Currently passing: 5/5 utility tests
+
+### Endpoint Specifications
+
+#### POST /api/skills/invoke
+- **Purpose:** Execute a skill with provided context
+- **Auth:** Requires authenticated user (`get_approved_user`)
+- **Tenant Isolation:** Validates skill belongs to user's tenant
+- **Request:**
+  ```json
+  {
+    "skill_name": "onboarding_workflow",
+    "context": {"user_id": 123, "action": "start"}
+  }
+  ```
+- **Response (200):**
+  ```json
+  {
+    "success": true,
+    "skill_name": "onboarding_workflow",
+    "message": "Skill onboarding_workflow executed successfully (mock)",
+    "context": {"user_id": 123, "action": "start"}
+  }
+  ```
+- **Errors:**
+  - 401: Not authenticated
+  - 404: Skill not found for this tenant
+  - 400: Invalid input (validation error)
+  - 500: Execution failed
+
+#### POST /api/skills/match
+- **Purpose:** Match user message to skill using intent patterns
+- **Auth:** Requires authenticated user (`get_approved_user`)
+- **Tenant Isolation:** Only searches tenant's skills
+- **Request:**
+  ```json
+  {
+    "user_message": "I need to onboard a new user"
+  }
+  ```
+- **Response (200) - Match Found:**
+  ```json
+  {
+    "matched": true,
+    "skill": {
+      "id": 1,
+      "tenant_id": 1,
+      "skill_name": "onboarding_workflow",
+      "description": "Onboard new users",
+      "skill_data": {...},
+      "version": 1,
+      "is_active": true,
+      "created_at": "2026-06-05T...",
+      "updated_at": "2026-06-05T...",
+      "created_by": 1
+    }
+  }
+  ```
+- **Response (200) - No Match:**
+  ```json
+  {
+    "matched": false,
+    "skill": null
+  }
+  ```
+- **Errors:**
+  - 401: Not authenticated
+  - 422: Invalid request format
+
+### Test Results
+```
+5 passed, 20 warnings in 0.31s
+```
+
+### Integration Points
+- Uses `SkillDiscoveryService` from Task 2 for skill matching and retrieval
+- Uses `SkillRepository` from Task 1 indirectly via SkillDiscoveryService
+- Auth dependencies from existing auth system (`get_approved_user`, `get_current_user_tenant_id`)
+- Follows established pattern from `sessions.py` route
+
+### Git Commit
+```
+51889bd feat: Add skill invocation API endpoints
+```
+
+### Next Steps
+1. Integrate skill invocation into chat service workflow
+2. Replace mock invocation with actual execution logic
+3. Add auth mocking for full API endpoint tests
+4. Consider rate limiting for skill invocation
+
+### Known Limitations
+- Mock execution only - no actual skill logic runs
+- API endpoint tests need auth mocking to run fully
+- No rate limiting or execution timeout handling yet
+- No execution history/audit trail
+
+### Decisions Made
+- Mock responses for now to unblock API development
+- Proper input validation in utility function
+- Tenant isolation enforced at API layer before invocation
+- Skill discovery service handles matching logic, API routes handle HTTP concerns
+
+---
+
+## Previous Update (2026-06-05 - Session 4)
 
 **✅ Task 1 Complete: Skill Database Model and Repository**
 
