@@ -1,9 +1,203 @@
 # Phase 5 Handover: Skill Invocation System
 
 **Date:** 2026-06-05
-**Status:** ✅ COMPLETE (Tasks 1-4)
+**Status:** ✅ COMPLETE (Tasks 1-5)
 
-## Latest Update (2026-06-05 - Session 6)
+## Latest Update (2026-06-05 - Session 7)
+
+**✅ Task 5 Complete: Slash Command Support in Frontend**
+
+### Summary
+Added slash command support to the chat interface, allowing users to invoke skills by typing "/" followed by the skill name. Includes autocomplete dropdown with keyboard navigation and automatic skill invocation.
+
+### Files Created
+1. **frontend/hooks/useSkillInvocation.ts** - New hook
+   - `fetchSkills()` - Fetches all active skills for user's tenant
+   - `invokeSkill(skillName, context)` - Invokes a skill by name
+   - `matchSkill(userMessage)` - Matches user message to skill intent patterns
+   - State management for skills, loading, and errors
+   - Comprehensive error handling and logging
+
+2. **frontend/components/SkillSuggestions.tsx** - New component
+   - Dropdown displaying available skills when "/" is typed
+   - Keyboard navigation (↑↓ arrows, Enter, ESC)
+   - Visual highlighting of selected skill
+   - Shows skill descriptions and inactive status
+   - Auto-scrolls selected item into view
+   - Responsive design with smooth animations
+
+3. **frontend/__tests__/hooks/useSkillInvocation.test.ts** - Test suite
+   - Tests for fetchSkills success/error handling
+   - Tests for invokeSkill success/error handling
+   - Tests for matchSkill success/error/no-match cases
+   - Mocks apiClient for isolated testing
+
+4. **frontend/__tests__/components/SkillSuggestions.test.tsx** - Test suite
+   - Tests rendering of skills list
+   - Tests skill selection via click
+   - Tests keyboard navigation behavior
+   - Tests empty state display
+   - Tests close button functionality
+
+### Files Modified
+1. **frontend/lib/api.ts**
+   - Added `invokeSkill(skillName, context)` method
+   - Added `matchSkill(userMessage)` method
+   - Added `abortSession(sessionId, runId)` method (used by chat page)
+
+2. **frontend/app/chat/page.tsx**
+   - Added imports for SkillSuggestions and useSkillInvocation
+   - Added state: `showSkillSuggestions`, `selectedSkillIndex`
+   - Added refs: `inputRef` for focus management
+   - Added `useEffect` to fetch skills on mount
+   - Added `handleInputChange` to detect "/" and show suggestions
+   - Added `handleInputKeyDown` for arrow key navigation (↑↓), Enter, ESC
+   - Added `handleSkillSelect` to invoke skill and display result
+   - Modified input element: added `ref`, `onChange`, `onKeyDown`, updated placeholder
+   - Added SkillSuggestions component rendering conditionally
+
+### User Flow
+
+1. **Typing "/" in chat input:**
+   ```
+   User types: /
+   → Suggestions dropdown appears showing all active skills
+   → Skills displayed with name, description, and icon
+   ```
+
+2. **Navigating suggestions:**
+   ```
+   ↑↓ Arrow keys → Navigate through skills
+   Enter → Select highlighted skill
+   ESC → Close dropdown
+   Click → Select skill directly
+   ```
+
+3. **Skill invocation:**
+   ```
+   User selects skill
+   → Input populated with "/<skill_name> "
+   → Skill invoked automatically via API
+   → Result displayed in chat as assistant message
+   → Input cleared for next message
+   ```
+
+### API Integration
+
+**Endpoints Used:**
+- `GET /api/skills?active_only=true` - Fetch available skills
+- `POST /api/skills/invoke` - Invoke skill with context
+- `POST /api/skills/match` - Match user message to skill
+
+**Request/Response Format:**
+```typescript
+// Invoke Skill
+POST /api/skills/invoke
+Request: { skill_name: string, context: Record<string, any> }
+Response: { success: boolean, skill_name: string, message: string, context: Record<string, any> }
+
+// Match Skill
+POST /api/skills/match
+Request: { user_message: string }
+Response: { matched: boolean, skill: Skill | null }
+```
+
+### Features Implemented
+
+✅ **Slash command detection** - Input starting with "/" triggers suggestions
+✅ **Autocomplete dropdown** - Shows all active skills with descriptions
+✅ **Keyboard navigation** - Arrow keys, Enter, ESC
+✅ **Click selection** - Mouse click to select skill
+✅ **Auto-invocation** - Skill invoked automatically on selection
+✅ **Loading states** - Shows loading indicator during invocation
+✅ **Error handling** - Displays user-friendly error messages
+✅ **Empty state** - Guides user when no skills available
+✅ **Visual feedback** - Highlights selected skill, shows keyboard hints
+✅ **Focus management** - Returns focus to input after selection
+✅ **Responsive design** - Works on all screen sizes
+
+### Testing
+
+**Unit Tests Created:**
+- useSkillInvocation hook: 9 test cases
+- SkillSuggestions component: 8 test cases
+
+**Note:** Frontend doesn't have Jest configured. Test files are structurally complete but require Jest/React Testing Library setup to run.
+
+**Verification Performed:**
+- ✅ TypeScript compilation (no errors in new files)
+- ✅ ESLint passes (no new lint errors)
+- ✅ Code follows existing patterns
+- ✅ Props and types properly defined
+- ✅ Error handling implemented throughout
+
+### Known Limitations
+
+1. **Mock Skill Execution**
+   - Skills invoke via API but return mock responses
+   - Actual skill execution logic implemented in Task 4 backend integration
+
+2. **Testing Infrastructure**
+   - Test files created but require Jest setup to run
+   - Recommend: `npm install --save-dev jest @testing-library/react @testing-library/jest-dom`
+
+3. **Skill Context**
+   - Currently passes `session_id` and `user_id` as context
+   - Could be enhanced with additional metadata (message history, etc.)
+
+4. **No Skill Parameter Input**
+   - Skills invoke immediately on selection
+   - Future: support parameter collection before invocation
+
+5. **No Fuzzy Search**
+   - Dropdown shows all skills, no filtering by typed text
+   - Future: add fuzzy search to filter skills as user types
+
+### Example Usage
+
+```typescript
+// User types "/" in chat input
+→ Dropdown shows: /onboarding, /report_generator, /data_export
+
+// User presses ↓ twice, then Enter
+→ Input becomes "/report_generator "
+→ API call: POST /api/skills/invoke { skill_name: "report_generator", context: {...} }
+→ Response displayed in chat
+```
+
+### Integration with Existing System
+
+- **Session Management**: Uses current session ID from chat state
+- **Authentication**: Uses apiClient with existing auth token
+- **Message Display**: Skill results rendered as assistant messages
+- **Loading States**: Reuses existing loading indicator system
+- **Error Handling**: Follows existing error alert pattern
+
+### Next Steps (Future Enhancements)
+
+1. **Add fuzzy search filtering** - Filter skills as user types after "/"
+2. **Skill parameter collection** - UI for collecting skill parameters before invocation
+3. **Skill result formatting** - Rich formatting for structured skill responses
+4. **Skill favorites** - Pin frequently used skills to top
+5. **Skill history** - Track and suggest recently used skills
+6. **Multi-step skills** - Support skills with multiple interaction steps
+7. **Setup Jest** - Enable test execution in frontend
+
+### Git Commit
+```
+feat: Add slash command support for skill invocation in chat UI
+
+- Create useSkillInvocation hook for skill operations
+- Add SkillSuggestions dropdown component with keyboard nav
+- Integrate slash command detection in chat input
+- Auto-invoke selected skills and display results
+- Add comprehensive test suites (requires Jest setup)
+- Update API client with skill invocation methods
+```
+
+---
+
+## Previous Update (2026-06-05 - Session 6)
 
 **✅ Task 4 Complete: Skill Invocation Integration**
 

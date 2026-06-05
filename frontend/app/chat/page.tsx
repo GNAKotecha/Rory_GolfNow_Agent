@@ -8,6 +8,8 @@ import { ChatWebSocket, StreamEvent } from '@/lib/websocket';
 import { MessageRenderer } from '@/components/MessageRenderer';
 import { parseMessageContent } from '@/lib/message-types';
 import { NewSessionModal } from '@/components/NewSessionModal';
+import { SkillSuggestions } from '@/components/SkillSuggestions';
+import { useSkillInvocation } from '@/hooks/useSkillInvocation';
 
 export default function ChatPage() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -27,10 +29,16 @@ export default function ChatPage() {
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [isAbortingRunId, setIsAbortingRunId] = useState<string | null>(null);
+  const [showSkillSuggestions, setShowSkillSuggestions] = useState(false);
+  const [selectedSkillIndex, setSelectedSkillIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ChatWebSocket | null>(null);
   const currentSessionIdRef = useRef<number>(0);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Skill invocation hook
+  const { skills, fetchSkills, invokeSkill } = useSkillInvocation();
 
   // Fixed model - always use Haiku 4.5
   const selectedModel = 'auto';
@@ -139,6 +147,13 @@ export default function ChatPage() {
     }
   }, [isEditingTitle]);
 
+  // Fetch skills on mount
+  useEffect(() => {
+    if (user) {
+      fetchSkills();
+    }
+  }, [user, fetchSkills]);
+
   async function loadSessions() {
     try {
       const data = await apiClient.getSessions();
@@ -230,6 +245,70 @@ export default function ChatPage() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // Show skill suggestions if input starts with "/"
+    if (value.startsWith('/') && value.length > 1) {
+      setShowSkillSuggestions(true);
+      setSelectedSkillIndex(0);
+    } else {
+      setShowSkillSuggestions(false);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSkillSuggestions) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSkillIndex(prev => (prev + 1) % skills.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSkillIndex(prev => (prev === 0 ? skills.length - 1 : prev - 1));
+    } else if (e.key === 'Enter' && skills.length > 0) {
+      e.preventDefault();
+      handleSkillSelect(skills[selectedSkillIndex]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowSkillSuggestions(false);
+    }
+  };
+
+  const handleSkillSelect = async (skill: { skill_name: string; description?: string | null }) => {
+    setShowSkillSuggestions(false);
+    setInput(`/${skill.skill_name} `);
+    inputRef.current?.focus();
+
+    // Auto-invoke the skill
+    if (currentSession?.id) {
+      setLoading(true);
+      try {
+        const result = await invokeSkill(skill.skill_name, {
+          session_id: currentSession.id,
+          user_id: user?.id,
+        });
+
+        // Add skill result to chat
+        const skillMessage: Message = {
+          id: Date.now(),
+          session_id: currentSession.id,
+          role: 'assistant',
+          content: result.message,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, skillMessage]);
+        setInput('');
+      } catch (error) {
+        console.error('Failed to invoke skill:', error);
+        alert('Failed to invoke skill. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -305,7 +384,7 @@ export default function ChatPage() {
           return;
         }
         const response = await apiClient.sendMessage({
-          session_id: currentSession?.id,
+          session_id: sessionId,
           message: userMessage,
           model: selectedModel,
           allow_opus: false,
@@ -547,7 +626,7 @@ export default function ChatPage() {
 
         {/* Input */}
         <div className="border-t border-gray-200 bg-white p-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto relative">
             {isAwaitingResumeInput && (
               <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <div className="font-medium">{pendingAskUser?.title || 'Additional information needed'}</div>
@@ -556,12 +635,25 @@ export default function ChatPage() {
                 )}
               </div>
             )}
+
+            {/* Skill Suggestions Dropdown */}
+            {showSkillSuggestions && (
+              <SkillSuggestions
+                skills={skills}
+                selectedIndex={selectedSkillIndex}
+                onSelect={handleSkillSelect}
+                onClose={() => setShowSkillSuggestions(false)}
+              />
+            )}
+
             <form onSubmit={loading ? (e) => { e.preventDefault(); handleAbortRun(); } : handleSendMessage} className="flex gap-3">
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isAwaitingResumeInput ? 'Provide details to continue...' : 'Message Assistant...'}
+                onChange={handleInputChange}
+                onKeyDown={handleInputKeyDown}
+                placeholder={isAwaitingResumeInput ? 'Provide details to continue...' : 'Message Assistant... (type / for skills)'}
                 className="flex-1 bg-gray-100 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-400 placeholder-gray-500"
                 disabled={loading && !isAwaitingResumeInput}
               />
