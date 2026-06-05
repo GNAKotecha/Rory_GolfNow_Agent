@@ -50,14 +50,23 @@ def _dedupe_preserve_order(items: List[str]) -> List[str]:
 
 
 def _fallback_catalog() -> List[str]:
-    """Fallback models used if model discovery is unavailable."""
+    """Fallback models used if model discovery via /v1/models is unavailable.
+
+    When USE_API_KEY=true, uses ANTHROPIC_MODEL for the correct model ID format.
+    Future: Implement model discovery from {ANTHROPIC_BASE_URL}/v1/models endpoint.
+    """
     if settings.use_api_key:
+        # Use ANTHROPIC_MODEL with correct Bedrock/API format (e.g., anthropic.claude-haiku-4-5-20251001-v1:0)
+        anthropic_model = os.getenv("ANTHROPIC_MODEL")
+        if anthropic_model:
+            return [anthropic_model]
+        # Fallback to separate model env vars if ANTHROPIC_MODEL not set
         return _dedupe_preserve_order(
             [
-                os.getenv("ANTHROPIC_HAIKU_MODEL", "claude-haiku-4-5"),
-                os.getenv("ANTHROPIC_SONNET_MODEL", "claude-sonnet-4-6"),
-                os.getenv("ANTHROPIC_OPUS_46_MODEL", "claude-opus-4-6"),
-                os.getenv("ANTHROPIC_OPUS_45_MODEL", "claude-opus-4-5"),
+                os.getenv("ANTHROPIC_HAIKU_MODEL", ""),
+                os.getenv("ANTHROPIC_SONNET_MODEL", ""),
+                os.getenv("ANTHROPIC_OPUS_46_MODEL", ""),
+                os.getenv("ANTHROPIC_OPUS_45_MODEL", ""),
             ]
         )
     return _dedupe_preserve_order(
@@ -260,7 +269,13 @@ def _choose_for_tier(tier: str, models: List[str]) -> Optional[str]:
 
 
 async def get_available_models(client: OllamaClient) -> List[str]:
-    """Discover models from backend, with fallback defaults."""
+    """Discover models from backend, with fallback defaults.
+
+    When USE_API_KEY=true:
+    - Attempts to discover models via client.list_models() (which calls /v1/models)
+    - Falls back to ANTHROPIC_MODEL env var if discovery fails
+    - TODO: Implement direct /v1/models endpoint querying with model switching support
+    """
     try:
         discovered = await client.list_models()
         models = _filter_supported_models(discovered)
