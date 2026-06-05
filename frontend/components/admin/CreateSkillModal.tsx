@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { TenantSkillCreate } from '@/lib/api';
 import {
   resetSkillForm,
-  validateSkillJSON,
   SkillFormData,
   stepsToSkillData,
   WorkflowStep,
@@ -27,23 +26,8 @@ export default function CreateSkillModal({
   const [formData, setFormData] = useState<SkillFormData>(resetSkillForm());
   const [steps, setSteps] = useState<WorkflowStep[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [jsonValidated, setJsonValidated] = useState(false);
 
   if (!isOpen) return null;
-
-  const handleValidateJSON = (): boolean => {
-    const result = validateSkillJSON(formData.skill_data);
-    if (result.valid) {
-      setValidationError(null);
-      setJsonValidated(true);
-      return true;
-    } else {
-      setValidationError(result.error);
-      setJsonValidated(false);
-      return false;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,25 +43,19 @@ export default function CreateSkillModal({
     if (steps.length > 0) {
       const emptySteps = steps.filter((step) => !step.action.trim());
       if (emptySteps.length > 0) {
-        setError('All steps must have an action');
+        setError('All workflow steps must have an action');
         return;
       }
-      // Auto-generate skill_data from steps
-      const generatedJSON = stepsToSkillData(steps);
-      setFormData({ ...formData, skill_data: generatedJSON });
-      setJsonValidated(false);
-    }
-
-    // Skip JSON validation on submit if already validated on blur
-    if (!jsonValidated && !handleValidateJSON()) {
-      return;
     }
 
     try {
+      // Auto-generate skill_data from steps
+      const skillDataJSON = steps.length > 0 ? stepsToSkillData(steps) : '{}';
+
       await onCreate({
         skill_name: formData.skill_name,
         description: formData.description,
-        skill_data: JSON.parse(formData.skill_data),
+        skill_data: JSON.parse(skillDataJSON),
       });
       setFormData(resetSkillForm());
       setSteps([]);
@@ -91,8 +69,6 @@ export default function CreateSkillModal({
     setFormData(resetSkillForm());
     setSteps([]);
     setError(null);
-    setValidationError(null);
-    setJsonValidated(false);
     onClose();
   };
 
@@ -109,7 +85,7 @@ export default function CreateSkillModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error Message */}
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
@@ -117,70 +93,47 @@ export default function CreateSkillModal({
             </div>
           )}
 
-          {/* Skill Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Skill Name *
-            </label>
-            <input
-              type="text"
-              value={formData.skill_name}
-              onChange={(e) =>
-                setFormData({ ...formData, skill_name: e.target.value })
-              }
-              placeholder="e.g., email_validator"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+          {/* Step 1: Skill Basics */}
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Step 1: Skill Basics</h3>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              placeholder="Brief description of what this skill does"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Workflow Steps Builder */}
-          <div className="border-t border-gray-200 pt-4">
-            <WorkflowStepsBuilder steps={steps} onStepsChange={setSteps} />
-          </div>
-
-          {/* Skill Data JSON */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Skill Data (JSON) *
-            </label>
-            <div className="relative">
-              <textarea
-                value={formData.skill_data}
-                onChange={(e) => {
-                  setFormData({ ...formData, skill_data: e.target.value });
-                  setValidationError(null);
-                  setJsonValidated(false);
-                }}
-                onBlur={handleValidateJSON}
-                placeholder='{"type": "custom", "config": {}}'
-                rows={10}
-                className={`w-full px-3 py-2 border rounded-md text-sm font-mono focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-                  validationError ? 'border-red-300' : 'border-gray-300'
-                }`}
+            {/* Skill Name */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Skill Name *
+              </label>
+              <input
+                type="text"
+                value={formData.skill_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, skill_name: e.target.value })
+                }
+                placeholder="e.g., email_validator, data_processor"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
-              {validationError && (
-                <p className="mt-1 text-sm text-red-600">{validationError}</p>
-              )}
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Enter valid JSON configuration for the skill
-            </p>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Brief description of what this skill does"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Step 2: Workflow Steps */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Step 2: Workflow Steps (Optional)</h3>
+            <WorkflowStepsBuilder steps={steps} onStepsChange={setSteps} />
           </div>
 
           {/* Buttons */}

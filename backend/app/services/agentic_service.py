@@ -289,6 +289,49 @@ class AgenticService:
         else:
             self.logger.warning(f"Workflow not found: {self.workflow_name} for tenant {self.tenant_id}")
 
+    def _load_skills_context(self) -> None:
+        """Load and extract skills context before execution.
+
+        Task 2 (Phase 5): Skill runtime integration.
+        Loads active skills for the tenant and makes them available to the agent.
+
+        Contract:
+        - Gracefully handles missing session or tenant_id
+        - Returns empty dict if no skills found (does not raise)
+        - Logs skill count for observability
+        - Captures errors and logs but continues execution
+        """
+        if not (self.session and self.tenant_id):
+            return
+
+        from app.services.workflow_runtime_service import WorkflowRuntimeService
+
+        try:
+            skills = WorkflowRuntimeService.load_active_skills(
+                session=self.session,
+                tenant_id=self.tenant_id
+            )
+
+            if skills:
+                self.skills_context = WorkflowRuntimeService.get_skills_context(skills)
+                self.logger.info(
+                    f"Loaded {len(skills)} active skills for tenant {self.tenant_id}",
+                    extra={
+                        "tenant_id": self.tenant_id,
+                        "skill_count": len(skills),
+                        "skill_names": self.skills_context.get("skill_names", [])
+                    }
+                )
+            else:
+                self.logger.debug(f"No active skills for tenant {self.tenant_id}")
+                self.skills_context = {}
+        except Exception as e:
+            self.logger.error(
+                f"Error loading skills for tenant {self.tenant_id}: {e}",
+                extra={"tenant_id": self.tenant_id, "error": str(e)}
+            )
+            self.skills_context = {}
+
     def _is_catalog_valid(self) -> bool:
         """Check if run catalog is valid with proper type checking.
 
@@ -420,7 +463,7 @@ class AgenticService:
         # Add system prompt for tool usage (required for qwen2.5-coder and similar models)
         if available_tools and not any(msg.get("role") == "system" for msg in current_messages):
             tool_names = [tool["function"]["name"] for tool in available_tools]
-            system_prompt = f"""You are a helpful AI assistant with access to tools. When the user's request requires external actions, data retrieval, or computation, you MUST use the available tools by making function calls.
+            system_prompt = f"""You are a helpful AI assistant with access to tools and skills. When the user's request requires external actions, data retrieval, or computation, you MUST use the available tools by making function calls.
 
 Available tools: {', '.join(tool_names)}
 
@@ -440,6 +483,17 @@ To use a tool, respond with a function call in the format expected by the API.""
 
         # Task 3 (Phase 5): Load workflow context before execution
         self._load_workflow_context()
+
+        # Task 2 (Phase 5): Load skills context before execution
+        self._load_skills_context()
+
+        # Enhance system prompt with skills context if available
+        if self.skills_context and self.skills_context.get("skill_names"):
+            # Find the system message and append skills info
+            system_msg = next((msg for msg in current_messages if msg.get("role") == "system"), None)
+            if system_msg:
+                skills_info = f"\n\nAvailable Skills:\n{json.dumps(self.skills_context.get('skill_data', {}), indent=2)}"
+                system_msg["content"] += skills_info
 
         # Log workflow start if workflow loaded
         if self.workflow_name and self.workflow_context:
@@ -1694,6 +1748,19 @@ To use a tool, respond with a function call in the format expected by the API.""
             )
             await self.config.stream_callback(continue_event.to_dict())
             await self._event_builder.persist_resume_token(continue_event.payload.get("resume_token"))
+
+        # Task 2 (Phase 5): Log agent execution completion with skills context
+        logger.info(
+            "Agent execution completed",
+            extra={
+                "run_id": self.run_id,
+                "session_id": session_id,
+                "total_steps": max_steps,
+                "skills_loaded": len(self.skills_context.get("skill_names", [])),
+                "skill_names": self.skills_context.get("skill_names", []),
+                "workflow_name": self.workflow_name,
+            }
+        )
 
         return AgenticResult(
             final_response=(

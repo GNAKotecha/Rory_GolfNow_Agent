@@ -4,8 +4,8 @@ Teesheet Tool Schemas
 Pydantic models for input/output validation of Teesheet tools.
 """
 
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator
 
 
 # -----------------------------------------------------------------------------
@@ -49,9 +49,13 @@ class CallApiInput(BaseModel):
         None,
         description="Club identifier (defaults to environment setting if not provided)"
     )
-    body: Optional[Dict[str, Any]] = Field(
+    body: Optional[Dict[str, Any] | str] = Field(
         None,
-        description="JSON request body for POST/PUT/PATCH"
+        description="Request body for POST/PUT/PATCH (dict for json/form, str for raw)"
+    )
+    body_format: Literal["json", "form", "raw"] = Field(
+        "json",
+        description="Body encoding format: 'json' (default), 'form' (application/x-www-form-urlencoded), or 'raw' (as-is string)"
     )
     query: Optional[Dict[str, str]] = Field(
         None,
@@ -61,6 +65,23 @@ class CallApiInput(BaseModel):
         None,
         description="Additional HTTP headers"
     )
+
+    @field_validator("body_format")
+    @classmethod
+    def validate_body_format_consistency(cls, v, info):
+        """Ensure body_format is consistent with body type."""
+        body = info.data.get("body")
+        body_format = v
+
+        if body is not None:
+            if body_format == "form":
+                if not isinstance(body, dict):
+                    raise ValueError("body_format='form' requires body to be a dict (will be URL-encoded)")
+            elif body_format == "raw":
+                if not isinstance(body, str):
+                    raise ValueError("body_format='raw' requires body to be a string")
+
+        return v
 
 
 class CallApiOutput(BaseModel):

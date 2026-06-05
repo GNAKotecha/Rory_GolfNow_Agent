@@ -1,0 +1,124 @@
+================================================================================
+                    SEE RORY'S API CALLS - START HERE
+================================================================================
+
+QUICK START (Copy & Paste):
+
+  # Terminal 1:
+  cd ~/Documents/GitHub/Rory_GolfNow_Agent/backend
+  DEBUG=1 uvicorn app.main:app --reload
+
+  # Terminal 2:
+  # Use Rory in the frontend
+  # Watch Terminal 1 - you'll see every API call!
+
+================================================================================
+
+WHAT YOU'LL SEE:
+
+  ================================================================================
+  API CALL COMPLETED: POST http://localhost:8056/api/v3/clubs/.../bookings
+  ================================================================================
+  Status: 201 | Time: 234ms
+
+  REQUEST HEADERS:
+    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGci...
+    Content-Type: application/json
+
+  REQUEST BODY:
+    {
+      "tee_sheet_booking": {
+        "course_id": 1,
+        "date": "2026-05-28",
+        ...
+      }
+    }
+
+  RESPONSE HEADERS:
+    content-type: application/json
+
+  RESPONSE BODY:
+    {
+      "id": 12345,
+      "status": "confirmed"
+    }
+  ================================================================================
+
+================================================================================
+
+WHAT THIS SHOWS:
+
+  ✓ HTTP method and URL being called
+  ✓ Request headers (auth, content type)
+  ✓ Request body (exact JSON/form data)
+  ✓ Response status code (200, 422, 500, etc.)
+  ✓ Response body (complete JSON response)
+  ✓ How long the request took
+
+================================================================================
+
+IF SOMETHING FAILS:
+
+  Status: 422
+  RESPONSE BODY:
+    {
+      "error": {
+        "code": "VALIDATION_FAILED",
+        "details": {
+          "email": "must be a valid email address"
+        }
+      }
+    }
+
+  → The error message tells you exactly what's wrong!
+
+================================================================================
+
+STATUS CODES:
+
+  200, 201, 204  = Success ✓
+  400, 401, 422  = Client error (check request format or auth)
+  500, 503       = Server error (API crashed)
+
+================================================================================
+
+DOCUMENTATION:
+
+  For complete guides, see:
+    - REAL_TIME_API_VISIBILITY.md      ← Read this for full details
+    - SEE_API_CALLS_NOW.md             ← Examples and scenarios
+    - HOW_TO_DEBUG_API_CALLS.md        ← All debugging approaches
+    - DEBUG_QUICK_REFERENCE.md         ← Quick commands
+
+================================================================================
+
+KEY FILES MODIFIED:
+
+  backend/gateway_mcp/tools/teesheet/handlers.py
+    - Added comprehensive logging to call_api_handler()
+    - Prints request/response details to terminal
+    - Shows status, headers, body, timing
+
+================================================================================
+
+TROUBLESHOOTING:
+
+  Q: I don't see any API calls
+  A: Make sure backend is running and you triggered an API call from frontend
+
+  Q: Output is scrolling off screen
+  A: Save to file: DEBUG=1 uvicorn app.main:app --reload 2>&1 | tee /tmp/rory.log
+
+  Q: I want to see only errors
+  A: grep "Status: [4-5]" your_log_file.txt
+
+================================================================================
+
+THAT'S IT!
+
+  cd ~/Documents/GitHub/Rory_GolfNow_Agent/backend
+  DEBUG=1 uvicorn app.main:app --reload
+
+  Then use Rory and watch the terminal. Every API call will be visible.
+
+================================================================================

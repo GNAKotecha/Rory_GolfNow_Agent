@@ -42,6 +42,21 @@ export default function WorkflowStepsBuilder({
     onStepsChange(steps.filter((step) => step.id !== id));
   };
 
+  const handleMoveStep = (id: string, direction: 'up' | 'down') => {
+    const index = steps.findIndex((step) => step.id === id);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      const newSteps = [...steps];
+      [newSteps[index], newSteps[index - 1]] = [newSteps[index - 1], newSteps[index]];
+      onStepsChange(newSteps);
+    } else if (direction === 'down' && index < steps.length - 1) {
+      const newSteps = [...steps];
+      [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
+      onStepsChange(newSteps);
+    }
+  };
+
   const handleValidationOnSubmit = (): { valid: boolean; error: string | null } => {
     const emptySteps = steps.filter((step) => !step.action.trim());
     if (emptySteps.length > 0) {
@@ -91,13 +106,36 @@ export default function WorkflowStepsBuilder({
                 className="flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
 
+              {/* Move Up Button */}
+              <button
+                type="button"
+                onClick={() => handleMoveStep(step.id, 'up')}
+                disabled={index === 0}
+                className="flex-shrink-0 px-2 py-1 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Move up"
+              >
+                ↑
+              </button>
+
+              {/* Move Down Button */}
+              <button
+                type="button"
+                onClick={() => handleMoveStep(step.id, 'down')}
+                disabled={index === steps.length - 1}
+                className="flex-shrink-0 px-2 py-1 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Move down"
+              >
+                ↓
+              </button>
+
               {/* Remove Button */}
               <button
                 type="button"
                 onClick={() => handleRemoveStep(step.id)}
                 className="flex-shrink-0 px-2 py-1 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                title="Delete step"
               >
-                Remove
+                ✕
               </button>
             </div>
           ))

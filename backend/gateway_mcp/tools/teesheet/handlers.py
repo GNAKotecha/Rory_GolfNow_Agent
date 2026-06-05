@@ -255,15 +255,44 @@ async def call_api_handler(
     )
     
     # Make HTTP request
+    import time
+    request_start = time.time()
+    request_body_for_log = None
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             if method in ("POST", "PUT", "PATCH") and input.body:
-                response = await client.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    json=input.body,
-                )
+                body_format = input.body_format
+
+                if body_format == "form":
+                    # URL-encode form data
+                    encoded_body = urlencode(input.body)
+                    request_body_for_log = encoded_body
+                    headers["Content-Type"] = "application/x-www-form-urlencoded"
+                    response = await client.request(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        content=encoded_body,
+                    )
+                elif body_format == "raw":
+                    # Send as raw string, no encoding
+                    request_body_for_log = input.body
+                    response = await client.request(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        content=input.body,
+                    )
+                else:  # json (default)
+                    # Existing behavior: JSON encode
+                    request_body_for_log = input.body
+                    response = await client.request(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        json=input.body,
+                    )
             else:
                 response = await client.request(
                     method=method,
@@ -282,21 +311,53 @@ async def call_api_handler(
                 detail=f"Request to {path} timed out",
                 audit_id=context.audit_id,
             )
-    
+
+    elapsed_ms = (time.time() - request_start) * 1000
+
     # Parse response body
     try:
         body = response.json()
     except json.JSONDecodeError:
         body = response.text
-    
+
     # Convert headers to dict
     response_headers = dict(response.headers)
-    
+
+    # Log complete request/response details
+    print(f"\n{'='*80}", flush=True)
+    print(f"API CALL COMPLETED: {method} {url}", flush=True)
+    print(f"{'='*80}", flush=True)
+    print(f"Status: {response.status_code} | Time: {elapsed_ms:.0f}ms", flush=True)
+    print(f"\nREQUEST HEADERS:", flush=True)
+    for k, v in headers.items():
+        if k == "Authorization":
+            print(f"  {k}: {v[:50]}...", flush=True)
+        else:
+            print(f"  {k}: {v}", flush=True)
+    if request_body_for_log:
+        print(f"\nREQUEST BODY:", flush=True)
+        if isinstance(request_body_for_log, dict):
+            print(f"  {json.dumps(request_body_for_log, indent=2)}", flush=True)
+        else:
+            print(f"  {request_body_for_log[:500]}", flush=True)
+    print(f"\nRESPONSE HEADERS:", flush=True)
+    for k, v in response_headers.items():
+        print(f"  {k}: {v}", flush=True)
+    print(f"\nRESPONSE BODY:", flush=True)
+    if isinstance(body, dict):
+        print(f"  {json.dumps(body, indent=2)[:1000]}", flush=True)
+    else:
+        print(f"  {body[:500]}", flush=True)
+    print(f"{'='*80}\n", flush=True)
+
     logger.info(
         f"Teesheet API response: {response.status_code}",
         extra={
             "correlation_id": context.correlation_id,
             "status": response.status_code,
+            "elapsed_ms": elapsed_ms,
+            "method": method,
+            "path": path,
         },
     )
     

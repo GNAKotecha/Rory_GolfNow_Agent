@@ -1172,6 +1172,152 @@ SELECT * FROM information_schema.tables WHERE table_name = 'tenant_workflows';
 
 ---
 
+## Task 2: Complete Skill Runtime Integration ✅ (2026-06-05)
+
+### Summary
+Integrated tenant skills into the agent execution loop. Skills are now loaded at runtime and passed to Claude/Ollama for awareness and potential invocation.
+
+### Implementation Details
+
+**File Modified:** `/backend/app/services/agentic_service.py`
+
+#### 1. Added _load_skills_context() Method (Lines 292-333)
+```python
+def _load_skills_context(self) -> None:
+    """Load and extract skills context before execution.
+    
+    Task 2 (Phase 5): Skill runtime integration.
+    Loads active skills for the tenant and makes them available to the agent.
+    """
+    if not (self.session and self.tenant_id):
+        return
+    
+    from app.services.workflow_runtime_service import WorkflowRuntimeService
+    
+    try:
+        skills = WorkflowRuntimeService.load_active_skills(
+            session=self.session,
+            tenant_id=self.tenant_id
+        )
+        
+        if skills:
+            self.skills_context = WorkflowRuntimeService.get_skills_context(skills)
+            self.logger.info(
+                f"Loaded {len(skills)} active skills for tenant {self.tenant_id}",
+                extra={
+                    "tenant_id": self.tenant_id,
+                    "skill_count": len(skills),
+                    "skill_names": self.skills_context.get("skill_names", [])
+                }
+            )
+        else:
+            self.logger.debug(f"No active skills for tenant {self.tenant_id}")
+            self.skills_context = {}
+    except Exception as e:
+        self.logger.error(
+            f"Error loading skills for tenant {self.tenant_id}: {e}",
+            extra={"tenant_id": self.tenant_id, "error": str(e)}
+        )
+        self.skills_context = {}
+```
+
+**Key Features:**
+- Graceful handling of missing session/tenant_id (early return)
+- Graceful error handling (logs but continues execution)
+- Structured logging with skill names and count
+- Returns empty dict as fallback (never raises exception)
+
+#### 2. Called from _execute_internal() (Line 488)
+```python
+# Task 3 (Phase 5): Load workflow context before execution
+self._load_workflow_context()
+
+# Task 2 (Phase 5): Load skills context before execution
+self._load_skills_context()
+```
+
+**Timing:** Skills loaded immediately after workflow context, before system prompt is finalized.
+
+#### 3. System Prompt Enhancement (Lines 490-496)
+```python
+# Enhance system prompt with skills context if available
+if self.skills_context and self.skills_context.get("skill_names"):
+    # Find the system message and append skills info
+    system_msg = next((msg for msg in current_messages if msg.get("role") == "system"), None)
+    if system_msg:
+        skills_info = f"\n\nAvailable Skills:\n{json.dumps(self.skills_context.get('skill_data', {}), indent=2)}"
+        system_msg["content"] += skills_info
+```
+
+**Behavior:**
+- If skills exist, appends them to system prompt as JSON
+- If no skills, system prompt unchanged
+- Skills appear after tool list in prompt context
+
+#### 4. Execution Completion Logging (Lines 1752-1763)
+```python
+# Task 2 (Phase 5): Log agent execution completion with skills context
+logger.info(
+    "Agent execution completed",
+    extra={
+        "run_id": self.run_id,
+        "session_id": session_id,
+        "total_steps": max_steps,
+        "skills_loaded": len(self.skills_context.get("skill_names", [])),
+        "skill_names": self.skills_context.get("skill_names", []),
+        "workflow_name": self.workflow_name,
+    }
+)
+```
+
+**Observability:**
+- Logs how many skills were loaded
+- Includes skill names for debugging
+- Correlated with run_id and session_id
+
+### Files Changed
+- `backend/app/services/agentic_service.py` - 3 edits
+
+### Tests Run
+✅ All 32 skill/workflow API tests pass
+✅ AgenticService imports successfully
+✅ _load_skills_context method exists and is callable
+✅ Mock integration tests pass (3/3)
+  - Empty skills list handling
+  - Multiple skills loading
+  - Missing session/tenant_id handling
+
+### Verification
+✅ Skills are loaded from database at runtime
+✅ Skills context structure matches WorkflowRuntimeService contract
+✅ System prompt includes skills when available
+✅ Graceful fallback when no skills exist
+✅ Logging captures execution context
+✅ No syntax errors or import issues
+✅ Type hints correct (return None)
+✅ Error handling prevents exceptions from propagating
+
+### Architecture Contract
+**Fulfilled:**
+- Skills loaded from `WorkflowRuntimeService.load_active_skills()`
+- Context extracted via `WorkflowRuntimeService.get_skills_context()`
+- Available before tool calling begins (in _execute_internal)
+- Included in system prompt to Claude/Ollama
+- Structured logging for observability
+- Graceful degradation (empty dict, no exceptions)
+
+### What's Next
+- **Phase 2:** Skill execution (parse skill metadata, execute skill actions)
+- **Phase 3:** Skill versioning and atomic updates
+- **Phase 4:** Skill sharing and marketplace
+
+### Known Limitations
+- Skills are metadata only (awareness, not execution yet)
+- No skill invocation logic yet (planned for Phase 2)
+- No skill-specific error recovery (planned for Phase 2)
+
+---
+
 ## Task 3: Runtime Integration for Tenant Workflows ✅
 
 ### Implementation Summary
@@ -4675,6 +4821,167 @@ if (!sessionId) {
 3. Consider storing abort history for audit/analytics
 4. Add keyboard shortcut (Escape key) to pause
 5. Add "Are you sure?" confirmation for long-running operations
+
+---
+
+## Task 6.7: Workflow Steps Builder for Skill Creation ✅ (2026-06-05)
+
+### Summary
+Implemented a structured workflow steps builder component that replaces raw JSON editing with a visual, step-by-step skill definition interface. Users can now create skills without touching JSON.
+
+### Implementation Details
+
+**Files Created:**
+- Enhanced: `frontend/components/WorkflowStepsBuilder.tsx` - Added reordering (↑↓) and delete (✕) controls
+
+**Files Modified:**
+- `frontend/components/admin/CreateSkillModal.tsx` - Removed JSON textarea, introduced step-based form flow
+- `frontend/components/admin/skillFormUtils.ts` - Already contained `stepsToSkillData()` for JSON generation
+
+### Key Changes
+
+#### 1. WorkflowStepsBuilder Component Enhancements
+**File:** `frontend/components/WorkflowStepsBuilder.tsx`
+
+Added `handleMoveStep()` function supporting bidirectional step reordering:
+```typescript
+const handleMoveStep = (id: string, direction: 'up' | 'down') => {
+  const index = steps.findIndex((step) => step.id === id);
+  if (direction === 'up' && index > 0) {
+    const newSteps = [...steps];
+    [newSteps[index], newSteps[index - 1]] = [newSteps[index - 1], newSteps[index]];
+    onStepsChange(newSteps);
+  } else if (direction === 'down' && index < steps.length - 1) {
+    const newSteps = [...steps];
+    [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
+    onStepsChange(newSteps);
+  }
+};
+```
+
+Updated UI with:
+- Move Up (↑) button - disabled on first step
+- Move Down (↓) button - disabled on last step
+- Delete (✕) button - always enabled
+
+#### 2. CreateSkillModal Restructuring
+**File:** `frontend/components/admin/CreateSkillModal.tsx`
+
+Removed:
+- Raw JSON textarea for skill_data
+- Manual JSON validation (validateSkillJSON, jsonValidated state)
+- JSON blur validation handlers
+
+Added:
+- Two-step form layout with visual progress
+- Step 1: Skill Basics (Name + Description)
+- Step 2: Workflow Steps (Optional) - powered by WorkflowStepsBuilder
+- Auto-generated JSON on submit via `stepsToSkillData(steps)`
+
+**Before:** Users had to manually write/paste JSON with error messages
+**After:** Users add discrete workflow steps with auto-generated JSON on submit
+
+#### 3. Form Flow Simplification
+- Removed unnecessary state: `validationError`, `jsonValidated`, `formData.skill_data` (now derived)
+- Simplified error handling: single `error` state for validation feedback
+- Cleaner submit logic: validate name + steps, auto-generate JSON, submit
+
+### UI/UX Changes
+
+**Old Flow:**
+1. Enter skill name
+2. Enter description  
+3. Manually write/paste JSON
+4. Click validate (or wait for blur)
+5. Fix JSON errors
+6. Submit
+
+**New Flow:**
+1. Enter skill name (Step 1)
+2. Enter description (Step 1)
+3. Click "Add Step" to define workflow steps (Step 2)
+4. Edit/reorder/delete steps as needed
+5. Click "Create Skill" - JSON generated automatically
+6. Submit
+
+### JSON Generation
+
+From steps array `[{id: "step-1", action: "validate email"}, {id: "step-2", action: "send notification"}]`:
+
+```json
+{
+  "workflow": {
+    "type": "sequential",
+    "steps": [
+      {"id": "1", "action": "validate email"},
+      {"id": "2", "action": "send notification"}
+    ]
+  }
+}
+```
+
+### Validation
+
+- Skill name required
+- All workflow steps must have non-empty action text
+- Steps can be empty (optional workflow)
+- Clear error messages for validation failures
+
+### Files Changed
+- Modified: 2 files
+  - `frontend/components/WorkflowStepsBuilder.tsx` (45 lines added for reordering)
+  - `frontend/components/admin/CreateSkillModal.tsx` (restructured, removed ~50 lines of JSON handling, added ~20 lines for step layout)
+
+### Acceptance Criteria Met
+✅ JSON textarea completely removed from UI  
+✅ Users add steps via "Add Step" button  
+✅ Steps can be reordered with ↑↓ buttons  
+✅ Steps can be deleted with ✕ button  
+✅ Submit auto-generates valid skill_data JSON  
+✅ Admin dashboard works after changes  
+✅ Can create new skill without touching JSON  
+✅ Modal closes after successful creation  
+
+### Testing Verified
+- ✅ Component renders correctly with no TypeScript errors
+- ✅ Add Step button creates new step input fields
+- ✅ Step text can be edited and persists
+- ✅ Move Up (↑) disabled on first step
+- ✅ Move Down (↓) disabled on last step
+- ✅ Delete (✕) removes step from array
+- ✅ Validation catches empty step actions
+- ✅ Form submission generates correct JSON structure
+- ✅ No console errors or warnings
+
+### Design Rationale
+- **No JSON in UI:** Reduces cognitive load for non-technical users
+- **Step-by-step:** Guides users through skill definition process
+- **Reordering:** Natural way to adjust workflow sequence
+- **Optional steps:** Skills don't require workflows (can be metadata-only)
+- **Auto-JSON:** Backend compatibility maintained, users never see JSON
+
+### Risks & Blockers
+None identified. All changes maintain backward compatibility:
+- Backend API unchanged (`POST /api/skills` still receives same JSON)
+- EditSkillModal left unchanged (users can still edit JSON directly if needed)
+- All existing skills continue to work
+
+### Suggestions for Future Enhancement
+1. Add step templates/presets (e.g., "approval gate", "notification", "tool call")
+2. Add drag-and-drop reordering as alternative to arrow buttons
+3. Add step descriptions/notes for each action
+4. Add conditional branching between steps (if/else logic)
+5. Add skill import/export from JSON for power users
+
+### Commit
+- Files: `frontend/components/WorkflowStepsBuilder.tsx`, `frontend/components/admin/CreateSkillModal.tsx`
+- Changes: 65 lines added, 50 lines removed, net +15 lines
+- Status: Ready for code review and deployment
+
+---
+
+**Workflow Steps Builder Completion Date:** 2026-06-05  
+**Status:** ✅ COMPLETE - Production Ready
 
 ---
 
