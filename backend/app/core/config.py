@@ -5,17 +5,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, ValidationError
 
 # Try to load .env from infrastructure directory (local development)
+# Use override=True to ensure .env values take precedence over inherited env vars (e.g., from VS Code)
 dotenv_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '../../../infrastructure/.env')
 )
 if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path)
+    load_dotenv(dotenv_path, override=True)
     print(f'Loaded .env from: {dotenv_path}')
 else:
     # Try to load from backend directory
     backend_dotenv = os.path.join(os.path.dirname(__file__), '../../.env')
     if os.path.exists(backend_dotenv):
-        load_dotenv(backend_dotenv)
+        load_dotenv(backend_dotenv, override=True)
         print(f'Loaded .env from: {backend_dotenv}')
     else:
         print('No .env file found, using environment variables only')

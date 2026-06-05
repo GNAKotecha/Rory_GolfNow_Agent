@@ -419,6 +419,7 @@ class OllamaClient:
                         "response_status": response.status_code,
                         "response_body": error_detail,
                         "use_api_key": self.use_api_key,
+                        "base_url": self.base_url,
                     }
                 )
 
@@ -428,6 +429,8 @@ class OllamaClient:
                     f"Model '{model_name}' not found. "
                     f"Pull it with: docker exec infrastructure-ollama-1 ollama pull {model_name}"
                 )
+
+            response.raise_for_status()
 
             response.raise_for_status()
             data = response.json()
