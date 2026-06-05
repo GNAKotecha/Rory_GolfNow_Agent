@@ -293,7 +293,10 @@ class AgenticService:
         """Load and extract skills context before execution.
 
         Task 2 (Phase 5): Skill runtime integration.
+        Task 4 (Phase 5): Enhanced to load skills from SkillRepository.
+
         Loads active skills for the tenant and makes them available to the agent.
+        Skills are loaded from both WorkflowRuntimeService (legacy) and SkillRepository.
 
         Contract:
         - Gracefully handles missing session or tenant_id
@@ -305,20 +308,66 @@ class AgenticService:
             return
 
         from app.services.workflow_runtime_service import WorkflowRuntimeService
+        from app.repositories.skill_repository import SkillRepository
 
         try:
-            skills = WorkflowRuntimeService.load_active_skills(
+            # Load skills from WorkflowRuntimeService (legacy)
+            workflow_skills = WorkflowRuntimeService.load_active_skills(
                 session=self.session,
                 tenant_id=self.tenant_id
             )
 
-            if skills:
-                self.skills_context = WorkflowRuntimeService.get_skills_context(skills)
+            # Load skills from SkillRepository (new skill system)
+            repository_skills = SkillRepository.get_active_skills(
+                db=self.session,
+                tenant_id=self.tenant_id
+            )
+
+            # Merge skills from both sources
+            all_skills = list(workflow_skills) if workflow_skills else []
+
+            # Add repository skills if not already present
+            workflow_skill_names = {skill.skill_name for skill in workflow_skills} if workflow_skills else set()
+            for repo_skill in repository_skills:
+                if repo_skill.skill_name not in workflow_skill_names:
+                    all_skills.append(repo_skill)
+
+            if all_skills:
+                # Build combined context
+                self.skills_context = WorkflowRuntimeService.get_skills_context(all_skills)
+
+                # Add additional metadata for repository skills
+                repo_skill_data = []
+                for skill in repository_skills:
+                    skill_info = {
+                        "name": skill.skill_name,
+                        "description": skill.description or "No description available",
+                        "version": skill.version,
+                        "intent_patterns": skill.intent_patterns or [],
+                    }
+                    # Include skill_data if it has useful information
+                    if skill.skill_data:
+                        skill_info["config"] = skill.skill_data
+                    repo_skill_data.append(skill_info)
+
+                # Merge repository skills into context
+                if "skills" not in self.skills_context:
+                    self.skills_context["skills"] = []
+                self.skills_context["skills"].extend(repo_skill_data)
+
+                # Update skill names list
+                if "skill_names" not in self.skills_context:
+                    self.skills_context["skill_names"] = []
+                self.skills_context["skill_names"].extend([s["name"] for s in repo_skill_data])
+
                 self.logger.info(
-                    f"Loaded {len(skills)} active skills for tenant {self.tenant_id}",
+                    f"Loaded {len(all_skills)} active skills for tenant {self.tenant_id} "
+                    f"({len(workflow_skills or [])} from workflow, {len(repository_skills)} from repository)",
                     extra={
                         "tenant_id": self.tenant_id,
-                        "skill_count": len(skills),
+                        "total_skill_count": len(all_skills),
+                        "workflow_skill_count": len(workflow_skills or []),
+                        "repository_skill_count": len(repository_skills),
                         "skill_names": self.skills_context.get("skill_names", [])
                     }
                 )
@@ -328,7 +377,8 @@ class AgenticService:
         except Exception as e:
             self.logger.error(
                 f"Error loading skills for tenant {self.tenant_id}: {e}",
-                extra={"tenant_id": self.tenant_id, "error": str(e)}
+                extra={"tenant_id": self.tenant_id, "error": str(e)},
+                exc_info=True
             )
             self.skills_context = {}
 
@@ -487,13 +537,44 @@ To use a tool, respond with a function call in the format expected by the API.""
         # Task 2 (Phase 5): Load skills context before execution
         self._load_skills_context()
 
+        # Task 4 (Phase 5): Check if user message matches a skill intent pattern
+        skill_match_result = await self._check_skill_match(messages, user)
+        if skill_match_result:
+            # Skill matched and executed - return the result
+            logger.info(
+                f"Skill '{skill_match_result['skill_name']}' matched and executed",
+                extra={
+                    "skill_name": skill_match_result["skill_name"],
+                    "success": skill_match_result.get("success", False),
+                    "tenant_id": self.tenant_id,
+                }
+            )
+            return AgenticResult(
+                final_response=skill_match_result.get("message", "Skill executed successfully"),
+                steps=[],
+                total_steps=0,
+                stopped_reason="skill_executed",
+                metadata={
+                    "skill_name": skill_match_result["skill_name"],
+                    "skill_result": skill_match_result,
+                    "run_id": self.run_id,
+                },
+            )
+
         # Enhance system prompt with skills context if available
         if self.skills_context and self.skills_context.get("skill_names"):
             # Find the system message and append skills info
             system_msg = next((msg for msg in current_messages if msg.get("role") == "system"), None)
             if system_msg:
-                skills_info = f"\n\nAvailable Skills:\n{json.dumps(self.skills_context.get('skill_data', {}), indent=2)}"
-                system_msg["content"] += skills_info
+                # Build a concise skills description for the system prompt
+                skills_list = self.skills_context.get("skills", [])
+                if skills_list:
+                    skills_description = "\n\nAvailable Skills (invoke by intent):\n"
+                    for skill in skills_list:
+                        skills_description += f"  - {skill['name']}: {skill.get('description', 'No description')}\n"
+                        if skill.get('intent_patterns'):
+                            skills_description += f"    Triggers: {', '.join(skill['intent_patterns'][:3])}\n"
+                    system_msg["content"] += skills_description
 
         # Log workflow start if workflow loaded
         if self.workflow_name and self.workflow_context:
@@ -1805,7 +1886,18 @@ To use a tool, respond with a function call in the format expected by the API.""
                 ttl_seconds=self.config.tool_catalog_ttl_seconds,
             )
             self._catalog_initialized = True
-            
+
+            # DEBUG: Check what tools the catalog has
+            logger.info(
+                f"[DEBUG MCP CATALOG] Run catalog created with {len(self._run_catalog.tools)} tools",
+                extra={
+                    "total_tools": len(self._run_catalog.tools),
+                    "tool_names": [t.name for t in self._run_catalog.tools],
+                    "servers": list(self._run_catalog.server_to_tools.keys()),
+                    "server_health": self._run_catalog.server_health,
+                }
+            )
+
             # Create enhanced catalog from MCP tools with metadata enrichment
             self._enhanced_catalog = EnhancedToolCatalog.from_mcp_tools(
                 self._run_catalog.tools,
@@ -1816,14 +1908,28 @@ To use a tool, respond with a function call in the format expected by the API.""
             workflow = self.config.workflow_type or WorkflowType.GENERAL
             policy = get_policy_for_workflow(workflow)
             policy_filtered = policy.apply(self._enhanced_catalog)
-            
+
             # Filter by role permissions (RBAC layer)
             allowed_tool_names = self.mcp.get_available_tools(user.role.value)
-            role_filtered = policy_filtered.include_only(allowed_tool_names)
+
+            # Handle wildcard: if "*" in allowlist, skip role filtering
+            if "*" in allowed_tool_names:
+                role_filtered = policy_filtered
+            else:
+                role_filtered = policy_filtered.include_only(allowed_tool_names)
             
             # Convert to Ollama format
             tool_definitions = role_filtered.to_ollama_format()
-            
+
+            # DEBUG: Check what we got from enhanced catalog
+            logger.warning(
+                f"[DEBUG ENHANCED] tool_definitions from enhanced catalog: {len(tool_definitions)} tools",
+                extra={
+                    "tool_count": len(tool_definitions),
+                    "tool_names": [t["function"]["name"] for t in tool_definitions][:10] if tool_definitions else [],
+                }
+            )
+
             logger.info(
                 f"Created enhanced catalog: {role_filtered.tool_count}/{self._enhanced_catalog.tool_count} tools "
                 f"for role={user.role.value} workflow={workflow.value}",
@@ -1849,8 +1955,27 @@ To use a tool, respond with a function call in the format expected by the API.""
             # Filter tools by role from catalog
             all_tools = self._run_catalog.tools
             allowed_tool_names = self.mcp.get_available_tools(user.role.value)
-            allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
-            
+
+            # Handle wildcard: if "*" in allowlist, allow all tools
+            if "*" in allowed_tool_names:
+                allowed_tools = all_tools
+            else:
+                allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
+
+            # DEBUG: Log tool filtering details
+            logger.info(
+                f"[DEBUG RBAC] Tool filtering for admin user:",
+                extra={
+                    "user_role": user.role.value,
+                    "total_tools_in_catalog": len(all_tools),
+                    "allowed_tool_names_count": len(allowed_tool_names),
+                    "allowed_tool_names": allowed_tool_names[:10] if len(allowed_tool_names) < 100 else f"{allowed_tool_names[:10]}... (truncated, total: {len(allowed_tool_names)})",
+                    "is_wildcard": "*" in allowed_tool_names,
+                    "catalog_tool_names": [t.name for t in all_tools][:10],
+                    "after_filter_count": len(allowed_tools),
+                }
+            )
+
             logger.info(
                 f"Created run-scoped catalog: {len(allowed_tools)}/{len(all_tools)} tools for role {user.role.value}",
                 extra={
@@ -1884,7 +2009,12 @@ To use a tool, respond with a function call in the format expected by the API.""
 
             # Filter by role
             allowed_tool_names = self.mcp.get_available_tools(user.role.value)
-            allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
+
+            # Handle wildcard: if "*" in allowlist, allow all tools
+            if "*" in allowed_tool_names:
+                allowed_tools = all_tools
+            else:
+                allowed_tools = [t for t in all_tools if t.name in allowed_tool_names]
             
             # Convert to Ollama format
             tool_definitions = []
@@ -1910,9 +2040,23 @@ To use a tool, respond with a function call in the format expected by the API.""
         else:
             logger.info("Bash tool disabled (set ENABLE_BASH_TOOL=true to enable)")
 
+        # DEBUG: Check tool_definitions before adding SimpleTool
+        logger.warning(
+            f"[DEBUG BEFORE SIMPLE] tool_definitions count before SimpleTool: {len(tool_definitions)}",
+            extra={
+                "count_before_simple": len(tool_definitions),
+                "tool_names_before": [t["function"]["name"] for t in tool_definitions][:10] if tool_definitions else [],
+            }
+        )
+
         # Add simple built-in tools (always available)
         tool_definitions.extend(SimpleTool.get_tool_definitions())
         logger.info(f"Added {len(SimpleTool.get_tool_definitions())} simple built-in tools")
+
+        # DEBUG: Check final count
+        final_tool_names = [t["function"]["name"] for t in tool_definitions]
+        logger.warning(f"[DEBUG FINAL] Final tool_definitions count: {len(tool_definitions)}")
+        logger.warning(f"[DEBUG FINAL] Tool names: {final_tool_names}")
 
         return tool_definitions
 
@@ -2008,4 +2152,111 @@ To use a tool, respond with a function call in the format expected by the API.""
             server_name, _ = await self.mcp._find_tool(tool_name)
             return server_name
         except Exception:
+            return None
+
+    async def _check_skill_match(
+        self, messages: List[Dict[str, Any]], user: User
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check if the user's message matches any skill intent pattern and execute if matched.
+
+        Task 4 (Phase 5): Skill detection and invocation integration.
+
+        Args:
+            messages: Conversation history
+            user: Current user
+
+        Returns:
+            Skill execution result if matched and executed, None if no match
+        """
+        # Skip if no session or tenant_id
+        if not (self.session and self.tenant_id):
+            return None
+
+        # Skip if no skills loaded
+        if not self.skills_context or not self.skills_context.get("skills"):
+            return None
+
+        # Get the last user message
+        last_user_message = None
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                last_user_message = msg.get("content")
+                break
+
+        if not last_user_message:
+            return None
+
+        # Try to match the message to a skill
+        from app.services.skill_discovery import SkillDiscoveryService
+        from app.utils.skill_invoker import invoke_skill
+
+        try:
+            discovery_service = SkillDiscoveryService(self.session)
+            matched_skill = discovery_service.match_skill_by_intent(
+                user_message=last_user_message,
+                tenant_id=self.tenant_id
+            )
+
+            if not matched_skill:
+                return None
+
+            # Skill matched - execute it
+            self.logger.info(
+                f"Skill matched: {matched_skill.skill_name}",
+                extra={
+                    "skill_name": matched_skill.skill_name,
+                    "skill_id": matched_skill.id,
+                    "tenant_id": self.tenant_id,
+                    "user_message": last_user_message[:100],
+                }
+            )
+
+            # Stream skill execution event if callback available
+            if self.config.stream_callback:
+                event = self._event_builder.workflow_start(
+                    available_tools=0,
+                    max_steps=1,
+                    workflow_type=f"skill:{matched_skill.skill_name}",
+                    model=None,
+                )
+                await self.config.stream_callback(event.to_dict())
+
+            # Build execution context
+            execution_context = {
+                "user_message": last_user_message,
+                "user_id": user.id,
+                "session_id": self._session_id,
+                "run_id": self.run_id,
+                "skill_id": matched_skill.id,
+                "skill_config": matched_skill.skill_data or {},
+            }
+
+            # Execute the skill
+            result = invoke_skill(
+                skill_name=matched_skill.skill_name,
+                context=execution_context,
+                tenant_id=self.tenant_id
+            )
+
+            # Stream completion event
+            if self.config.stream_callback:
+                event = self._event_builder.workflow_complete(
+                    total_steps=1,
+                    stopped_reason="skill_executed",
+                )
+                await self.config.stream_callback(event.to_dict())
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"Error checking skill match: {e}",
+                extra={
+                    "tenant_id": self.tenant_id,
+                    "error": str(e),
+                    "last_user_message": last_user_message[:100] if last_user_message else None,
+                },
+                exc_info=True
+            )
             return None
