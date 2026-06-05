@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiClient, User } from '@/lib/api';
+import { logger, redactUserData } from '@/lib/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -19,21 +20,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check if user is already logged in
     const loadUser = async () => {
-      try {
-        console.log('[AuthContext] Loading user...');
-        console.log('[AuthContext] Token present:', !!apiClient['token']);
+      // Only attempt to load user if token exists
+      if (!apiClient.hasToken()) {
+        logger.log('[AuthContext] No token found, skipping user load');
+        setLoading(false);
+        return;
+      }
 
+      try {
+        logger.log('[AuthContext] Loading current user');
         const currentUser = await apiClient.getCurrentUser();
-        console.log('[AuthContext] User loaded successfully:', currentUser);
+        logger.log('[AuthContext] User loaded:', redactUserData(currentUser));
         setUser(currentUser);
       } catch (error) {
+        logger.log('[AuthContext] Failed to load user, clearing token');
         // Not logged in or token expired
-        console.error('[AuthContext] Failed to load user:', error);
-        console.log('[AuthContext] Clearing token');
         apiClient.clearToken();
       } finally {
         setLoading(false);
-        console.log('[AuthContext] Loading complete');
       }
     };
 
@@ -41,12 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    logger.log('[AuthContext] Attempting login');
     await apiClient.login(email, password);
     const currentUser = await apiClient.getCurrentUser();
+    logger.log('[AuthContext] Login successful:', redactUserData(currentUser));
     setUser(currentUser);
   };
 
   const logout = () => {
+    logger.log('[AuthContext] Logging out');
     apiClient.logout();
     setUser(null);
   };
