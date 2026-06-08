@@ -1510,3 +1510,40 @@ tool_calls = llm_response.get("tool_calls", [])
 ✅ Backend running
 ⏳ Awaiting manual test via frontend
 
+
+---
+
+## 2026-06-08 (11:48): Second Bug Fix - Model Configuration
+
+### Issue
+Skill execution was failing with: `'AgenticConfig' object has no attribute 'llm_model'`
+
+### Root Cause
+Attempted to use `self.config.llm_model` but this attribute doesn't exist in AgenticConfig.
+
+### Fix Applied
+**File:** `backend/app/services/agentic_service.py` (line 2447)
+
+Changed from:
+```python
+model=self.config.llm_model
+```
+
+Changed to:
+```python
+model="haiku"  # Use fast model for skill execution
+```
+
+### Rationale
+- Skills should use a fast model (haiku) for deterministic workflow execution
+- No need for dynamic model selection - skills are optimized for haiku's speed
+- Hardcoded value avoids config dependency issues
+
+### Files Modified
+- `backend/app/services/agentic_service.py` (line 2447)
+
+### Status
+✅ Fix applied and committed (7756c97)
+✅ Backend auto-reloaded successfully
+⏳ Ready for next test attempt
+
