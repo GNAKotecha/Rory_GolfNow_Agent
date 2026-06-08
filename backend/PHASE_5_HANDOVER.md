@@ -7,14 +7,15 @@
 
 **✅ Skill Execution System Fully Operational**
 
-All 7 bugs found during testing have been fixed. The skill execution system now works end-to-end:
+All 8 bugs found during testing have been fixed. The skill execution system now works end-to-end:
 - ✅ Skills match correctly via semantic intent patterns
 - ✅ Isolated execution context prevents LLM from asking questions
 - ✅ Multi-turn tool calling works (LLM → tool → LLM → tool...)
-- ✅ MCP tools execute successfully (run_sql called 10 times)
+- ✅ MCP tools execute successfully with proper stop criteria
+- ✅ Skills complete naturally without hitting iteration limits
 - ✅ Results formatted and returned to frontend
 
-**See "Bug Fixes During Testing" section below for details on all 7 bugs.**
+**See "Bug Fixes During Testing" section below for details on all 8 bugs.**
 
 ## Previous Update (2026-06-05 - Session 8)
 
@@ -727,7 +728,7 @@ According to the skill invocation implementation plan:
 
 ## Bug Fixes During Testing (2026-06-08)
 
-During end-to-end testing of the skill execution system, 7 critical bugs were discovered and fixed:
+During end-to-end testing of the skill execution system, 8 critical bugs were discovered and fixed:
 
 ### Bug #4: Incorrect MCP Registry Attribute Name
 **Error:** `'AgenticService' object has no attribute 'mcp_registry'`
@@ -792,6 +793,47 @@ During end-to-end testing of the skill execution system, 7 critical bugs were di
 **Added:** Logging for LLM 400 error responses to capture error details from API
 
 **Commit:** a0c8f37 - debug: Add logging for LLM 400 error responses
+
+---
+
+### Bug #8: Skill Instructions Missing Stop Criteria (Infinite Loop)
+**Error:** Skill execution hit maximum 10 iterations, making repeated identical queries without reaching conclusion
+
+**Root Cause:** The `_build_skill_instructions()` method generated instructions telling the LLM to "Execute these steps NOW" but never told it:
+- When to STOP executing (e.g., "if user not found, STOP")
+- How many queries are reasonable (no limit specified)
+- What constitutes completion (no explicit criteria)
+
+This caused the LLM to keep searching for the user with variations of the same query indefinitely, never concluding "user doesn't exist".
+
+**Evidence:**
+```
+Iteration 1: SELECT ... WHERE username LIKE '%98765432%' OR uid = 98765432
+Iteration 2: SELECT ... WHERE username LIKE '%98765432%' OR username = '98765432_deleted'
+Iteration 3: SELECT ... WHERE username LIKE '%98765432%' ...
+[... 10 total iterations, all similar queries ...]
+Iteration 10: Hit max iterations limit
+Result: "Skill execution exceeded maximum iterations"
+```
+
+**Fix:** Added explicit COMPLETION CRITERIA section to skill instructions:
+1. **User not found:** After checking database → STOP and report "User not found"
+2. **User already active:** After checking → STOP and report "Already active"
+3. **Restoration complete:** After restoring → STOP and report success
+4. **Error encountered:** → STOP and report error
+5. **Maximum 3 tool calls:** Hard limit to prevent runaway execution
+
+Also added STOP directives to individual steps:
+- Step 2: "If no results → STOP and return: 'User not found'"
+- Step 4: "If username NOT available → STOP and return: 'Already active'"
+
+**Commit:** d8b3e0c - fix(skills): Add explicit stop criteria to prevent infinite loops (Bug #8)
+
+**Test Results After Fix:**
+- Execution stopped after **5 iterations** (down from 10)
+- Made 4 tool calls (SQL queries) before concluding
+- No more tool calls on iteration 5 - returned final result
+- Properly reported outcome without exceeding limits
 
 ---
 
