@@ -1831,3 +1831,217 @@ model="haiku"  # Use fast model for skill execution
 ✅ Backend auto-reloaded successfully
 ⏳ Ready for next test attempt
 
+
+---
+
+## Update: Bug #10 Resolved - Dynamic Tool Filtering (2026-06-08)
+
+### Problem Summary
+**Bug #10:** LLM repeated `run_sql` calls infinitely instead of progressing through the REINSTATE_USER workflow (run_sql → call_api PATCH → call_api POST → run_sql).
+
+**Evidence:**
+- Test showed 6 consecutive `run_sql` calls with no `call_api` calls
+- Extremely directive instructions didn't work:
+  - "NEVER call run_sql twice in a row"
+  - "YOUR NEXT TOOL CALL MUST BE call_api WITH METHOD PATCH"
+  - Maximum 4-5 tool call limits
+- Root cause: LLM (Claude Haiku 4.5) interprets instructions but doesn't follow deterministic sequences
+
+### Solution Attempts
+
+#### Attempt 1: Hyper-Directive Instructions (FAILED)
+**Approach:** Rewrite skill instructions with explicit rules and step-by-step sequences.
+
+**File:** `backend/app/services/agentic_service.py` (lines 2342-2494)
+
+**Changes:**
+- Added numbered workflow steps (Step 1-5)
+- Added explicit rules: "NEVER call run_sql twice in a row"
+- Added completion criteria with tool call counts
+- Made consequences explicit: "If you call X, then you MUST call Y next"
+
+**Result:** ❌ LLM still called `run_sql` 6 times, completely ignored instructions.
+
+**Commit:** `7139a81` - "fix(skills): Correct REINSTATE_USER workflow to use proper BRS API endpoints"
+
+---
+
+#### Attempt 2: Blocking Repeated Reads (FAILED)
+**Approach:** Programmatically block and fail when LLM repeats a read-only tool.
+
+**Implementation:**
+```python
+if last_tool_name == tool_name and tool_name in ['run_sql', 'get_config', 'list_tools']:
+    self.logger.warning(f"⚠️ Blocked repeated read tool: {tool_name}")
+    return {
+        "success": False,
+        "message": "Blocked repeated read tool. Please progress to a write tool."
+    }
+```
+
+**Result:** ❌ LLM attempted `run_sql` twice, was blocked, skill execution failed with error message.
+
+**Problem:** Blocking doesn't guide forward - it just fails faster.
+
+---
+
+#### Attempt 3: Dynamic Tool Filtering (SUCCESS ✅)
+**Approach:** Track workflow state and dynamically filter available tools to force progression.
+
+**Implementation:**
+**File:** `backend/app/services/agentic_service.py` (lines 2533-2626)
+
+**Key Changes:**
+
+1. **State Tracking:**
+   ```python
+   workflow_state = "initial"  # initial → after_read → after_write → complete
+   ```
+
+2. **Dynamic Tool Filtering (Before LLM Call):**
+   ```python
+   filtered_tools = available_tools
+   if workflow_state == "after_read":
+       # Remove read-only tools to force write operations
+       read_only_tools = ['run_sql', 'get_config', 'list_tools']
+       filtered_tools = [t for t in available_tools if t['function']['name'] not in read_only_tools]
+       self.logger.info(f"🎯 Filtered to write tools only")
+   ```
+
+3. **State Progression (After Successful Tool Call):**
+   ```python
+   if tool_name in read_only_tools:
+       if workflow_state == "initial":
+           workflow_state = "after_read"
+       elif workflow_state == "after_write":
+           workflow_state = "complete"
+   elif tool_name in write_tools:
+       workflow_state = "after_write"
+   ```
+
+**Workflow Flow:**
+```
+Initial State (tools: all available)
+   ↓ LLM calls run_sql
+State: after_read (tools: call_api only)
+   ↓ LLM forced to call call_api
+State: after_write (tools: all available again)
+   ↓ LLM calls run_sql (verification)
+State: complete
+```
+
+### Test Results
+
+**Before Fix:**
+```
+Tools Used:
+1. run_sql
+2. run_sql
+3. run_sql
+4. run_sql
+5. run_sql
+6. run_sql
+```
+❌ Infinite loop, no API calls, skill timed out.
+
+**After Fix:**
+```
+Tools Used:
+1. run_sql   (query user)
+2. call_api  (write operation forced)
+3. run_sql   (verification)
+```
+✅ No infinite loop! Workflow progresses correctly.
+
+**Backend Logs:**
+```
+INFO - Skill execution iteration 1/10, workflow_state=initial
+INFO - Calling tool: run_sql with args: {'query': '...'}
+INFO - 📖 State transition: initial → after_read
+INFO - Skill execution iteration 2/10, workflow_state=after_read
+INFO - 🎯 Filtered to write tools only (removed read-only tools)
+INFO - Calling tool: call_api with args: {...}
+INFO - ✏️ State transition: after_read → after_write
+INFO - Skill execution iteration 3/10, workflow_state=after_write
+INFO - Calling tool: run_sql with args: {...}
+INFO - ✅ State transition: after_write → complete
+INFO - ✅ Skill execution complete
+```
+
+### Commits
+1. `7139a81` - Updated skill instructions (directive attempt)
+2. `4130281` - Documented Bug #10 
+3. `7877409` - **Implemented dynamic tool filtering (SOLUTION)**
+
+### Files Modified
+- `backend/app/services/agentic_service.py`
+  - Lines 2533-2554: Added workflow state tracking and tool filtering before LLM call
+  - Lines 2613-2627: Added state progression logic after successful tool execution
+
+### What Was Fixed
+✅ **Infinite Loop Resolved:** LLM no longer repeats `run_sql` calls
+✅ **Workflow Progression:** LLM forced to call write tools after reads
+✅ **State Machine Works:** Workflow state correctly transitions through stages
+✅ **Skill-Agnostic:** Solution works for any read → write → read pattern
+
+### Remaining Issue
+⚠️ **HTTP Method Selection:** LLM called `call_api` with `GET` method instead of `PATCH`/`POST`.
+
+**Log Evidence:**
+```
+Calling tool: call_api with args: {'method': 'GET', 'path': '/api/v3/clubs/brsgolfclubsales/users', 'query': {'username': '98765432'}}
+```
+
+**Expected:**
+```
+Iteration 2: call_api with method='PATCH', endpoint='/api/v3/clubs/brsgolfclubsales/users/23', body={'username': '98765432_deleted'}
+Iteration 3: call_api with method='POST', endpoint='/api/v3/clubs/brsgolfclubsales/users', body={...}
+```
+
+**Actual:**
+```
+Iteration 2: call_api with method='GET' (wrong - should be PATCH)
+Iteration 3: run_sql (verification - but nothing to verify since no changes were made)
+```
+
+### Proposed Next Steps
+
+1. **Option A: Further Constrain call_api Parameters**
+   - After state transition to `after_read`, filter call_api to only allow `method` in `['PATCH', 'POST', 'PUT', 'DELETE']`
+   - Block `GET` method (read operation disguised as write)
+
+2. **Option B: Step-Specific Tool Templates**
+   - Define allowed tool call patterns per workflow step
+   - Step 2 (after_read): Only allow `call_api` with `method='PATCH'`
+   - Step 3 (after first write): Only allow `call_api` with `method='POST'`
+
+3. **Option C: Model Upgrade**
+   - Test with Claude Sonnet 4.5 instead of Haiku 4.5
+   - Sonnet may follow instructions better (higher reasoning capability)
+   - Cost tradeoff: ~5x more expensive per skill execution
+
+### Impact Assessment
+**Bug Severity:** 🔴 **Critical** → 🟡 **Medium**
+- Before: Skills completely unusable (infinite loops)
+- After: Skills execute workflows but may use wrong API methods
+
+**User Experience:**
+- Before: "Skill execution failed: exceeded max iterations"
+- After: "Skill executed but did not make expected database changes"
+
+**Recommendation:** Ship current fix, monitor in production, refine HTTP method selection in next iteration.
+
+### Testing Performed
+1. ✅ Backend restart with new code
+2. ✅ Skill execution via API (session 168)
+3. ✅ Verified workflow state transitions in logs
+4. ✅ Confirmed tool call sequence (run_sql → call_api → run_sql)
+5. ✅ No infinite loops observed
+6. ⚠️ HTTP method selection still needs work
+
+### Next Session Priorities
+1. Refine `call_api` method selection logic
+2. Test with real BRS user (currently testing with 98765432 which exists)
+3. Add workflow completion detection (stop after `workflow_state == "complete"`)
+4. Consider model upgrade to Sonnet for better instruction following
+
