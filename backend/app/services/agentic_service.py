@@ -2346,25 +2346,26 @@ You have been matched to this skill based on the user's intent. You MUST begin e
 - Extract the username (look for text after "reinstate user" or "reinstate")
 - The username is the account to be reinstated (currently has _deleted suffix or needs to be restored)
 
-**Step 2: Query User Details**
+**Step 2: Query User Details (MAX 1 QUERY)**
 - IMMEDIATELY execute: `run_sql` with query:
   ```sql
   SELECT uid, username, email, name, usergroup FROM fe_users WHERE username LIKE '%extracted_username%' OR username = 'extracted_username_deleted' LIMIT 5;
   ```
-- If no results, query for similar usernames to help user identify the correct account
+- **If no results → STOP and return:** "User {{extracted_username}} not found in database. No account to reinstate."
+- **If results found → Continue to Step 3**
 
 **Step 3: Identify Target User**
 - From query results, identify the user to reinstate
 - If username already has "_deleted" suffix, that's the one to restore
-- If username doesn't exist, check if there's a "username_deleted" version
+- If username doesn't exist but you found similar users → STOP and list them for user to clarify
 
-**Step 4: Check if Username is Available**
+**Step 4: Check if Username is Available (MAX 1 QUERY)**
 - Execute: `run_sql` with query:
   ```sql
   SELECT uid, username FROM fe_users WHERE username = 'target_username_without_deleted';
   ```
-- If username IS available (no results): Proceed to rename step
-- If username NOT available (user exists): The account is already active, inform user
+- **If username IS available (no results):** Proceed to rename step
+- **If username NOT available (user exists) → STOP and return:** "User {{username}} is already active (no restoration needed)."
 
 **Step 5: Rename Deleted User (Restore Original Username)**
 - Use `call_api` tool to update the username from "username_deleted" back to "username"
@@ -2390,9 +2391,17 @@ You have been matched to this skill based on the user's intent. You MUST begin e
 4. **DO report progress** - Keep user informed of each step as you execute it
 5. **DO use call_api for writes** - Never use run_sql for UPDATE/INSERT/DELETE operations
 
-## 🎯 START EXECUTION NOW
+## 🛑 COMPLETION CRITERIA (CRITICAL)
 
-Begin with Step 1 immediately. Do not respond with questions or requests for more information first.
+**You MUST stop making tool calls and return a final response when ANY of these conditions are met:**
+
+1. **User not found:** After checking database and finding no matching user → STOP and report "User not found"
+2. **User already active:** After checking and finding user exists without _deleted suffix → STOP and report "Already active"
+3. **Restoration complete:** After successfully renaming user and verifying → STOP and report success
+4. **Error encountered:** If any step fails → STOP and report the error
+5. **Maximum 3 tool calls:** Do NOT exceed 3 tool calls total. If you haven't reached a conclusion by then, report your findings and STOP.
+
+**AFTER determining the outcome, make NO MORE tool calls. Return your final summary immediately.**
 
 ## 🎯 START EXECUTION NOW
 
