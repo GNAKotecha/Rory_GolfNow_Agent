@@ -536,27 +536,37 @@ To use a tool, respond with a function call in the format expected by the API.""
 
         # Task 2 (Phase 5): Load skills context before execution
         self._load_skills_context()
+        logger.info(f"🔍 Skills loaded: {len(self.skills_context.get('skills', []))} skills in context")
+        if self.skills_context.get('skills'):
+            logger.info(f"🔍 Skill names: {[s.get('name') for s in self.skills_context['skills']]}")
 
         # Task 4 (Phase 5): Check if user message matches a skill intent pattern
         skill_match_result = await self._check_skill_match(messages, user)
         if skill_match_result:
-            # Skill matched and executed - return the result
+            # Skill matched and executed - format and return the result
             logger.info(
                 f"Skill '{skill_match_result['skill_name']}' matched and executed",
                 extra={
                     "skill_name": skill_match_result["skill_name"],
                     "success": skill_match_result.get("success", False),
                     "tenant_id": self.tenant_id,
+                    "tools_used": len(skill_match_result.get("tool_calls", [])),
                 }
             )
+
+            # Format skill response for user display
+            formatted_response = self._format_skill_response(skill_match_result)
+
             return AgenticResult(
-                final_response=skill_match_result.get("message", "Skill executed successfully"),
+                final_response=formatted_response,
                 steps=[],
                 total_steps=0,
                 stopped_reason="skill_executed",
                 metadata={
                     "skill_name": skill_match_result["skill_name"],
-                    "skill_result": skill_match_result,
+                    "skill_executed": True,
+                    "skill_success": skill_match_result.get("success", False),
+                    "tool_calls": skill_match_result.get("tool_calls", []),
                     "run_id": self.run_id,
                 },
             )
@@ -2169,12 +2179,18 @@ To use a tool, respond with a function call in the format expected by the API.""
         Returns:
             Skill execution result if matched and executed, None if no match
         """
+        self.logger.info("=== 🎯 SKILL CHECK START ===")
+        self.logger.info(f"Session exists: {self.session is not None}, Tenant ID: {self.tenant_id}")
+        self.logger.info(f"Skills context: {list(self.skills_context.keys()) if self.skills_context else 'None'}")
+
         # Skip if no session or tenant_id
         if not (self.session and self.tenant_id):
+            self.logger.warning("⚠️ Skill check skipped: no session or tenant_id")
             return None
 
         # Skip if no skills loaded
         if not self.skills_context or not self.skills_context.get("skills"):
+            self.logger.warning(f"⚠️ Skill check skipped: no skills in context (context={self.skills_context})")
             return None
 
         # Get the last user message
@@ -2192,6 +2208,7 @@ To use a tool, respond with a function call in the format expected by the API.""
         from app.utils.skill_invoker import invoke_skill
 
         try:
+            self.logger.info(f"🔍 Attempting to match message: '{last_user_message[:100]}'")
             discovery_service = SkillDiscoveryService(self.session)
             matched_skill = discovery_service.match_skill_by_intent(
                 user_message=last_user_message,
@@ -2199,7 +2216,10 @@ To use a tool, respond with a function call in the format expected by the API.""
             )
 
             if not matched_skill:
+                self.logger.info("❌ No skill matched")
                 return None
+
+            self.logger.info(f"✅ Skill matched: {matched_skill.skill_name} (id={matched_skill.id})")
 
             # Skill matched - execute it
             self.logger.info(
@@ -2232,22 +2252,37 @@ To use a tool, respond with a function call in the format expected by the API.""
                 "skill_config": matched_skill.skill_data or {},
             }
 
-            # Execute the skill
-            result = invoke_skill(
-                skill_name=matched_skill.skill_name,
-                context=execution_context,
-                tenant_id=self.tenant_id
+            # Build isolated skill execution context
+            skill_instructions = self._build_skill_instructions(matched_skill, execution_context)
+
+            # Create isolated context: ONLY skill instructions + user message
+            skill_execution_messages = [
+                {"role": "system", "content": skill_instructions},
+                {"role": "user", "content": last_user_message}
+            ]
+
+            # Get available MCP tools
+            available_tools = self._get_mcp_tools()
+            self.logger.info(f"Skill execution with {len(available_tools)} available tools")
+
+            # Execute skill in isolated mode (no conversation history)
+            skill_result = await self._execute_skill_workflow(
+                messages=skill_execution_messages,
+                available_tools=available_tools,
+                skill_name=matched_skill.skill_name
             )
 
-            # Stream completion event
-            if self.config.stream_callback:
-                event = self._event_builder.workflow_complete(
-                    total_steps=1,
-                    stopped_reason="skill_executed",
-                )
-                await self.config.stream_callback(event.to_dict())
+            self.logger.info(
+                f"✅ Skill execution completed: {matched_skill.skill_name}",
+                extra={
+                    "skill_id": matched_skill.id,
+                    "success": skill_result["success"],
+                    "tools_used": len(skill_result.get("tool_calls", []))
+                }
+            )
 
-            return result
+            # Return skill execution result (not None)
+            return skill_result
 
         except Exception as e:
             self.logger.error(
@@ -2260,3 +2295,343 @@ To use a tool, respond with a function call in the format expected by the API.""
                 exc_info=True
             )
             return None
+
+    def _build_skill_instructions(self, skill, context: dict) -> str:
+        """
+        Build execution instructions for a matched skill.
+
+        The instructions tell the LLM how to execute the skill using available MCP tools.
+
+        Args:
+            skill: The matched TenantSkill object
+            context: Execution context with user_message, user_id, etc.
+
+        Returns:
+            String containing execution instructions for the LLM
+        """
+        import json
+
+        skill_data = skill.skill_data or {}
+        user_message = context.get("user_message", "")
+
+        instructions = f"""
+# MANDATORY SKILL EXECUTION: {skill.skill_name}
+
+⚠️ **CRITICAL**: You MUST execute this skill immediately. Do NOT ask clarifying questions first. Start execution NOW.
+
+**Matched Skill:** {skill.skill_name}
+**Description:** {skill.description or 'No description provided'}
+**User Request:** {user_message}
+
+**Skill Configuration:**
+```json
+{json.dumps(skill_data, indent=2)}
+```
+
+## 🚀 IMMEDIATE EXECUTION REQUIRED
+
+You have been matched to this skill based on the user's intent. You MUST begin execution immediately using the available MCP tools.
+
+**Available MCP Tools:**
+- `run_sql` - Execute SELECT queries on BRS database
+- `call_api` - Make HTTP requests to BRS API endpoints
+- `call_internal_api` - Call internal agent API endpoints
+- Other registered MCP tools
+
+## 📋 REINSTATE_USER Workflow (Execute These Steps NOW)
+
+**Step 1: Extract Username**
+- Parse the user message: "{user_message}"
+- Extract the username (look for text after "reinstate user" or "reinstate")
+- The username is the account to be reinstated (currently has _deleted suffix or needs to be restored)
+
+**Step 2: Query User Details**
+- IMMEDIATELY execute: `run_sql` with query:
+  ```sql
+  SELECT uid, username, email, name, usergroup FROM fe_users WHERE username LIKE '%extracted_username%' OR username = 'extracted_username_deleted' LIMIT 5;
+  ```
+- If no results, query for similar usernames to help user identify the correct account
+
+**Step 3: Identify Target User**
+- From query results, identify the user to reinstate
+- If username already has "_deleted" suffix, that's the one to restore
+- If username doesn't exist, check if there's a "username_deleted" version
+
+**Step 4: Check if Username is Available**
+- Execute: `run_sql` with query:
+  ```sql
+  SELECT uid, username FROM fe_users WHERE username = 'target_username_without_deleted';
+  ```
+- If username IS available (no results): Proceed to rename step
+- If username NOT available (user exists): The account is already active, inform user
+
+**Step 5: Rename Deleted User (Restore Original Username)**
+- Use `call_api` tool to update the username from "username_deleted" back to "username"
+- Request details:
+  - method: "PATCH"
+  - endpoint: "/api/admin/users/{{uid}}"
+  - body: {{"username": "original_username"}}
+- IMPORTANT: Use call_api, NOT run_sql (writes must go through API)
+
+**Step 6: Verify Restoration**
+- Execute: `run_sql` query:
+  ```sql
+  SELECT uid, username, email, name FROM fe_users WHERE uid = {{restored_uid}};
+  ```
+- Confirm username no longer has "_deleted" suffix
+- Report success to user with restored user details
+
+## ⚠️ EXECUTION RULES
+
+1. **DO NOT ask for clarification** - Extract parameters from the user message and begin execution
+2. **DO use error handling** - If a step fails, report the error and suggest solutions
+3. **DO verify each step** - After each MCP tool call, confirm the result before proceeding
+4. **DO report progress** - Keep user informed of each step as you execute it
+5. **DO use call_api for writes** - Never use run_sql for UPDATE/INSERT/DELETE operations
+
+## 🎯 START EXECUTION NOW
+
+Begin with Step 1 immediately. Do not respond with questions or requests for more information first.
+
+## 🎯 START EXECUTION NOW
+
+Begin with Step 1 immediately. Do not respond with questions or requests for more information first.
+"""
+
+        return instructions.strip()
+
+    async def _execute_skill_workflow(
+        self,
+        messages: List[Dict[str, Any]],
+        available_tools: List[Dict[str, Any]],
+        skill_name: str,
+        max_iterations: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Execute skill workflow with isolated context (no conversation history).
+
+        This method forces deterministic skill execution by:
+        1. Calling LLM with only skill instructions and user message
+        2. Processing tool calls via MCP registry
+        3. Handling multi-turn execution (LLM → tool → LLM → tool...)
+
+        Args:
+            messages: Isolated context [system instruction, user message]
+            available_tools: MCP tools in Ollama format
+            skill_name: Name of the skill being executed
+            max_iterations: Maximum tool execution loops (default 10)
+
+        Returns:
+            {
+                "success": bool,
+                "skill_name": str,
+                "message": str,  # Final LLM response
+                "tool_calls": List[Dict],  # All tool calls made
+                "tool_results": List[Dict]  # Results from all tools
+            }
+        """
+        self.logger.info(f"🚀 Starting skill execution: {skill_name} (isolated context)")
+
+        iteration = 0
+        tool_call_history = []
+        tool_results_history = []
+
+        while iteration < max_iterations:
+            try:
+                self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}")
+
+                # Call LLM with current context
+                llm_response = await self.ollama.chat(
+                    messages=messages,
+                    tools=available_tools,
+                    stream=False
+                )
+
+                # Extract tool calls from response
+                message = llm_response.get("message", {})
+                tool_calls = message.get("tool_calls", [])
+
+                if not tool_calls:
+                    # No more tool calls - skill execution complete
+                    final_content = message.get("content", "")
+                    self.logger.info(f"✅ Skill execution complete: {skill_name}")
+                    return {
+                        "success": True,
+                        "skill_name": skill_name,
+                        "message": final_content,
+                        "tool_calls": tool_call_history,
+                        "tool_results": tool_results_history
+                    }
+
+                self.logger.info(f"Processing {len(tool_calls)} tool calls")
+
+                # Execute each tool call via MCP
+                for tool_call in tool_calls:
+                    tool_name = tool_call["function"]["name"]
+                    tool_args_str = tool_call["function"]["arguments"]
+
+                    try:
+                        tool_args = json.loads(tool_args_str)
+                    except json.JSONDecodeError as e:
+                        self.logger.error(f"Failed to parse tool arguments: {tool_args_str}", exc_info=True)
+                        tool_call_history.append({
+                            "tool": tool_name,
+                            "arguments": tool_args_str
+                        })
+                        tool_results_history.append({
+                            "tool": tool_name,
+                            "success": False,
+                            "result": f"Invalid JSON arguments: {str(e)}"
+                        })
+                        continue
+
+                    self.logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
+
+                    # Call MCP tool
+                    try:
+                        mcp_result = await self.mcp_registry.execute_tool(
+                            tool_name=tool_name,
+                            arguments=tool_args,
+                            user=self.user
+                        )
+
+                        tool_call_history.append({
+                            "tool": tool_name,
+                            "arguments": tool_args
+                        })
+
+                        if mcp_result.success:
+                            self.logger.info(f"✅ Tool {tool_name} succeeded")
+                            tool_results_history.append({
+                                "tool": tool_name,
+                                "success": True,
+                                "result": mcp_result.result
+                            })
+                            tool_result_content = json.dumps(mcp_result.result)
+                        else:
+                            self.logger.warning(f"⚠️ Tool {tool_name} failed: {mcp_result.error}")
+                            tool_results_history.append({
+                                "tool": tool_name,
+                                "success": False,
+                                "result": mcp_result.error
+                            })
+                            tool_result_content = mcp_result.error
+
+                        # Add tool result to conversation for next LLM call
+                        messages.append({
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [tool_call]
+                        })
+                        messages.append({
+                            "role": "tool",
+                            "content": tool_result_content
+                        })
+
+                    except Exception as e:
+                        self.logger.error(f"Exception calling tool {tool_name}: {e}", exc_info=True)
+                        tool_call_history.append({
+                            "tool": tool_name,
+                            "arguments": tool_args
+                        })
+                        tool_results_history.append({
+                            "tool": tool_name,
+                            "success": False,
+                            "result": f"Tool execution error: {str(e)}"
+                        })
+                        # Still add to messages so LLM can see the error
+                        messages.append({
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [tool_call]
+                        })
+                        messages.append({
+                            "role": "tool",
+                            "content": f"Error: {str(e)}"
+                        })
+
+                iteration += 1
+
+            except Exception as e:
+                self.logger.error(f"Error in skill execution loop: {e}", exc_info=True)
+                return {
+                    "success": False,
+                    "skill_name": skill_name,
+                    "message": f"Skill execution error: {str(e)}",
+                    "tool_calls": tool_call_history,
+                    "tool_results": tool_results_history
+                }
+
+        # Max iterations reached
+        self.logger.warning(f"⚠️ Skill execution exceeded max iterations ({max_iterations})")
+        return {
+            "success": False,
+            "skill_name": skill_name,
+            "message": f"Skill execution exceeded maximum iterations ({max_iterations}). Partial results returned.",
+            "tool_calls": tool_call_history,
+            "tool_results": tool_results_history
+        }
+
+    def _format_skill_response(self, skill_result: Dict[str, Any]) -> str:
+        """
+        Format skill execution result as user-facing message.
+
+        Args:
+            skill_result: Result from _execute_skill_workflow()
+
+        Returns:
+            Formatted markdown string for display to user
+        """
+        if not skill_result["success"]:
+            response = f"❌ **Skill execution failed: {skill_result['skill_name']}**\n\n"
+            response += f"{skill_result['message']}\n\n"
+
+            if skill_result.get("tool_calls"):
+                response += "### Tools Attempted:\n"
+                for i, tool_call in enumerate(skill_result['tool_calls'], 1):
+                    tool_name = tool_call['tool']
+                    response += f"{i}. `{tool_name}`\n"
+
+            return response
+
+        # Success case
+        response_parts = [
+            f"✅ **Executed skill: {skill_result['skill_name']}**",
+            "",
+            skill_result['message'],
+            ""
+        ]
+
+        if skill_result.get("tool_calls"):
+            response_parts.append("### Tools Used:")
+            for i, tool_call in enumerate(skill_result['tool_calls'], 1):
+                tool_name = tool_call['tool']
+                response_parts.append(f"{i}. `{tool_name}`")
+
+        return "\n".join(response_parts)
+
+    def _get_mcp_tools(self) -> List[Dict[str, Any]]:
+        """
+        Get list of available MCP tools in Ollama tool format.
+
+        Returns:
+            List of tool definitions compatible with Ollama chat API
+        """
+        try:
+            # Get tools from MCP registry
+            if not hasattr(self, 'mcp_registry') or self.mcp_registry is None:
+                self.logger.warning("No MCP registry available for skill execution")
+                return []
+
+            # Get the tool catalog (already in Ollama format)
+            if hasattr(self, '_run_catalog') and self._run_catalog is not None:
+                tools = self._run_catalog.tools
+                self.logger.info(f"Retrieved {len(tools)} tools from run catalog")
+                return tools
+
+            self.logger.warning("No run catalog available, tools may be empty")
+            return []
+
+        except Exception as e:
+            self.logger.error(f"Error getting MCP tools: {e}", exc_info=True)
+            return []
