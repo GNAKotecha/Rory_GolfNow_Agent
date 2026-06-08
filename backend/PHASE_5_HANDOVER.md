@@ -75,7 +75,54 @@ User Message → Skill Match → Execute Isolated Workflow → Return Result
 ```
 
 ### Known Issues
-- **Bug #8 (Stop Criteria)**: LLM still makes multiple queries when it should stop after first empty result. This is a limitation of the LLM model's instruction following, not the execution architecture. Stop criteria is explicitly stated in instructions but not programmatically enforced.
+
+#### Bug #10: LLM Not Progressing Through Multi-Step Workflow (BLOCKING)
+
+**Status:** ACTIVE BLOCKER - Skill architecture works but LLM doesn't follow multi-step instructions
+
+**Problem:**
+The skill execution system works correctly (isolated context, tool calling, multi-turn execution), but the LLM (Claude Haiku 4.5) doesn't progress through the workflow steps. Instead, it repeats Step 2 (SQL query) 4-5 times instead of moving to Step 3 (PATCH API call).
+
+**Evidence (2026-06-08 15:26):**
+```
+Iteration 1: run_sql (SELECT uid, username... WHERE username = '98765432')  
+Iteration 2: run_sql (same query)  
+Iteration 3: run_sql (same query)  
+Iteration 4: run_sql (uid = 98765432)
+Max iterations hit - skill fails
+```
+
+**Expected Workflow:**
+1. Step 2: SELECT to find user → ✅ Returns UID 23, username 98765432
+2. Step 3: PATCH `/api/v3/clubs/brsgolfclubsales/users/23` → ❌ Never called
+3. Step 4: POST `/api/v3/clubs/brsgolfclubsales/users` → ❌ Never called
+4. Step 5: SELECT to verify → ❌ Never reached
+
+**Root Cause:**
+The LLM sees the SQL results (user found) but doesn't understand it should move to Step 3. The tool result format (JSON) might be confusing it, or the instructions aren't explicit enough about what "found user" means.
+
+**Verified:**
+- ✅ User 98765432 exists (UID 23, firstname: John, surname: Smith)
+- ✅ SQL query returns results successfully
+- ✅ Tool results added to messages correctly (lines 2533-2541)
+- ✅ Instructions explicitly say "If results found → Save the uid, firstname, surname, email for later steps"
+- ❌ LLM ignores the instruction and re-runs the query
+
+**Potential Solutions:**
+1. **Add programmatic progression enforcement**: After Step 2 succeeds, don't allow Step 2 to be called again - force next tool call to be `call_api`
+2. **Change LLM model**: Try Sonnet or Opus instead of Haiku (may follow instructions better)
+3. **Simplify tool result format**: Instead of raw JSON, format as plain text: "Found user: UID=23, username=98765432, ..."
+4. **Add explicit step tracking**: Track which step was last completed and reject tool calls that go backward
+
+**Impact:**
+- Cannot test end-to-end skill execution (no DB changes happen)
+- Architecture is correct but LLM behavior blocks testing
+
+#### Bug #8 (Stop Criteria)
+
+**Status:** Lower priority - same root cause as Bug #10
+
+LLM still makes multiple queries when it should stop after first empty result. This is a limitation of the LLM model's instruction following, not the execution architecture. Stop criteria is explicitly stated in instructions but not programmatically enforced.
 
 ### Next Steps (Optional Improvements)
 1. **Programmatic stop enforcement**: Add code to detect empty SQL results and break the loop programmatically instead of relying on LLM instructions
