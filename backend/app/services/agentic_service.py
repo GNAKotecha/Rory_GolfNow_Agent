@@ -2489,7 +2489,7 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
 
                     # Call MCP tool
                     try:
-                        mcp_result = await self.mcp_registry.execute_tool(
+                        mcp_result = await self.mcp.execute_tool(
                             tool_name=tool_name,
                             arguments=tool_args,
                             user=self.user
@@ -2618,8 +2618,8 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
             List of tool definitions compatible with Ollama chat API
         """
         try:
-            # Get tools from MCP registry
-            if not hasattr(self, 'mcp_registry') or self.mcp_registry is None:
+            # Get tools from MCP registry (stored as self.mcp)
+            if not hasattr(self, 'mcp') or self.mcp is None:
                 self.logger.warning("No MCP registry available for skill execution")
                 return []
 
