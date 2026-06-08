@@ -2269,7 +2269,8 @@ To use a tool, respond with a function call in the format expected by the API.""
             skill_result = await self._execute_skill_workflow(
                 messages=skill_execution_messages,
                 available_tools=available_tools,
-                skill_name=matched_skill.skill_name
+                skill_name=matched_skill.skill_name,
+                user=user
             )
 
             self.logger.info(
@@ -2405,6 +2406,7 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
         messages: List[Dict[str, Any]],
         available_tools: List[Dict[str, Any]],
         skill_name: str,
+        user: User,
         max_iterations: int = 10
     ) -> Dict[str, Any]:
         """
@@ -2492,7 +2494,7 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                         mcp_result = await self.mcp.execute_tool(
                             tool_name=tool_name,
                             arguments=tool_args,
-                            user=self.user
+                            user=user
                         )
 
                         tool_call_history.append({
