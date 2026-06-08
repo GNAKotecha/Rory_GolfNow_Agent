@@ -2339,70 +2339,158 @@ You have been matched to this skill based on the user's intent. You MUST begin e
 - `call_internal_api` - Call internal agent API endpoints
 - Other registered MCP tools
 
-## 📋 REINSTATE_USER Workflow (Execute These Steps NOW)
+## 📋 THE WORKFLOW (MANDATORY EXECUTION ORDER)
 
-**Step 1: Extract Username**
-- Parse the user message: "{user_message}"
-- Extract the username (look for text after "reinstate user" or "reinstate")
-- The username is the account to be reinstated (currently has _deleted suffix or needs to be restored)
+This workflow has EXACTLY 5 steps. Execute them IN ORDER. DO NOT skip steps. DO NOT repeat steps.
 
-**Step 2: Query Existing User (MAX 1 QUERY)**
-- IMMEDIATELY execute: `run_sql` with query:
-  ```sql
-  SELECT uid, username, email, firstname, surname, usergroup FROM fe_users WHERE username = 'extracted_username' LIMIT 1;
-  ```
-- **If no results → STOP and return:** "User {{extracted_username}} not found in database. No account to reinstate."
-- **If results found → Save the uid, firstname, surname, email for later steps**
+---
 
-**Step 3: Archive Old User Record via API**
-- Use `call_api` tool to rename the existing user's username to add "_deleted" suffix
-- Request details:
-  - method: "PATCH"
-  - endpoint: "/api/v3/clubs/brsgolfclubsales/users/{{uid}}"
-  - body: {{"username": "{{original_username}}_deleted"}}
-- **If API call fails → STOP and return error**
-- This preserves the old user record with a _deleted suffix
+### Step 1: Extract Username (NO TOOL CALLS)
 
-**Step 4: Create New User with Original Username**
-- Use `call_api` tool to create a new user with the original username
-- Request details:
-  - method: "POST"
-  - endpoint: "/api/v3/clubs/brsgolfclubsales/users"
-  - body: {{
-      "username": "{{original_username}}",
-      "firstname": "{{saved_firstname}}",
-      "surname": "{{saved_surname}}",
-      "email": "{{saved_email}}"
-    }}
-- **If API call fails → STOP and return error**
-- This creates a fresh user record with the original username
+Parse "{user_message}" and extract the username.
 
-**Step 5: Verify Reinstatement**
-- Execute: `run_sql` query:
-  ```sql
-  SELECT uid, username, email, firstname, surname FROM fe_users WHERE username = '{{original_username}}' OR username = '{{original_username}}_deleted' ORDER BY uid DESC LIMIT 2;
-  ```
-- Confirm two records exist: one with _deleted suffix (old), one without (new)
-- Report success to user with both user details (old UID vs new UID)
+Examples:
+- "Reinstate user 98765432" → username = "98765432"
+- "Restore account john.doe" → username = "john.doe"
 
-## ⚠️ EXECUTION RULES
+**After extraction, IMMEDIATELY proceed to Step 2. DO NOT ask for confirmation.**
 
-1. **DO NOT ask for clarification** - Extract parameters from the user message and begin execution
-2. **DO use error handling** - If a step fails, report the error and suggest solutions
-3. **DO verify each step** - After each MCP tool call, confirm the result before proceeding
-4. **DO report progress** - Keep user informed of each step as you execute it
-5. **DO use call_api for writes** - Never use run_sql for UPDATE/INSERT/DELETE operations
+---
 
-## 🛑 COMPLETION CRITERIA (CRITICAL)
+### Step 2: Find User (EXACTLY ONE run_sql CALL)
 
-**You MUST stop making tool calls and return a final response when ANY of these conditions are met:**
+**MANDATORY:** Call `run_sql` with this EXACT query (replace extracted_username):
+```sql
+SELECT uid, username, email, firstname, surname, usergroup FROM fe_users WHERE username = 'extracted_username' LIMIT 1;
+```
 
-1. **User not found:** After Step 2 finds no user → STOP and report "User not found"
-2. **API error:** If Step 3 (PATCH) or Step 4 (POST) fails → STOP and report the error
-3. **Reinstatement complete:** After Step 5 verification shows both old (_deleted) and new records → STOP and report success
-4. **Maximum 5 tool calls:** Do NOT exceed 5 tool calls (1 SELECT + 1 PATCH + 1 POST + 1 SELECT + 1 buffer). If you haven't reached a conclusion, STOP and report findings.
+**After calling run_sql, examine the result:**
 
-**AFTER determining the outcome, make NO MORE tool calls. Return your final summary immediately.**
+**Case A: No rows returned**
+→ STOP. Return message: "User {{extracted_username}} not found. Cannot reinstate."
+→ DO NOT make any more tool calls.
+
+**Case B: One row returned**
+→ Save: uid, firstname, surname, email
+→ IMMEDIATELY proceed to Step 3
+→ DO NOT call run_sql again
+→ DO NOT ask questions
+→ **YOUR NEXT TOOL CALL MUST BE call_api WITH METHOD PATCH**
+
+---
+
+### Step 3: Archive Old User (EXACTLY ONE call_api WITH PATCH)
+
+**MANDATORY:** You found the user in Step 2. Now call `call_api` with:
+
+```json
+{{
+  "method": "PATCH",
+  "endpoint": "/api/v3/clubs/brsgolfclubsales/users/{{uid}}",
+  "body": {{
+    "username": "{{original_username}}_deleted"
+  }}
+}}
+```
+
+Replace {{uid}} with the uid from Step 2.
+Replace {{original_username}} with the username you extracted.
+
+**After calling call_api:**
+
+**Case A: API returns error**
+→ STOP. Return the error message.
+→ DO NOT make any more tool calls.
+
+**Case B: API succeeds**
+→ IMMEDIATELY proceed to Step 4
+→ DO NOT verify with SQL
+→ **YOUR NEXT TOOL CALL MUST BE call_api WITH METHOD POST**
+
+---
+
+### Step 4: Create New User (EXACTLY ONE call_api WITH POST)
+
+**MANDATORY:** Old user is renamed. Now call `call_api` with:
+
+```json
+{{
+  "method": "POST",
+  "endpoint": "/api/v3/clubs/brsgolfclubsales/users",
+  "body": {{
+    "username": "{{original_username}}",
+    "firstname": "{{saved_firstname}}",
+    "surname": "{{saved_surname}}",
+    "email": "{{saved_email}}"
+  }}
+}}
+```
+
+Replace {{original_username}}, {{saved_firstname}}, {{saved_surname}}, {{saved_email}} with values from Step 2.
+
+**After calling call_api:**
+
+**Case A: API returns error**
+→ STOP. Return the error message.
+→ DO NOT make any more tool calls.
+
+**Case B: API succeeds**
+→ IMMEDIATELY proceed to Step 5
+→ **YOUR NEXT TOOL CALL MUST BE run_sql**
+
+---
+
+### Step 5: Verify Both Records (EXACTLY ONE run_sql CALL)
+
+**MANDATORY:** Call `run_sql` to verify both old and new users exist:
+
+```sql
+SELECT uid, username, email, firstname, surname FROM fe_users WHERE username = '{{original_username}}' OR username = '{{original_username}}_deleted' ORDER BY uid DESC LIMIT 2;
+```
+
+**After calling run_sql:**
+
+Examine the results:
+- Should see 2 rows: one with "_deleted" suffix, one without
+- Report both UIDs to the user
+- **STOP. DO NOT make any more tool calls.**
+- Return final message: "✅ User reinstated successfully. Old UID: X (renamed to {{username}}_deleted), New UID: Y (username: {{username}})"
+
+---
+
+## 🚨 CRITICAL RULES
+
+**Rule 1: NEVER call run_sql twice in a row**
+If you just called run_sql and got results, your next call MUST be call_api (unless stopping).
+
+**Rule 2: NEVER call run_sql for Step 2 more than once**
+One query is enough. If you got results, move to Step 3. If you got no results, stop.
+
+**Rule 3: Tool call sequence MUST follow this pattern:**
+run_sql → call_api (PATCH) → call_api (POST) → run_sql → STOP
+
+**Rule 4: DO NOT ask questions between steps**
+Extract parameters, execute tools, report results. No clarifications mid-workflow.
+
+**Rule 5: Maximum 4 tool calls total**
+- 1 run_sql (Step 2)
+- 1 call_api PATCH (Step 3)
+- 1 call_api POST (Step 4)
+- 1 run_sql (Step 5)
+
+If you reach 4 tool calls, you MUST stop and return a final message. NO exceptions.
+
+---
+
+## 🎯 WHAT TO DO RIGHT NOW
+
+1. Look at the user message: "{user_message}"
+2. Extract the username
+3. Call run_sql (Step 2) to find the user
+4. When you get the result, immediately proceed to Step 3 (call_api PATCH)
+5. DO NOT stop to think between steps
+6. DO NOT call run_sql multiple times
+7. Follow the exact tool call sequence: run_sql → call_api → call_api → run_sql → DONE
 
 ## 🎯 START EXECUTION NOW
 
@@ -2447,15 +2535,25 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
         iteration = 0
         tool_call_history = []
         tool_results_history = []
+        last_tool_name = None  # Track last successfully executed tool
+        workflow_state = "initial"  # Track workflow progression: initial, after_read, after_write
 
         while iteration < max_iterations:
             try:
-                self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}")
+                self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}, workflow_state={workflow_state}")
+
+                # Filter tools based on workflow state to guide progression
+                filtered_tools = available_tools
+                if workflow_state == "after_read":
+                    # Remove read-only tools to force write operations
+                    read_only_tools = ['run_sql', 'get_config', 'list_tools']
+                    filtered_tools = [t for t in available_tools if t['function']['name'] not in read_only_tools]
+                    self.logger.info(f"🎯 Filtered to write tools only (removed read-only tools)")
 
                 # Call LLM with current context
                 llm_response = await self.ollama.generate_chat_completion_with_tools(
                     messages=messages,
-                    tools=available_tools if available_tools else None,
+                    tools=filtered_tools if filtered_tools else None,
                     model="anthropic.claude-haiku-4-5-20251001-v1:0"  # Use fast model for skill execution
                 )
 
@@ -2513,6 +2611,22 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                         })
 
                         if mcp_result.success:
+                            # Update workflow state based on tool type
+                            read_only_tools = ['run_sql', 'get_config', 'list_tools']
+                            write_tools = ['call_api', 'update_config', 'create_resource']
+
+                            if tool_name in read_only_tools:
+                                if workflow_state == "initial":
+                                    workflow_state = "after_read"
+                                    self.logger.info(f"📖 State transition: initial → after_read (read tool completed)")
+                                elif workflow_state == "after_write":
+                                    workflow_state = "complete"
+                                    self.logger.info(f"✅ State transition: after_write → complete (final verification done)")
+                            elif tool_name in write_tools:
+                                workflow_state = "after_write"
+                                self.logger.info(f"✏️ State transition: after_read → after_write (write tool completed)")
+
+                            last_tool_name = tool_name
                             self.logger.info(f"✅ Tool {tool_name} succeeded")
                             tool_results_history.append({
                                 "tool": tool_name,
