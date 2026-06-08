@@ -2441,19 +2441,17 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                 self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}")
 
                 # Call LLM with current context
-                llm_response = await self.ollama.chat(
+                llm_response = await self.ollama.generate_chat_completion_with_tools(
                     messages=messages,
-                    tools=available_tools,
-                    stream=False
+                    tools=available_tools if available_tools else None,
+                    model=self.config.llm_model
                 )
 
                 # Extract tool calls from response
-                message = llm_response.get("message", {})
-                tool_calls = message.get("tool_calls", [])
-
-                if not tool_calls:
-                    # No more tool calls - skill execution complete
-                    final_content = message.get("content", "")
+                # Response format: {"type": "tool_calls", "tool_calls": [...]} or {"type": "text", "content": "..."}
+                if llm_response.get("type") == "text":
+                    # No tool calls - final response
+                    final_content = llm_response.get("content", "")
                     self.logger.info(f"✅ Skill execution complete: {skill_name}")
                     return {
                         "success": True,
@@ -2462,6 +2460,8 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                         "tool_calls": tool_call_history,
                         "tool_results": tool_results_history
                     }
+
+                tool_calls = llm_response.get("tool_calls", [])
 
                 self.logger.info(f"Processing {len(tool_calls)} tool calls")
 

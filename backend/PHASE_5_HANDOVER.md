@@ -1441,3 +1441,72 @@ deterministic execution of workflow steps via MCP tools.
 - **Blocker Analysis:** `REINSTATE_USER_EXECUTION_BLOCKER.md`
 - **Previous Handover:** `PHASE_5_HANDOVER.md` (lines 1-1192)
 - **Architecture:** `SKILL_TOOL_ARCHITECTURE.md`
+
+---
+
+## 2026-06-08 (11:45): Critical Bug Fix - Ollama Method Name
+
+### Issue
+Skill execution was failing with: `'OllamaClient' object has no attribute 'chat'`
+
+### Root Cause
+The `_execute_skill_workflow()` method was calling `self.ollama.chat()` but the correct method name is `self.ollama.generate_chat_completion_with_tools()`.
+
+### Fix Applied
+**File:** `backend/app/services/agentic_service.py` (lines 2443-2465)
+
+Changed from:
+```python
+llm_response = await self.ollama.chat(
+    messages=messages,
+    tools=available_tools,
+    stream=False
+)
+message = llm_response.get("message", {})
+tool_calls = message.get("tool_calls", [])
+```
+
+Changed to:
+```python
+llm_response = await self.ollama.generate_chat_completion_with_tools(
+    messages=messages,
+    tools=available_tools if available_tools else None,
+    model=self.config.llm_model
+)
+
+# Response format: {"type": "tool_calls", "tool_calls": [...]} or {"type": "text", "content": "..."}
+if llm_response.get("type") == "text":
+    # No tool calls - final response
+    final_content = llm_response.get("content", "")
+    return {
+        "success": True,
+        "skill_name": skill_name,
+        "message": final_content,
+        "tool_calls": tool_call_history,
+        "tool_results": tool_results_history
+    }
+
+tool_calls = llm_response.get("tool_calls", [])
+```
+
+### Key Changes
+1. **Method name**: `.chat()` → `.generate_chat_completion_with_tools()`
+2. **Response format**: Updated to handle `{"type": "text"}` vs `{"type": "tool_calls"}`
+3. **Early return**: Added completion check when `type == "text"`
+4. **Model parameter**: Added `model=self.config.llm_model` to match existing usage pattern
+
+### Files Modified
+- `backend/app/services/agentic_service.py` (lines 2443-2465)
+
+### Testing Steps
+1. Backend restarted successfully (port 8000)
+2. Syntax validated with `python3 -m py_compile`
+3. Ready to test: Send "Reinstate user 98765432" via frontend
+4. Expected: Skill executes with tool calls (not error)
+
+### Status
+✅ Fix applied
+✅ Syntax validated
+✅ Backend running
+⏳ Awaiting manual test via frontend
+
