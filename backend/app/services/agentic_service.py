@@ -2623,11 +2623,28 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                 self.logger.warning("No MCP registry available for skill execution")
                 return []
 
-            # Get the tool catalog (already in Ollama format)
+            # Get the tool catalog
             if hasattr(self, '_run_catalog') and self._run_catalog is not None:
                 tools = self._run_catalog.tools
                 self.logger.info(f"Retrieved {len(tools)} tools from run catalog")
-                return tools
+
+                # Convert MCPTool objects to dicts for Ollama API
+                tool_dicts = []
+                for tool in tools:
+                    if isinstance(tool, dict):
+                        tool_dicts.append(tool)
+                    else:
+                        # Convert dataclass to dict
+                        tool_dicts.append({
+                            "type": "function",
+                            "function": {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "parameters": tool.input_schema
+                            }
+                        })
+
+                return tool_dicts
 
             self.logger.warning("No run catalog available, tools may be empty")
             return []
