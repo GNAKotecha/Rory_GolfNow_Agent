@@ -20,7 +20,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [useStreaming, setUseStreaming] = useState(true);
+  const [useStreaming, setUseStreaming] = useState(false); // Disabled until WebSocket is fixed (BUG-001)
   const [streamingStatus, setStreamingStatus] = useState<string>('');
   const [pendingAskUser, setPendingAskUser] = useState<StreamEvent | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -399,10 +399,8 @@ export default function ChatPage() {
           }
         }
 
-        setMessages(prev => {
-          const withoutOptimistic = prev.filter(m => m.id !== optimisticUserMessage.id);
-          return [...withoutOptimistic, response.message, response.response].filter(Boolean);
-        });
+        // Refetch all messages from server to ensure UI is in sync (BUG-001 fix)
+        await loadMessages(response.session_id);
         setLoading(false);
       }
     } catch (error) {
