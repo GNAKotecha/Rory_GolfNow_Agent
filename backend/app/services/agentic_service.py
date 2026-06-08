@@ -2444,7 +2444,7 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                 llm_response = await self.ollama.generate_chat_completion_with_tools(
                     messages=messages,
                     tools=available_tools if available_tools else None,
-                    model=self.config.llm_model
+                    model="haiku"  # Use fast model for skill execution
                 )
 
                 # Extract tool calls from response
