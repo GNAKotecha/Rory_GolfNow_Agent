@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: "1"
+          - generic [ref=e36]: "2"
+        - generic [ref=e16]:
+          - text: Issue
+          - generic [ref=e37]: s
+      - button "Collapse issues badge" [ref=e17]:
+        - img [ref=e18]
+  - alert [ref=e20]
+  - generic [ref=e22]:
+    - generic [ref=e23]:
+      - heading "Welcome back" [level=1] [ref=e24]
+      - paragraph [ref=e25]: Sign in to continue to Rory
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]: Email
+        - textbox "Email" [ref=e29]: admin@golfnow.com
+      - generic [ref=e30]:
+        - generic [ref=e31]: Password
+        - textbox "Password" [ref=e32]: admin123
+      - generic [ref=e38]: Failed to fetch
+      - button "Sign In" [ref=e33]

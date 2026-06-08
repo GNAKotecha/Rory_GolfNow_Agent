@@ -1,0 +1,69 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "Chat - 19:14:23" [ref=e19]
+        - button "Chat - 19:13:01" [ref=e20]
+        - button "Chat - 19:11:36" [ref=e21]
+        - button "What tools do you have access to? Please list all" [ref=e22]
+        - button "What tools do you have?" [ref=e23]
+        - button "What tools do you have?" [ref=e24]
+        - button "what brs tools do you have access to" [ref=e25]
+        - button "What tools do you have?" [ref=e26]
+        - button "What tools do you have?" [ref=e27]
+        - button "What tools do you have access to? List all of them" [ref=e28]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e29]
+        - button "What tools and skills do you have access to? Can y" [ref=e30]
+        - button "I need to reinstate user 98765432" [ref=e31]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e32]
+        - button "hello" [ref=e33]
+        - button "Find a user in brsgolfclubsales" [ref=e34]
+        - button "New Chat" [ref=e35]
+        - button "New Chat" [ref=e36]
+        - button "Final Test" [ref=e37]
+        - button "Create Club Test" [ref=e38]
+        - button "Test Session" [ref=e39]
+        - button "New Chat" [ref=e40]
+        - button "Create Club Test 2" [ref=e41]
+        - button "Create Club Test" [ref=e42]
+        - button "Create Club Test" [ref=e43]
+        - button "Debug Test" [ref=e44]
+        - button "Test Create Club" [ref=e45]
+        - button "Test Session 2" [ref=e46]
+        - button "Test Session" [ref=e47]
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: Armaan
+          - generic [ref=e52]: admin
+        - button "Logout" [ref=e53]:
+          - img [ref=e54]
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - button [ref=e58]:
+          - img [ref=e59]
+        - heading "New Chat" [level=1] [ref=e61] [cursor=pointer]
+        - generic [ref=e62]:
+          - generic [ref=e63]: Haiku 4.5
+          - generic [ref=e64]: Live
+          - generic [ref=e65]:
+            - link "Skills" [ref=e66] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e67] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e68] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e69] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e72]:
+        - heading "How can I help you today?" [level=2] [ref=e73]
+        - paragraph [ref=e74]: Ask me anything about BRS teesheet management.
+      - generic [ref=e77]:
+        - textbox "Message Assistant..." [active] [ref=e78]
+        - button [disabled] [ref=e79]:
+          - img [ref=e80]

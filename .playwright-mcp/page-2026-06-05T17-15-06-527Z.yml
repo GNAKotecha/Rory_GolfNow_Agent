@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "what brs tools do you have access to" [ref=e19]
+        - button "What tools do you have?" [ref=e20]
+        - button "What tools do you have?" [ref=e21]
+        - button "What tools do you have access to? List all of them" [ref=e22]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e23]
+        - button "What tools and skills do you have access to? Can y" [ref=e24]
+        - button "I need to reinstate user 98765432" [ref=e25]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e26]
+        - button "hello" [ref=e27]
+        - button "Find a user in brsgolfclubsales" [ref=e28]
+        - button "New Chat" [ref=e29]
+        - button "New Chat" [ref=e30]
+        - button "Final Test" [ref=e31]
+        - button "Create Club Test" [ref=e32]
+        - button "Test Session" [ref=e33]
+        - button "New Chat" [ref=e34]
+        - button "Create Club Test 2" [ref=e35]
+        - button "Create Club Test" [ref=e36]
+        - button "Create Club Test" [ref=e37]
+        - button "Debug Test" [ref=e38]
+        - button "Test Create Club" [ref=e39]
+        - button "Test Session 2" [ref=e40]
+        - button "Test Session" [ref=e41]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: Armaan
+          - generic [ref=e46]: admin
+        - button "Logout" [ref=e47]:
+          - img [ref=e48]
+    - generic [ref=e50]:
+      - generic [ref=e51]:
+        - button [ref=e52]:
+          - img [ref=e53]
+        - heading "New Chat" [level=1] [ref=e55] [cursor=pointer]
+        - generic [ref=e56]:
+          - generic [ref=e57]: Haiku 4.5
+          - generic [ref=e58]: Live
+          - generic [ref=e59]:
+            - link "Skills" [ref=e60] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e61] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e62] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e63] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e66]:
+        - heading "How can I help you today?" [level=2] [ref=e67]
+        - paragraph [ref=e68]: Ask me anything about BRS teesheet management.
+      - generic [ref=e71]:
+        - textbox "Message Assistant..." [ref=e72]
+        - button [disabled] [ref=e73]:
+          - img [ref=e74]

@@ -1,0 +1,116 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate a deleted user account" [ref=e88]
+        - button "Can you execute the complete REINSTATE_USER workfl" [ref=e19]
+        - button "I need to reinstate user 98765432. Can you walk me" [ref=e20]
+        - button "list tools" [ref=e21]
+        - button "test" [ref=e22]
+        - button "count tools" [ref=e23]
+        - button "What tools do you have? List all of them." [ref=e24]
+        - button "Chat - 19:14:23" [ref=e25]
+        - button "Chat - 19:13:01" [ref=e26]
+        - button "Chat - 19:11:36" [ref=e27]
+        - button "What tools do you have access to? Please list all" [ref=e28]
+        - button "What tools do you have?" [ref=e29]
+        - button "What tools do you have?" [ref=e30]
+        - button "what brs tools do you have access to" [ref=e31]
+        - button "What tools do you have?" [ref=e32]
+        - button "What tools do you have?" [ref=e33]
+        - button "What tools do you have access to? List all of them" [ref=e34]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e35]
+        - button "What tools and skills do you have access to? Can y" [ref=e36]
+        - button "I need to reinstate user 98765432" [ref=e37]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e38]
+        - button "hello" [ref=e39]
+        - button "Find a user in brsgolfclubsales" [ref=e40]
+        - button "New Chat" [ref=e41]
+        - button "New Chat" [ref=e42]
+        - button "Final Test" [ref=e43]
+        - button "Create Club Test" [ref=e44]
+        - button "Test Session" [ref=e45]
+        - button "New Chat" [ref=e46]
+        - button "Create Club Test 2" [ref=e47]
+        - button "Create Club Test" [ref=e48]
+        - button "Create Club Test" [ref=e49]
+        - button "Debug Test" [ref=e50]
+        - button "Test Create Club" [ref=e51]
+        - button "Test Session 2" [ref=e52]
+        - button "Test Session" [ref=e53]
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]: Armaan
+          - generic [ref=e58]: admin
+        - button "Logout" [ref=e59]:
+          - img [ref=e60]
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - button [ref=e64]:
+          - img [ref=e65]
+        - heading "I need to reinstate a deleted user account" [level=1] [ref=e89] [cursor=pointer]
+        - generic [ref=e68]:
+          - generic [ref=e69]: Haiku 4.5
+          - generic [ref=e70]: Live
+          - generic [ref=e71]:
+            - link "Skills" [ref=e72] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e73] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e74] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e75] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e77]:
+        - generic [ref=e90]:
+          - img [ref=e92]
+          - generic [ref=e94]:
+            - generic [ref=e95]: You
+            - paragraph [ref=e97]: I need to reinstate a deleted user account
+        - generic [ref=e104]:
+          - img [ref=e106]
+          - generic [ref=e108]:
+            - generic [ref=e109]: Assistant
+            - generic [ref=e112]:
+              - paragraph [ref=e113]: "I'd be happy to help you reinstate a deleted user account. To do this effectively, I need some additional information:"
+              - list [ref=e114]:
+                - listitem [ref=e115]:
+                  - paragraph [ref=e116]:
+                    - strong [ref=e117]: User/Account Type
+                    - text: ": What type of account is this?"
+                  - list [ref=e118]:
+                    - listitem [ref=e119]: Member account?
+                    - listitem [ref=e120]: Staff/Employee account?
+                    - listitem [ref=e121]: Contact/Guest account?
+                    - listitem [ref=e122]: Other?
+                - listitem [ref=e123]:
+                  - paragraph [ref=e124]:
+                    - strong [ref=e125]: Golf Club
+                    - text: ": Which golf club is this account associated with?"
+                  - list [ref=e126]:
+                    - listitem [ref=e127]: Club name or Club ID?
+                - listitem [ref=e128]:
+                  - paragraph [ref=e129]:
+                    - strong [ref=e130]: User Details
+                    - text: ":"
+                  - list [ref=e131]:
+                    - listitem [ref=e132]: What is the user's name or email address?
+                    - listitem [ref=e133]: Do you have their user ID or member ID?
+                - listitem [ref=e134]:
+                  - paragraph [ref=e135]:
+                    - strong [ref=e136]: Context
+                    - text: ":"
+                  - list [ref=e137]:
+                    - listitem [ref=e138]: Do you know why the account was deleted?
+                    - listitem [ref=e139]: Do you have a backup or snapshot of their account data that needs to be restored?
+              - paragraph [ref=e140]: Once you provide these details, I can help you work with the appropriate system (BRS API, database, or other) to reinstate the account. If you have access to specific account information or system credentials, that would also be helpful.
+      - generic [ref=e83]:
+        - textbox "Message Assistant..." [ref=e84]
+        - button [disabled] [ref=e85]:
+          - img [ref=e86]

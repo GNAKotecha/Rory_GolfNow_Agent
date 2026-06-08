@@ -148,6 +148,17 @@ class MCPClient:
         self._cache_ttl_seconds = 300  # 5 minutes
 
     @mcp_async_method
+    async def initialize(self):
+        """Initialize aiohttp session. Must be called during app startup."""
+        if not self.session or self.session.closed:
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout_seconds)
+            self.session = aiohttp.ClientSession(timeout=timeout)
+            logger.info(
+                f"Initialized aiohttp session for {self.config.name}",
+                extra={"server": self.config.name}
+            )
+
+    @mcp_async_method
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
@@ -200,7 +211,7 @@ class MCPClient:
 
         try:
             session = await self._get_session()
-            url = f"{self.config.url}/mcp/tools/list"
+            url = f"{self.config.url}/tools/list"
             
             # Build auth headers (gateway-mcp requires service token)
             headers = self._build_auth_headers(user_id=None)
@@ -322,7 +333,7 @@ class MCPClient:
         for attempt in range(self.config.max_retries + 1):
             try:
                 session = await self._get_session()
-                url = f"{self.config.url}/mcp/tools/call"
+                url = f"{self.config.url}/tools/call"
 
                 payload = {
                     "name": tool_name,

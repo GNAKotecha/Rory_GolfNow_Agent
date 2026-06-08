@@ -1,0 +1,58 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "What tools and skills do you have access to? Can y" [ref=e19]
+        - button "I need to reinstate user 98765432" [ref=e20]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e21]
+        - button "hello" [ref=e22]
+        - button "Find a user in brsgolfclubsales" [ref=e23]
+        - button "New Chat" [ref=e24]
+        - button "New Chat" [ref=e25]
+        - button "Final Test" [ref=e26]
+        - button "Create Club Test" [ref=e27]
+        - button "Test Session" [ref=e28]
+        - button "New Chat" [ref=e29]
+        - button "Create Club Test 2" [ref=e30]
+        - button "Create Club Test" [ref=e31]
+        - button "Create Club Test" [ref=e32]
+        - button "Debug Test" [ref=e33]
+        - button "Test Create Club" [ref=e34]
+        - button "Test Session 2" [ref=e35]
+        - button "Test Session" [ref=e36]
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: Armaan
+          - generic [ref=e41]: admin
+        - button "Logout" [ref=e42]:
+          - img [ref=e43]
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - button [ref=e47]:
+          - img [ref=e48]
+        - heading "New Chat" [level=1] [ref=e50] [cursor=pointer]
+        - generic [ref=e51]:
+          - generic [ref=e52]: Haiku 4.5
+          - generic [ref=e53]: Live
+          - generic [ref=e54]:
+            - link "Skills" [ref=e55] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e56] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e57] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e58] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e61]:
+        - heading "How can I help you today?" [level=2] [ref=e62]
+        - paragraph [ref=e63]: Ask me anything about BRS teesheet management.
+      - generic [ref=e66]:
+        - textbox "Message Assistant..." [ref=e67]
+        - button [disabled] [ref=e68]:
+          - img [ref=e69]

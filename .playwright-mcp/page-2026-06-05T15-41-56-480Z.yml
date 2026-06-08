@@ -1,0 +1,61 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "Test after fix - can you help me?" [ref=e19]
+        - button "Hello, can you help me with a test?" [ref=e20]
+        - button "hello" [ref=e21]
+        - button "test" [ref=e22]
+        - button "reinstate user 98765432" [ref=e23]
+        - button "Hello" [ref=e24]
+        - button "I need to reinstate user 98765432" [ref=e25]
+        - button "I need to reinstate user 98765432" [ref=e26]
+        - button "Hello" [ref=e27]
+        - button "hello" [ref=e28]
+        - button "Chat - 15:53:50" [ref=e29]
+        - button "I need to reinstate user 98765432" [ref=e30]
+        - button "I need to reinstate user 98765432" [ref=e31]
+        - button "I need to reinstate user 98765432" [ref=e32]
+        - button "You I need to reinstate user 98765432. Please exec" [ref=e33]
+        - button "I need to reinstate user 98765432. Please execute" [ref=e34]
+        - button "I need to reinstate user 98765432. Can you use the" [ref=e35]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e36]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e37]
+        - button "I need to reinstate user 98765432. Please use the" [ref=e38]
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: E2E Tester
+          - generic [ref=e43]: user
+        - button "Logout" [ref=e44]:
+          - img [ref=e45]
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - button [ref=e49]:
+          - img [ref=e50]
+        - heading "New Chat" [level=1] [ref=e52] [cursor=pointer]
+        - generic [ref=e53]:
+          - generic [ref=e54]: Haiku 4.5
+          - generic [ref=e55]: Live
+      - generic [ref=e58]:
+        - heading "How can I help you today?" [level=2] [ref=e59]
+        - paragraph [ref=e60]: Ask me anything about BRS teesheet management.
+      - generic [ref=e63]:
+        - textbox "Message Assistant..." [ref=e64]
+        - button [disabled] [ref=e65]:
+          - img [ref=e66]
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - heading "New Conversation" [level=2] [ref=e71]
+        - paragraph [ref=e72]: Give this chat a title (optional)
+      - generic [ref=e73]:
+        - textbox "e.g., Golf course research" [active] [ref=e74]
+        - paragraph [ref=e75]: Leave blank for auto-generated title
+        - generic [ref=e76]:
+          - button "Cancel" [ref=e77]
+          - button "Create" [ref=e78]

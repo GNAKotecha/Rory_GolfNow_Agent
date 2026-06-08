@@ -1,0 +1,83 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Can you help me" [active] [ref=e53]
+        - button "hello" [ref=e54]
+        - button "Find a user in brsgolfclubsales" [ref=e55]
+        - button "New Chat" [ref=e56]
+        - button "New Chat" [ref=e57]
+        - button "Final Test" [ref=e58]
+        - button "Create Club Test" [ref=e59]
+        - button "Test Session" [ref=e60]
+        - button "New Chat" [ref=e61]
+        - button "Create Club Test 2" [ref=e62]
+        - button "Create Club Test" [ref=e63]
+        - button "Create Club Test" [ref=e64]
+        - button "Debug Test" [ref=e65]
+        - button "Test Create Club" [ref=e66]
+        - button "Test Session 2" [ref=e67]
+        - button "Test Session" [ref=e68]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: Armaan
+          - generic [ref=e23]: admin
+        - button "Logout" [ref=e24]:
+          - img [ref=e25]
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - heading "I need to reinstate user 98765432. Can you help me" [level=1] [ref=e69] [cursor=pointer]
+        - generic [ref=e33]:
+          - generic [ref=e34]: Haiku 4.5
+          - generic [ref=e35]: Live
+          - generic [ref=e36]:
+            - link "Skills" [ref=e37] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e38] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e39] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e40] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e42]:
+        - generic [ref=e70]:
+          - img [ref=e72]
+          - generic [ref=e74]:
+            - generic [ref=e75]: You
+            - paragraph [ref=e77]: I need to reinstate user 98765432. Can you help me with the Reinstate User process?
+        - generic [ref=e78]:
+          - img [ref=e80]
+          - generic [ref=e82]:
+            - generic [ref=e83]: Assistant
+            - generic [ref=e86]:
+              - paragraph [ref=e87]: I'd be happy to help you reinstate user 98765432! However, I need a bit more information to proceed with the Reinstate User workflow.
+              - paragraph [ref=e88]: "The process requires me to locate the deleted user record. Could you please clarify:"
+              - paragraph [ref=e89]:
+                - strong [ref=e90]: "Is \"98765432\" the:"
+              - list [ref=e91]:
+                - listitem [ref=e92]:
+                  - strong [ref=e93]: User ID
+                  - text: of the deleted user, or
+                - listitem [ref=e94]:
+                  - strong [ref=e95]: Username
+                  - text: (or the deleted version like "username_deleted_XXXXXXXX")?
+              - paragraph [ref=e96]: "Once I have this clarification, I can:"
+              - list [ref=e97]:
+                - listitem [ref=e98]: Query the fe_user table for the deleted user record
+                - listitem [ref=e99]: Extract their credentials (email, first name, last name, etc.)
+                - listitem [ref=e100]: Remove the _deleted suffix from their username
+                - listitem [ref=e101]: Create a new active user account with their original credentials
+                - listitem [ref=e102]: Verify the reinstatement was successful
+              - paragraph [ref=e103]: Please provide the username or confirm what "98765432" represents, and I'll get started right away!
+      - generic [ref=e48]:
+        - textbox "Message Assistant..." [ref=e49]
+        - button [disabled] [ref=e50]:
+          - img [ref=e51]

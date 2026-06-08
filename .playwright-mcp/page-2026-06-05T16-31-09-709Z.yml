@@ -1,0 +1,89 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. This user was d" [ref=e71]
+        - button "What tools and skills do you have access to? Can y" [ref=e19]
+        - button "I need to reinstate user 98765432" [ref=e20]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e21]
+        - button "hello" [ref=e22]
+        - button "Find a user in brsgolfclubsales" [ref=e23]
+        - button "New Chat" [ref=e24]
+        - button "New Chat" [ref=e25]
+        - button "Final Test" [ref=e26]
+        - button "Create Club Test" [ref=e27]
+        - button "Test Session" [ref=e28]
+        - button "New Chat" [ref=e29]
+        - button "Create Club Test 2" [ref=e30]
+        - button "Create Club Test" [ref=e31]
+        - button "Create Club Test" [ref=e32]
+        - button "Debug Test" [ref=e33]
+        - button "Test Create Club" [ref=e34]
+        - button "Test Session 2" [ref=e35]
+        - button "Test Session" [ref=e36]
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: Armaan
+          - generic [ref=e41]: admin
+        - button "Logout" [ref=e42]:
+          - img [ref=e43]
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - button [ref=e47]:
+          - img [ref=e48]
+        - heading "I need to reinstate user 98765432. This user was d" [level=1] [ref=e72] [cursor=pointer]
+        - generic [ref=e51]:
+          - generic [ref=e52]: Haiku 4.5
+          - generic [ref=e53]: Live
+          - generic [ref=e54]:
+            - link "Skills" [ref=e55] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e56] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e57] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e58] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e60]:
+        - generic [ref=e73]:
+          - img [ref=e75]
+          - generic [ref=e77]:
+            - generic [ref=e78]: You
+            - paragraph [ref=e80]: I need to reinstate user 98765432. This user was deleted and I want to restore their account with the original credentials. Can you walk me through the Reinstate User workflow?
+        - generic [ref=e87]:
+          - img [ref=e89]
+          - generic [ref=e91]:
+            - generic [ref=e92]: Assistant
+            - generic [ref=e95]:
+              - paragraph [ref=e96]: I don't have access to a tool for reinstating user accounts or managing user account workflows in your system. Based on your request, it sounds like you're working with a specific user management or administration system that I'm not connected to.
+              - paragraph [ref=e97]: "To help you effectively, I'd need more information about your system:"
+              - list [ref=e98]:
+                - listitem [ref=e99]:
+                  - strong [ref=e100]: What system are you using?
+                  - text: (e.g., a specific CRM, admin panel, identity management platform, etc.)
+                - listitem [ref=e101]:
+                  - strong [ref=e102]: Do you have documentation or a manual
+                  - text: that outlines the Reinstate User workflow?
+                - listitem [ref=e103]:
+                  - strong [ref=e104]: What tools or interfaces
+                  - text: do you normally use to manage user accounts?
+              - paragraph [ref=e105]:
+                - strong [ref=e106]: "What I can help with:"
+              - list [ref=e107]:
+                - listitem [ref=e108]: Storing information about user 98765432 and the reinstatement details in my memory for reference during our conversation
+                - listitem [ref=e109]:
+                  - text: Walking through the steps
+                  - emphasis [ref=e110]: if you can share the workflow process
+                  - text: with me
+                - listitem [ref=e111]: Helping you organize or track the reinstatement steps
+              - paragraph [ref=e112]: Would you like to share the workflow steps so I can help you walk through them? Or can you provide more context about which system you're working with?
+      - generic [ref=e66]:
+        - textbox "Message Assistant..." [ref=e67]
+        - button [disabled] [ref=e68]:
+          - img [ref=e69]

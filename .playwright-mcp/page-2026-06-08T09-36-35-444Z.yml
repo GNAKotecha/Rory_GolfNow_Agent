@@ -1,0 +1,3143 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "BRS Golf API Documentation":
+      - /url: /api/documentation/
+      - heading "BRS Golf API Documentation" [level=1] [ref=e3] [cursor=pointer]
+    - generic [ref=e4]:
+      - text: "body format:"
+      - combobox [ref=e5]:
+        - option "Form Data" [selected]
+        - option "JSON"
+      - text: "request format:"
+      - combobox [ref=e6]:
+        - option "json" [selected]
+        - option "xml"
+  - generic [ref=e7]:
+    - heading "BRS Admin API Documentation" [level=3] [ref=e8]
+    - paragraph [ref=e9]:
+      - link "Find out more »" [ref=e10] [cursor=pointer]:
+        - /url: /api/admin/documentation/
+  - generic [ref=e11]:
+    - heading "G1 API Documentation (G1 UK Consumers)" [level=3] [ref=e12]
+    - paragraph [ref=e13]:
+      - link "Find out more »" [ref=e14] [cursor=pointer]:
+        - /url: /api/g1/documentation/
+  - list [ref=e16]:
+    - list [ref=e18]:
+      - listitem [ref=e19]:
+        - link "API Sync v1 - Users" [ref=e20] [cursor=pointer]:
+          - /url: "#section-API Sync v1 - Users"
+      - listitem [ref=e21]:
+        - link "API v1 - Bookings" [ref=e22] [cursor=pointer]:
+          - /url: "#section-API v1 - Bookings"
+      - listitem [ref=e23]:
+        - link "API v1 - Green Fees" [ref=e24] [cursor=pointer]:
+          - /url: "#section-API v1 - Green Fees"
+      - listitem [ref=e25]:
+        - link "API v1 - Reservation Types" [ref=e26] [cursor=pointer]:
+          - /url: "#section-API v1 - Reservation Types"
+      - listitem [ref=e27]:
+        - link "API v1 - System Configuration" [ref=e28] [cursor=pointer]:
+          - /url: "#section-API v1 - System Configuration"
+      - listitem [ref=e29]:
+        - link "API v1 - Tee Sheets" [ref=e30] [cursor=pointer]:
+          - /url: "#section-API v1 - Tee Sheets"
+      - listitem [ref=e31]:
+        - link "API v1 - Users" [ref=e32] [cursor=pointer]:
+          - /url: "#section-API v1 - Users"
+      - listitem [ref=e33]:
+        - link "API v2 - Bookings" [ref=e34] [cursor=pointer]:
+          - /url: "#section-API v2 - Bookings"
+      - listitem [ref=e35]:
+        - link "API v2 - Clubs" [ref=e36] [cursor=pointer]:
+          - /url: "#section-API v2 - Clubs"
+      - listitem [ref=e37]:
+        - link "API v2 - Competitions" [ref=e38] [cursor=pointer]:
+          - /url: "#section-API v2 - Competitions"
+      - listitem [ref=e39]:
+        - link "API v2 - Configuration" [ref=e40] [cursor=pointer]:
+          - /url: "#section-API v2 - Configuration"
+      - listitem [ref=e41]:
+        - link "API v2 - Contacts" [ref=e42] [cursor=pointer]:
+          - /url: "#section-API v2 - Contacts"
+      - listitem [ref=e43]:
+        - link "API v2 - Courses" [ref=e44] [cursor=pointer]:
+          - /url: "#section-API v2 - Courses"
+      - listitem [ref=e45]:
+        - link "API v2 - G1 Green Fee Packages" [ref=e46] [cursor=pointer]:
+          - /url: "#section-API v2 - G1 Green Fee Packages"
+      - listitem [ref=e47]:
+        - link "API v2 - Member Casual Booking Rules" [ref=e48] [cursor=pointer]:
+          - /url: "#section-API v2 - Member Casual Booking Rules"
+      - listitem [ref=e49]:
+        - link "API v2 - Members" [ref=e50] [cursor=pointer]:
+          - /url: "#section-API v2 - Members"
+      - listitem [ref=e51]:
+        - link "API v2 - Membership Types" [ref=e52] [cursor=pointer]:
+          - /url: "#section-API v2 - Membership Types"
+      - listitem [ref=e53]:
+        - link "API v2 - Products" [ref=e54] [cursor=pointer]:
+          - /url: "#section-API v2 - Products"
+      - listitem [ref=e55]:
+        - link "API v2 - Reservation Types" [ref=e56] [cursor=pointer]:
+          - /url: "#section-API v2 - Reservation Types"
+      - listitem [ref=e57]:
+        - link "API v2 - Sunrise and Sunset" [ref=e58] [cursor=pointer]:
+          - /url: "#section-API v2 - Sunrise and Sunset"
+      - listitem [ref=e59]:
+        - link "API v2 - Tee Sheets" [ref=e60] [cursor=pointer]:
+          - /url: "#section-API v2 - Tee Sheets"
+      - listitem [ref=e61]:
+        - link "API v2 - Tee Times" [ref=e62] [cursor=pointer]:
+          - /url: "#section-API v2 - Tee Times"
+      - listitem [ref=e63]:
+        - link "API v2 - Users" [ref=e64] [cursor=pointer]:
+          - /url: "#section-API v2 - Users"
+      - listitem [ref=e65]:
+        - link "API v3 - AWS" [ref=e66] [cursor=pointer]:
+          - /url: "#section-API v3 - AWS"
+      - listitem [ref=e67]:
+        - link "API v3 - AerisWeather API" [ref=e68] [cursor=pointer]:
+          - /url: "#section-API v3 - AerisWeather API"
+      - listitem [ref=e69]:
+        - link "API v3 - Authorisation" [ref=e70] [cursor=pointer]:
+          - /url: "#section-API v3 - Authorisation"
+      - listitem [ref=e71]:
+        - link "API v3 - BCG" [ref=e72] [cursor=pointer]:
+          - /url: "#section-API v3 - BCG"
+      - listitem [ref=e73]:
+        - link "API v3 - Bookings" [ref=e74] [cursor=pointer]:
+          - /url: "#section-API v3 - Bookings"
+      - listitem [ref=e75]:
+        - link "API v3 - Check" [ref=e76] [cursor=pointer]:
+          - /url: "#section-API v3 - Check"
+      - listitem [ref=e77]:
+        - link "API v3 - Club Messages" [ref=e78] [cursor=pointer]:
+          - /url: "#section-API v3 - Club Messages"
+      - listitem [ref=e79]:
+        - link "API v3 - Club News" [ref=e80] [cursor=pointer]:
+          - /url: "#section-API v3 - Club News"
+      - listitem [ref=e81]:
+        - link "API v3 - ClubUp" [ref=e82] [cursor=pointer]:
+          - /url: "#section-API v3 - ClubUp"
+      - listitem [ref=e83]:
+        - link "API v3 - Clubs" [ref=e84] [cursor=pointer]:
+          - /url: "#section-API v3 - Clubs"
+      - listitem [ref=e85]:
+        - link "API v3 - Competition Pairings" [ref=e86] [cursor=pointer]:
+          - /url: "#section-API v3 - Competition Pairings"
+      - listitem [ref=e87]:
+        - link "API v3 - Competition Purse" [ref=e88] [cursor=pointer]:
+          - /url: "#section-API v3 - Competition Purse"
+      - listitem [ref=e89]:
+        - link "API v3 - Configuration" [ref=e90] [cursor=pointer]:
+          - /url: "#section-API v3 - Configuration"
+      - listitem [ref=e91]:
+        - link "API v3 - Consents Proxy" [ref=e92] [cursor=pointer]:
+          - /url: "#section-API v3 - Consents Proxy"
+      - listitem [ref=e93]:
+        - link "API v3 - Contacts" [ref=e94] [cursor=pointer]:
+          - /url: "#section-API v3 - Contacts"
+      - listitem [ref=e95]:
+        - link "API v3 - Contacts Summary" [ref=e96] [cursor=pointer]:
+          - /url: "#section-API v3 - Contacts Summary"
+      - listitem [ref=e97]:
+        - link "API v3 - Courses" [ref=e98] [cursor=pointer]:
+          - /url: "#section-API v3 - Courses"
+      - listitem [ref=e99]:
+        - link "API v3 - Features" [ref=e100] [cursor=pointer]:
+          - /url: "#section-API v3 - Features"
+      - listitem [ref=e101]:
+        - link "API v3 - G1 API" [ref=e102] [cursor=pointer]:
+          - /url: "#section-API v3 - G1 API"
+      - listitem [ref=e103]:
+        - link "API v3 - G1 Contact" [ref=e104] [cursor=pointer]:
+          - /url: "#section-API v3 - G1 Contact"
+      - listitem [ref=e105]:
+        - link "API v3 - G1 Player Slot Lock" [ref=e106] [cursor=pointer]:
+          - /url: "#section-API v3 - G1 Player Slot Lock"
+      - listitem [ref=e107]:
+        - link "API v3 - Golf Genius" [ref=e108] [cursor=pointer]:
+          - /url: "#section-API v3 - Golf Genius"
+      - listitem [ref=e109]:
+        - link "API v3 - Golf Plus" [ref=e110] [cursor=pointer]:
+          - /url: "#section-API v3 - Golf Plus"
+      - listitem [ref=e111]:
+        - link "API v3 - GolfNow Pricing" [ref=e112] [cursor=pointer]:
+          - /url: "#section-API v3 - GolfNow Pricing"
+      - listitem [ref=e113]:
+        - link "API v3 - Green Fees" [ref=e114] [cursor=pointer]:
+          - /url: "#section-API v3 - Green Fees"
+      - listitem [ref=e115]:
+        - link "API v3 - Handicaddie" [ref=e116] [cursor=pointer]:
+          - /url: "#section-API v3 - Handicaddie"
+      - listitem [ref=e117]:
+        - link "API v3 - HotDeals" [ref=e118] [cursor=pointer]:
+          - /url: "#section-API v3 - HotDeals"
+      - listitem [ref=e119]:
+        - link "API v3 - Licensing" [ref=e120] [cursor=pointer]:
+          - /url: "#section-API v3 - Licensing"
+      - listitem [ref=e121]:
+        - link "API v3 - Master Roster" [ref=e122] [cursor=pointer]:
+          - /url: "#section-API v3 - Master Roster"
+      - listitem [ref=e123]:
+        - link "API v3 - Member App Navigation" [ref=e124] [cursor=pointer]:
+          - /url: "#section-API v3 - Member App Navigation"
+      - listitem [ref=e125]:
+        - link "API v3 - Member Green Fee Rates" [ref=e126] [cursor=pointer]:
+          - /url: "#section-API v3 - Member Green Fee Rates"
+      - listitem [ref=e127]:
+        - link "API v3 - Member Guest Green Fees" [ref=e128] [cursor=pointer]:
+          - /url: "#section-API v3 - Member Guest Green Fees"
+      - listitem [ref=e129]:
+        - link "API v3 - Members" [ref=e130] [cursor=pointer]:
+          - /url: "#section-API v3 - Members"
+      - listitem [ref=e131]:
+        - link "API v3 - Membership Types" [ref=e132] [cursor=pointer]:
+          - /url: "#section-API v3 - Membership Types"
+      - listitem [ref=e133]:
+        - link "API v3 - Merchants" [ref=e134] [cursor=pointer]:
+          - /url: "#section-API v3 - Merchants"
+      - listitem [ref=e135]:
+        - link "API v3 - No Show Reasons" [ref=e136] [cursor=pointer]:
+          - /url: "#section-API v3 - No Show Reasons"
+      - listitem [ref=e137]:
+        - link "API v3 - Open Competitions" [ref=e138] [cursor=pointer]:
+          - /url: "#section-API v3 - Open Competitions"
+      - listitem [ref=e139]:
+        - link "API v3 - People" [ref=e140] [cursor=pointer]:
+          - /url: "#section-API v3 - People"
+      - listitem [ref=e141]:
+        - link "API v3 - Players" [ref=e142] [cursor=pointer]:
+          - /url: "#section-API v3 - Players"
+      - listitem [ref=e143]:
+        - link "API v3 - Push Tokens" [ref=e144] [cursor=pointer]:
+          - /url: "#section-API v3 - Push Tokens"
+      - listitem [ref=e145]:
+        - link "API v3 - RTS Tee Sheets" [ref=e146] [cursor=pointer]:
+          - /url: "#section-API v3 - RTS Tee Sheets"
+      - listitem [ref=e147]:
+        - link "API v3 - Reports" [ref=e148] [cursor=pointer]:
+          - /url: "#section-API v3 - Reports"
+      - listitem [ref=e149]:
+        - link "API v3 - Reservation Types" [ref=e150] [cursor=pointer]:
+          - /url: "#section-API v3 - Reservation Types"
+      - listitem [ref=e151]:
+        - link "API v3 - Squeeze Tee Times" [ref=e152] [cursor=pointer]:
+          - /url: "#section-API v3 - Squeeze Tee Times"
+      - listitem [ref=e153]:
+        - link "API v3 - Statistics" [ref=e154] [cursor=pointer]:
+          - /url: "#section-API v3 - Statistics"
+      - listitem [ref=e155]:
+        - link "API v3 - Stripe" [ref=e156] [cursor=pointer]:
+          - /url: "#section-API v3 - Stripe"
+      - listitem [ref=e157]:
+        - link "API v3 - Tee Sheet Data" [ref=e158] [cursor=pointer]:
+          - /url: "#section-API v3 - Tee Sheet Data"
+      - listitem [ref=e159]:
+        - link "API v3 - Tee Sheets" [ref=e160] [cursor=pointer]:
+          - /url: "#section-API v3 - Tee Sheets"
+      - listitem [ref=e161]:
+        - link "API v3 - Tee Time Transactions" [ref=e162] [cursor=pointer]:
+          - /url: "#section-API v3 - Tee Time Transactions"
+      - listitem [ref=e163]:
+        - link "API v3 - Tee Times" [ref=e164] [cursor=pointer]:
+          - /url: "#section-API v3 - Tee Times"
+      - listitem [ref=e165]:
+        - link "API v3 - Text Messaging" [ref=e166] [cursor=pointer]:
+          - /url: "#section-API v3 - Text Messaging"
+      - listitem [ref=e167]:
+        - link "API v3 - Users" [ref=e168] [cursor=pointer]:
+          - /url: "#section-API v3 - Users"
+      - listitem [ref=e169]:
+        - link "API v3 - Visitor Green Fee Rates" [ref=e170] [cursor=pointer]:
+          - /url: "#section-API v3 - Visitor Green Fee Rates"
+      - listitem [ref=e171]:
+        - link "API v3 - Visitor Tee Sheets" [ref=e172] [cursor=pointer]:
+          - /url: "#section-API v3 - Visitor Tee Sheets"
+      - listitem [ref=e173]:
+        - link "API v3 - Weather" [ref=e174] [cursor=pointer]:
+          - /url: "#section-API v3 - Weather"
+      - listitem [ref=e175]:
+        - link "_others" [ref=e176] [cursor=pointer]:
+          - /url: "#section-_others"
+    - listitem [ref=e177]:
+      - generic [ref=e178]: Show/hide List Operations Expand Operations
+      - heading "API Sync v1 - Users" [level=1] [ref=e179]
+      - list [ref=e180]:
+        - listitem [ref=e181]:
+          - 'heading "/api/sync/v1/clubs/{clubId}/users" [level=2] [ref=e183]'
+          - list [ref=e184]:
+            - listitem [ref=e185]:
+              - list [ref=e186]:
+                - listitem [ref=e187]:
+                  - generic [ref=e188] [cursor=pointer]:
+                    - 'heading "GET /api/sync/v1/clubs/{clubId}/users.{_format}" [level=3] [ref=e189]':
+                      - generic [ref=e191]: GET
+                      - text: "/api/sync/v1/clubs/{clubId}/users.{_format}"
+                    - list [ref=e192]:
+                      - listitem [ref=e193]: Returns all users
+                - listitem [ref=e194]:
+                  - generic [ref=e195] [cursor=pointer]:
+                    - 'heading "POST /api/sync/v1/clubs/{clubId}/users.{_format}" [level=3] [ref=e196]':
+                      - generic [ref=e198]: POST
+                      - text: "/api/sync/v1/clubs/{clubId}/users.{_format}"
+                    - list [ref=e199]:
+                      - listitem [ref=e200]: Creates a user
+        - listitem [ref=e201]:
+          - 'heading "/api/sync/v1/clubs/{clubId}/users/{commonId}" [level=2] [ref=e203]'
+          - list [ref=e204]:
+            - listitem [ref=e205]:
+              - list [ref=e206]:
+                - listitem [ref=e207]:
+                  - generic [ref=e208] [cursor=pointer]:
+                    - 'heading "DELETE /api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}" [level=3] [ref=e209]':
+                      - generic [ref=e211]: DELETE
+                      - text: "/api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}"
+                    - list [ref=e212]:
+                      - listitem [ref=e213]: Deletes a user
+                - listitem [ref=e214]:
+                  - generic [ref=e215] [cursor=pointer]:
+                    - 'heading "GET /api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}" [level=3] [ref=e216]':
+                      - generic [ref=e218]: GET
+                      - text: "/api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}"
+                    - list [ref=e219]:
+                      - listitem [ref=e220]: Returns a users by commonId
+                - listitem [ref=e221]:
+                  - generic [ref=e222] [cursor=pointer]:
+                    - 'heading "PATCH /api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}" [level=3] [ref=e223]':
+                      - generic [ref=e225]: PATCH
+                      - text: "/api/sync/v1/clubs/{clubId}/users/{commonId}.{_format}"
+                    - list [ref=e226]:
+                      - listitem [ref=e227]: Patches a user
+    - listitem [ref=e228]:
+      - generic [ref=e229]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Bookings" [level=1] [ref=e230]
+      - list [ref=e231]:
+        - listitem [ref=e232]:
+          - 'heading "/{clubId}/api/v1/bookings" [level=2] [ref=e234]'
+          - list [ref=e235]:
+            - listitem [ref=e236]:
+              - list [ref=e237]:
+                - listitem [ref=e238]:
+                  - generic [ref=e239] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/bookings.{_format}" [level=3] [ref=e240]':
+                      - generic [ref=e242]: GET
+                      - text: "/{clubId}/api/v1/bookings.{_format}"
+                    - list [ref=e243]:
+                      - listitem [ref=e244]: Returns a collection of Booking instances.
+        - listitem [ref=e245]:
+          - 'heading "/{clubId}/api/v1/bookings/search/{date}" [level=2] [ref=e247]'
+          - list [ref=e248]:
+            - listitem [ref=e249]:
+              - list [ref=e250]:
+                - listitem [ref=e251]:
+                  - generic [ref=e252] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/bookings/search/{date}.{_format}" [level=3] [ref=e253]':
+                      - generic [ref=e255]: GET
+                      - text: "/{clubId}/api/v1/bookings/search/{date}.{_format}"
+                    - list [ref=e256]:
+                      - listitem [ref=e257]: Returns bookings for a date.
+        - listitem [ref=e258]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}" [level=2] [ref=e260]'
+          - list [ref=e261]:
+            - listitem [ref=e262]:
+              - list [ref=e263]:
+                - listitem [ref=e264]:
+                  - generic [ref=e265] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/bookings/{booking}.{_format}" [level=3] [ref=e266]':
+                      - generic [ref=e268]: GET
+                      - text: "/{clubId}/api/v1/bookings/{booking}.{_format}"
+                    - list [ref=e269]:
+                      - listitem [ref=e270]: Returns a Booking instance.
+                - listitem [ref=e271]:
+                  - generic [ref=e272] [cursor=pointer]:
+                    - 'heading "PATCH /{clubId}/api/v1/bookings/{booking}.{_format}" [level=3] [ref=e273]':
+                      - generic [ref=e275]: PATCH
+                      - text: "/{clubId}/api/v1/bookings/{booking}.{_format}"
+                    - list [ref=e276]:
+                      - listitem [ref=e277]: Modify an existing Booking.
+        - listitem [ref=e278]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}/additional-items/{additionalItem}" [level=2] [ref=e280]'
+          - list [ref=e281]:
+            - listitem [ref=e282]:
+              - list [ref=e283]:
+                - listitem [ref=e284]:
+                  - generic [ref=e285] [cursor=pointer]:
+                    - 'heading "DELETE /{clubId}/api/v1/bookings/{booking}/additional-items/{additionalItem}.{_format}" [level=3] [ref=e286]':
+                      - generic [ref=e288]: DELETE
+                      - text: "/{clubId}/api/v1/bookings/{booking}/additional-items/{additionalItem}.{_format}"
+                    - list [ref=e289]:
+                      - listitem [ref=e290]: Deletes an additional item on the booking.
+        - listitem [ref=e291]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders" [level=2] [ref=e293]'
+          - list [ref=e294]:
+            - listitem [ref=e295]:
+              - list [ref=e296]:
+                - listitem [ref=e297]:
+                  - generic [ref=e298] [cursor=pointer]:
+                    - 'heading "POST /{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders.{_format}" [level=3] [ref=e299]':
+                      - generic [ref=e301]: POST
+                      - text: "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders.{_format}"
+                    - list [ref=e302]:
+                      - listitem [ref=e303]: Adds (marks paid) an EPOS Order from a collection of player green fees on an existing Booking.
+        - listitem [ref=e304]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders/{orderRef}" [level=2] [ref=e306]'
+          - list [ref=e307]:
+            - listitem [ref=e308]:
+              - list [ref=e309]:
+                - listitem [ref=e310]:
+                  - generic [ref=e311] [cursor=pointer]:
+                    - 'heading "DELETE /{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders/{orderRef}.{_format}" [level=3] [ref=e312]':
+                      - generic [ref=e314]: DELETE
+                      - text: "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/orders/{orderRef}.{_format}"
+                    - list [ref=e315]:
+                      - listitem [ref=e316]: Deletes (Voids) an EPOS Order from a collection of player green fees on an existing Booking.
+        - listitem [ref=e317]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/slots/{index}" [level=2] [ref=e319]'
+          - list [ref=e320]:
+            - listitem [ref=e321]:
+              - list [ref=e322]:
+                - listitem [ref=e323]:
+                  - generic [ref=e324] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/slots/{index}.{_format}" [level=3] [ref=e325]':
+                      - generic [ref=e327]: GET
+                      - text: "/{clubId}/api/v1/bookings/{booking}/courses/{courseId}/times/{teeTime}/slots/{index}.{_format}"
+                    - list [ref=e328]:
+                      - listitem [ref=e329]: Returns a Booked Tee Slot instance.
+        - listitem [ref=e330]:
+          - 'heading "/{clubId}/api/v1/bookings/{booking}/payments" [level=2] [ref=e332]'
+          - list [ref=e333]:
+            - listitem [ref=e334]:
+              - list [ref=e335]:
+                - listitem [ref=e336]:
+                  - generic [ref=e337] [cursor=pointer]:
+                    - 'heading "POST /{clubId}/api/v1/bookings/{booking}/payments.{_format}" [level=3] [ref=e338]':
+                      - generic [ref=e340]: POST
+                      - text: "/{clubId}/api/v1/bookings/{booking}/payments.{_format}"
+                    - list [ref=e341]:
+                      - listitem [ref=e342]: Submit a Payment for a given Booking.
+    - listitem [ref=e343]:
+      - generic [ref=e344]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Green Fees" [level=1] [ref=e345]
+      - list [ref=e346]:
+        - listitem [ref=e347]:
+          - 'heading "/{clubId}/api/v1/green-fee-rates" [level=2] [ref=e349]'
+          - list [ref=e350]:
+            - listitem [ref=e351]:
+              - list [ref=e352]:
+                - listitem [ref=e353]:
+                  - generic [ref=e354] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/green-fee-rates.{_format}" [level=3] [ref=e355]':
+                      - generic [ref=e357]: GET
+                      - text: "/{clubId}/api/v1/green-fee-rates.{_format}"
+                    - list [ref=e358]:
+                      - listitem [ref=e359]: Returns all Green Fee Rates for the club.
+        - listitem [ref=e360]:
+          - 'heading "/{clubId}/api/v1/green-fee-rates/{id}" [level=2] [ref=e362]'
+          - list [ref=e363]:
+            - listitem [ref=e364]:
+              - list [ref=e365]:
+                - listitem [ref=e366]:
+                  - generic [ref=e367] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/green-fee-rates/{id}.{_format}" [level=3] [ref=e368]':
+                      - generic [ref=e370]: GET
+                      - text: "/{clubId}/api/v1/green-fee-rates/{id}.{_format}"
+                    - list [ref=e371]:
+                      - listitem [ref=e372]: Returns a Green Fee Rates for the club.
+    - listitem [ref=e373]:
+      - generic [ref=e374]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Reservation Types" [level=1] [ref=e375]
+      - list [ref=e376]:
+        - listitem [ref=e377]:
+          - 'heading "/{clubId}/api/v1/reservation-types" [level=2] [ref=e379]'
+          - list [ref=e380]:
+            - listitem [ref=e381]:
+              - list [ref=e382]:
+                - listitem [ref=e383]:
+                  - generic [ref=e384] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/reservation-types.{_format}" [level=3] [ref=e385]':
+                      - generic [ref=e387]: GET
+                      - text: "/{clubId}/api/v1/reservation-types.{_format}"
+                    - list [ref=e388]:
+                      - listitem [ref=e389]: Returns all Reservation Types for the club.
+    - listitem [ref=e390]:
+      - generic [ref=e391]: Show/hide List Operations Expand Operations
+      - heading "API v1 - System Configuration" [level=1] [ref=e392]
+      - list [ref=e393]:
+        - listitem [ref=e394]:
+          - heading "/api/admin/v1/configuration/settings" [level=2] [ref=e396]
+          - list [ref=e397]:
+            - listitem [ref=e398]:
+              - list [ref=e399]:
+                - listitem [ref=e400]:
+                  - generic [ref=e401] [cursor=pointer]:
+                    - 'heading "GET /api/admin/v1/configuration/settings.{_format}" [level=3] [ref=e402]':
+                      - generic [ref=e404]: GET
+                      - text: "/api/admin/v1/configuration/settings.{_format}"
+                    - list [ref=e405]:
+                      - listitem [ref=e406]: List configuration settings and their allowed values
+    - listitem [ref=e407]:
+      - generic [ref=e408]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Tee Sheets" [level=1] [ref=e409]
+      - list [ref=e410]:
+        - listitem [ref=e411]:
+          - list [ref=e413]:
+            - listitem [ref=e414]:
+              - list [ref=e415]:
+                - listitem [ref=e416]:
+                  - generic [ref=e417] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/tee-sheets/{courseId}/{date}/statistics.{_format}" [level=3] [ref=e418]':
+                      - generic [ref=e420]: GET
+                      - text: "/{clubId}/api/v1/tee-sheets/{courseId}/{date}/statistics.{_format}"
+                    - list [ref=e421]:
+                      - listitem [ref=e422]: Returns Tee Sheet statistics for a given course and date.
+                - listitem [ref=e423]:
+                  - generic [ref=e424] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/tee-sheets/{courseId}/{date}/version.{_format}" [level=3] [ref=e425]':
+                      - generic [ref=e427]: GET
+                      - text: "/{clubId}/api/v1/tee-sheets/{courseId}/{date}/version.{_format}"
+                    - list [ref=e428]:
+                      - listitem [ref=e429]: Returns the current version (the last transaction id) of the Tee Sheet.
+                - listitem [ref=e430]:
+                  - generic [ref=e431] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/tee-sheets/{date}/weather.{_format}" [level=3] [ref=e432]':
+                      - generic [ref=e434]: GET
+                      - text: "/{clubId}/api/v1/tee-sheets/{date}/weather.{_format}"
+                    - list [ref=e435]:
+                      - listitem [ref=e436]: Returns the weather/info banner weather markup for a course/date.
+                - listitem [ref=e437]:
+                  - generic [ref=e438] [cursor=pointer]:
+                    - 'heading "POST /{clubId}/webapi/tee-sheets/{courseId}/{date}/squeeze-tee-time.{_format}" [level=3] [ref=e439]':
+                      - generic [ref=e441]: POST
+                      - text: "/{clubId}/webapi/tee-sheets/{courseId}/{date}/squeeze-tee-time.{_format}"
+                    - list [ref=e442]:
+                      - listitem [ref=e443]: Inserts a tee time on a given course and date between the passed tee times.
+                - listitem [ref=e444]:
+                  - generic [ref=e445] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/tee-sheets/{courseId}/{date}/statistics.{_format}" [level=3] [ref=e446]':
+                      - generic [ref=e448]: GET
+                      - text: "/{clubId}/webapi/tee-sheets/{courseId}/{date}/statistics.{_format}"
+                    - list [ref=e449]:
+                      - listitem [ref=e450]: Returns Tee Sheet statistics for a given course and date.
+                - listitem [ref=e451]:
+                  - generic [ref=e452] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/tee-sheets/{courseId}/{date}/version.{_format}" [level=3] [ref=e453]':
+                      - generic [ref=e455]: GET
+                      - text: "/{clubId}/webapi/tee-sheets/{courseId}/{date}/version.{_format}"
+                    - list [ref=e456]:
+                      - listitem [ref=e457]: Returns the current version (the last transaction id) of the Tee Sheet.
+                - listitem [ref=e458]:
+                  - generic [ref=e459] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/tee-sheets/{date}/weather.{_format}" [level=3] [ref=e460]':
+                      - generic [ref=e462]: GET
+                      - text: "/{clubId}/webapi/tee-sheets/{date}/weather.{_format}"
+                    - list [ref=e463]:
+                      - listitem [ref=e464]: Returns the weather/info banner weather markup for a course/date.
+    - listitem [ref=e465]:
+      - generic [ref=e466]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Users" [level=1] [ref=e467]
+      - list [ref=e468]:
+        - listitem [ref=e469]:
+          - 'heading "/{clubId}/api/v1/security/groups" [level=2] [ref=e471]'
+          - list [ref=e472]:
+            - listitem [ref=e473]:
+              - list [ref=e474]:
+                - listitem [ref=e475]:
+                  - generic [ref=e476] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/security/groups.{_format}" [level=3] [ref=e477]':
+                      - generic [ref=e479]: GET
+                      - text: "/{clubId}/api/v1/security/groups.{_format}"
+                    - list [ref=e480]:
+                      - listitem [ref=e481]: Returns a collection of User Groups.
+        - listitem [ref=e482]:
+          - 'heading "/{clubId}/api/v1/user" [level=2] [ref=e484]'
+          - list [ref=e485]:
+            - listitem [ref=e486]:
+              - list [ref=e487]:
+                - listitem [ref=e488]:
+                  - generic [ref=e489] [cursor=pointer]:
+                    - 'heading "DELETE /{clubId}/api/v1/user.{_format}" [level=3] [ref=e490]':
+                      - generic [ref=e492]: DELETE
+                      - text: "/{clubId}/api/v1/user.{_format}"
+                    - list [ref=e493]:
+                      - listitem [ref=e494]: Deletes a User instance.
+                - listitem [ref=e495]:
+                  - generic [ref=e496] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/user.{_format}" [level=3] [ref=e497]':
+                      - generic [ref=e499]: GET
+                      - text: "/{clubId}/api/v1/user.{_format}"
+                    - list [ref=e500]:
+                      - listitem [ref=e501]: Returns a User instance.
+                - listitem [ref=e502]:
+                  - generic [ref=e503] [cursor=pointer]:
+                    - 'heading "PATCH /{clubId}/api/v1/user.{_format}" [level=3] [ref=e504]':
+                      - generic [ref=e506]: PATCH
+                      - text: "/{clubId}/api/v1/user.{_format}"
+                    - list [ref=e507]:
+                      - listitem [ref=e508]: Updates a User instance.
+                - listitem [ref=e509]:
+                  - generic [ref=e510] [cursor=pointer]:
+                    - 'heading "PUT /{clubId}/api/v1/user.{_format}" [level=3] [ref=e511]':
+                      - generic [ref=e513]: PUT
+                      - text: "/{clubId}/api/v1/user.{_format}"
+                    - list [ref=e514]:
+                      - listitem [ref=e515]: Updates a User instance or creates a new User.
+        - listitem [ref=e516]:
+          - 'heading "/{clubId}/api/v1/user-groups" [level=2] [ref=e518]'
+          - list [ref=e519]:
+            - listitem [ref=e520]:
+              - list [ref=e521]:
+                - listitem [ref=e522]:
+                  - generic [ref=e523] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/user-groups.{_format}" [level=3] [ref=e524]':
+                      - generic [ref=e526]: GET
+                      - text: "/{clubId}/api/v1/user-groups.{_format}"
+                    - list [ref=e527]:
+                      - listitem [ref=e528]: Returns a collection of User Groups.
+        - listitem [ref=e529]:
+          - 'heading "/{clubId}/api/v1/users" [level=2] [ref=e531]'
+          - list [ref=e532]:
+            - listitem [ref=e533]:
+              - list [ref=e534]:
+                - listitem [ref=e535]:
+                  - generic [ref=e536] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/users.{_format}" [level=3] [ref=e537]':
+                      - generic [ref=e539]: GET
+                      - text: "/{clubId}/api/v1/users.{_format}"
+                    - list [ref=e540]:
+                      - listitem [ref=e541]: Returns a collection of Users.
+                - listitem [ref=e542]:
+                  - generic [ref=e543] [cursor=pointer]:
+                    - 'heading "POST /{clubId}/api/v1/users.{_format}" [level=3] [ref=e544]':
+                      - generic [ref=e546]: POST
+                      - text: "/{clubId}/api/v1/users.{_format}"
+                    - list [ref=e547]:
+                      - listitem [ref=e548]: Creates a new user from the submitted data.
+    - listitem [ref=e549]:
+      - generic [ref=e550]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Bookings" [level=1] [ref=e551]
+      - list [ref=e552]:
+        - listitem [ref=e553]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings" [level=2] [ref=e555]'
+          - list [ref=e556]:
+            - listitem [ref=e557]:
+              - list [ref=e558]:
+                - listitem [ref=e559]:
+                  - generic [ref=e560] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/bookings.{_format}" [level=3] [ref=e561]':
+                      - generic [ref=e563]: POST
+                      - text: "/api/v2/clubs/{clubId}/bookings.{_format}"
+                    - list [ref=e564]:
+                      - listitem [ref=e565]: Creates a new booking from the submitted data.
+        - listitem [ref=e566]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/cancel" [level=2] [ref=e568]'
+          - list [ref=e569]:
+            - listitem [ref=e570]:
+              - list [ref=e571]:
+                - listitem [ref=e572]:
+                  - generic [ref=e573] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/bookings/{booking}/cancel.{_format}" [level=3] [ref=e574]':
+                      - generic [ref=e576]: POST
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/cancel.{_format}"
+                    - list [ref=e577]:
+                      - listitem [ref=e578]: Cancels a booking.
+        - listitem [ref=e579]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots" [level=2] [ref=e581]'
+          - list [ref=e582]:
+            - listitem [ref=e583]:
+              - list [ref=e584]:
+                - listitem [ref=e585]:
+                  - generic [ref=e586] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots.{_format}" [level=3] [ref=e587]':
+                      - generic [ref=e589]: POST
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots.{_format}"
+                    - list [ref=e590]:
+                      - listitem [ref=e591]: Creates a booked-slot by adding a player to an existing booking.
+        - listitem [ref=e592]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots/{index}" [level=2] [ref=e594]'
+          - list [ref=e595]:
+            - listitem [ref=e596]:
+              - list [ref=e597]:
+                - listitem [ref=e598]:
+                  - generic [ref=e599] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots/{index}.{_format}" [level=3] [ref=e600]':
+                      - generic [ref=e602]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots/{index}.{_format}"
+                    - list [ref=e603]:
+                      - listitem [ref=e604]: Removes a booked-slot from an existing booking.
+                - listitem [ref=e605]:
+                  - generic [ref=e606] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots/{index}.{_format}" [level=3] [ref=e607]':
+                      - generic [ref=e609]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/booked-slots/{index}.{_format}"
+                    - list [ref=e610]:
+                      - listitem [ref=e611]: Updates a booked-slot by updating a player on an existing booking.
+        - listitem [ref=e612]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/move" [level=2] [ref=e614]'
+          - list [ref=e615]:
+            - listitem [ref=e616]:
+              - list [ref=e617]:
+                - listitem [ref=e618]:
+                  - generic [ref=e619] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/move.{_format}" [level=3] [ref=e620]':
+                      - generic [ref=e622]: POST
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/courses/{course}/tee-sheets/{date}/tee-times/{time}/move.{_format}"
+                    - list [ref=e623]:
+                      - listitem [ref=e624]: Moves a booked tee-time to an alternative available tee-time.
+        - listitem [ref=e625]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/line-items" [level=2] [ref=e627]'
+          - list [ref=e628]:
+            - listitem [ref=e629]:
+              - list [ref=e630]:
+                - listitem [ref=e631]:
+                  - generic [ref=e632] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/bookings/{booking}/line-items.{_format}" [level=3] [ref=e633]':
+                      - generic [ref=e635]: GET
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/line-items.{_format}"
+                    - list [ref=e636]:
+                      - listitem [ref=e637]: Gets a list of line items associated with a booking.
+        - listitem [ref=e638]:
+          - 'heading "/api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}" [level=2] [ref=e640]'
+          - list [ref=e641]:
+            - listitem [ref=e642]:
+              - list [ref=e643]:
+                - listitem [ref=e644]:
+                  - generic [ref=e645] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}" [level=3] [ref=e646]':
+                      - generic [ref=e648]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}"
+                    - list [ref=e649]:
+                      - listitem [ref=e650]: Deletes a line item from a booking.
+                - listitem [ref=e651]:
+                  - generic [ref=e652] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}" [level=3] [ref=e653]':
+                      - generic [ref=e655]: GET
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}"
+                    - list [ref=e656]:
+                      - listitem [ref=e657]: Gets an individual line items associated with a booking.
+                - listitem [ref=e658]:
+                  - generic [ref=e659] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}" [level=3] [ref=e660]':
+                      - generic [ref=e662]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/bookings/{booking}/line-items/{itemId}.{_format}"
+                    - list [ref=e663]:
+                      - listitem [ref=e664]: Updates the quantity and price of a line item within a booking.
+    - listitem [ref=e665]:
+      - generic [ref=e666]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Clubs" [level=1] [ref=e667]
+      - list [ref=e668]:
+        - listitem [ref=e669]:
+          - heading "/api/v2/clubs" [level=2] [ref=e671]
+          - list [ref=e672]:
+            - listitem [ref=e673]:
+              - list [ref=e674]:
+                - listitem [ref=e675]:
+                  - generic [ref=e676] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs.{_format}" [level=3] [ref=e677]':
+                      - generic [ref=e679]: GET
+                      - text: "/api/v2/clubs.{_format}"
+                    - list [ref=e680]:
+                      - listitem [ref=e681]: Returns a list of mobile enabled clubs.
+    - listitem [ref=e682]:
+      - generic [ref=e683]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Competitions" [level=1] [ref=e684]
+      - list [ref=e685]:
+        - listitem [ref=e686]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions" [level=2] [ref=e688]'
+          - list [ref=e689]:
+            - listitem [ref=e690]:
+              - list [ref=e691]:
+                - listitem [ref=e692]:
+                  - generic [ref=e693] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions.{_format}" [level=3] [ref=e694]':
+                      - generic [ref=e696]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions.{_format}"
+                    - list [ref=e697]:
+                      - listitem [ref=e698]: Returns the members competitions.
+                - listitem [ref=e699]:
+                  - generic [ref=e700] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/competitions/{competition}/entry-player.{_format}" [level=3] [ref=e701]':
+                      - generic [ref=e703]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/entry-player.{_format}"
+                    - list [ref=e704]:
+                      - listitem [ref=e705]: Deletes the logged in member's entry on a competition.
+        - listitem [ref=e706]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/count" [level=2] [ref=e708]'
+          - list [ref=e709]:
+            - listitem [ref=e710]:
+              - list [ref=e711]:
+                - listitem [ref=e712]:
+                  - generic [ref=e713] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/count.{_format}" [level=3] [ref=e714]':
+                      - generic [ref=e716]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/count.{_format}"
+                    - list [ref=e717]:
+                      - listitem [ref=e718]: Returns a count of members competitions.
+        - listitem [ref=e719]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist" [level=2] [ref=e721]'
+          - list [ref=e722]:
+            - listitem [ref=e723]:
+              - list [ref=e724]:
+                - listitem [ref=e725]:
+                  - generic [ref=e726] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist.{_format}" [level=3] [ref=e727]':
+                      - generic [ref=e729]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist.{_format}"
+                    - list [ref=e730]:
+                      - listitem [ref=e731]: Returns the waiting list entries for a draw competition.
+                - listitem [ref=e732]:
+                  - generic [ref=e733] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist.{_format}" [level=3] [ref=e734]':
+                      - generic [ref=e736]: POST
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist.{_format}"
+                    - list [ref=e737]:
+                      - listitem [ref=e738]: Creates a new waiting list entry on a draw competition for a member.
+        - listitem [ref=e739]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist/{entry}" [level=2] [ref=e741]'
+          - list [ref=e742]:
+            - listitem [ref=e743]:
+              - list [ref=e744]:
+                - listitem [ref=e745]:
+                  - generic [ref=e746] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist/{entry}.{_format}" [level=3] [ref=e747]':
+                      - generic [ref=e749]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist/{entry}.{_format}"
+                    - list [ref=e750]:
+                      - listitem [ref=e751]: Deletes a draw waiting list entry on a competition.
+                - listitem [ref=e752]:
+                  - generic [ref=e753] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist/{entry}.{_format}" [level=3] [ref=e754]':
+                      - generic [ref=e756]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/draw-waitinglist/{entry}.{_format}"
+                    - list [ref=e757]:
+                      - listitem [ref=e758]: Returns a draw waiting list entry for a competition.
+        - listitem [ref=e759]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/entries" [level=2] [ref=e761]'
+          - list [ref=e762]:
+            - listitem [ref=e763]:
+              - list [ref=e764]:
+                - listitem [ref=e765]:
+                  - generic [ref=e766] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/competitions/{competition}/entries.{_format}" [level=3] [ref=e767]':
+                      - generic [ref=e769]: POST
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/entries.{_format}"
+                    - list [ref=e770]:
+                      - listitem [ref=e771]: Creates new competition entries with members.
+        - listitem [ref=e772]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/entries/availability" [level=2] [ref=e774]'
+          - list [ref=e775]:
+            - listitem [ref=e776]:
+              - list [ref=e777]:
+                - listitem [ref=e778]:
+                  - generic [ref=e779] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/{competition}/entries/availability.{_format}" [level=3] [ref=e780]':
+                      - generic [ref=e782]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/entries/availability.{_format}"
+                    - list [ref=e783]:
+                      - listitem [ref=e784]: Get available competition entry availability.
+        - listitem [ref=e785]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist" [level=2] [ref=e787]'
+          - list [ref=e788]:
+            - listitem [ref=e789]:
+              - list [ref=e790]:
+                - listitem [ref=e791]:
+                  - generic [ref=e792] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/{competition}/waitinglist.{_format}" [level=3] [ref=e793]':
+                      - generic [ref=e795]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist.{_format}"
+                    - list [ref=e796]:
+                      - listitem [ref=e797]: Returns the waiting list entries for a competition.
+                - listitem [ref=e798]:
+                  - generic [ref=e799] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/competitions/{competition}/waitinglist.{_format}" [level=3] [ref=e800]':
+                      - generic [ref=e802]: POST
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist.{_format}"
+                    - list [ref=e803]:
+                      - listitem [ref=e804]: Creates a new waiting list entry on a competition for a member.
+        - listitem [ref=e805]:
+          - 'heading "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist/{entry}" [level=2] [ref=e807]'
+          - list [ref=e808]:
+            - listitem [ref=e809]:
+              - list [ref=e810]:
+                - listitem [ref=e811]:
+                  - generic [ref=e812] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/competitions/{competition}/waitinglist/{entry}.{_format}" [level=3] [ref=e813]':
+                      - generic [ref=e815]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist/{entry}.{_format}"
+                    - list [ref=e816]:
+                      - listitem [ref=e817]: Deletes a waiting list entry on a competition.
+                - listitem [ref=e818]:
+                  - generic [ref=e819] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/competitions/{competition}/waitinglist/{entry}.{_format}" [level=3] [ref=e820]':
+                      - generic [ref=e822]: GET
+                      - text: "/api/v2/clubs/{clubId}/competitions/{competition}/waitinglist/{entry}.{_format}"
+                    - list [ref=e823]:
+                      - listitem [ref=e824]: Returns a waiting list entry for a competition.
+    - listitem [ref=e825]:
+      - generic [ref=e826]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Configuration" [level=1] [ref=e827]
+      - list [ref=e828]:
+        - listitem [ref=e829]:
+          - 'heading "/api/v2/clubs/{clubId}/configurations" [level=2] [ref=e831]'
+          - list [ref=e832]:
+            - listitem [ref=e833]:
+              - list [ref=e834]:
+                - listitem [ref=e835]:
+                  - generic [ref=e836] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/configurations.{_format}" [level=3] [ref=e837]':
+                      - generic [ref=e839]: GET
+                      - text: "/api/v2/clubs/{clubId}/configurations.{_format}"
+                    - list [ref=e840]:
+                      - listitem [ref=e841]: Returns a collection of configuration resources for a club.
+                - listitem [ref=e842]:
+                  - generic [ref=e843] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/configurations.{_format}" [level=3] [ref=e844]':
+                      - generic [ref=e846]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/configurations.{_format}"
+                    - list [ref=e847]:
+                      - listitem [ref=e848]: Updates configuration resources for a club.
+        - listitem [ref=e849]:
+          - 'heading "/api/v2/clubs/{clubId}/configurations/{key}" [level=2] [ref=e851]'
+          - list [ref=e852]:
+            - listitem [ref=e853]:
+              - list [ref=e854]:
+                - listitem [ref=e855]:
+                  - generic [ref=e856] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/configurations/{key}.{_format}" [level=3] [ref=e857]':
+                      - generic [ref=e859]: GET
+                      - text: "/api/v2/clubs/{clubId}/configurations/{key}.{_format}"
+                    - list [ref=e860]:
+                      - listitem [ref=e861]: Returns a configuration resource for a club.
+    - listitem [ref=e862]:
+      - generic [ref=e863]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Contacts" [level=1] [ref=e864]
+      - list [ref=e865]:
+        - listitem [ref=e866]:
+          - 'heading "/api/v2/clubs/{clubId}/contacts" [level=2] [ref=e868]'
+          - list [ref=e869]:
+            - listitem [ref=e870]:
+              - list [ref=e871]:
+                - listitem [ref=e872]:
+                  - generic [ref=e873] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/contacts.{_format}" [level=3] [ref=e874]':
+                      - generic [ref=e876]: GET
+                      - text: "/api/v2/clubs/{clubId}/contacts.{_format}"
+                    - list [ref=e877]:
+                      - listitem [ref=e878]: Returns contacts from either BRS or Booker repository.
+                - listitem [ref=e879]:
+                  - generic [ref=e880] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/contacts.{_format}" [level=3] [ref=e881]':
+                      - generic [ref=e883]: POST
+                      - text: "/api/v2/clubs/{clubId}/contacts.{_format}"
+                    - list [ref=e884]:
+                      - listitem [ref=e885]: Creates a new contact from the submitted data.
+        - listitem [ref=e886]:
+          - 'heading "/api/v2/clubs/{clubId}/contacts/{contact}/bookings" [level=2] [ref=e888]'
+          - list [ref=e889]:
+            - listitem [ref=e890]:
+              - list [ref=e891]:
+                - listitem [ref=e892]:
+                  - generic [ref=e893] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/contacts/{contact}/bookings.{_format}" [level=3] [ref=e894]':
+                      - generic [ref=e896]: GET
+                      - text: "/api/v2/clubs/{clubId}/contacts/{contact}/bookings.{_format}"
+                    - list [ref=e897]:
+                      - listitem [ref=e898]: Returns the contact playing history.
+        - listitem [ref=e899]:
+          - 'heading "/api/v2/clubs/{clubId}/contacts/{id}" [level=2] [ref=e901]'
+          - list [ref=e902]:
+            - listitem [ref=e903]:
+              - list [ref=e904]:
+                - listitem [ref=e905]:
+                  - generic [ref=e906] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/contacts/{id}.{_format}" [level=3] [ref=e907]':
+                      - generic [ref=e909]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}.{_format}"
+                    - list [ref=e910]:
+                      - listitem [ref=e911]: Deletes a contact.
+                - listitem [ref=e912]:
+                  - generic [ref=e913] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/contacts/{id}.{_format}" [level=3] [ref=e914]':
+                      - generic [ref=e916]: GET
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}.{_format}"
+                    - list [ref=e917]:
+                      - listitem [ref=e918]: Gets a contact.
+                - listitem [ref=e919]:
+                  - generic [ref=e920] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/contacts/{id}.{_format}" [level=3] [ref=e921]':
+                      - generic [ref=e923]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}.{_format}"
+                    - list [ref=e924]:
+                      - listitem [ref=e925]: Partially updates a contact with the submitted data.
+                - listitem [ref=e926]:
+                  - generic [ref=e927] [cursor=pointer]:
+                    - 'heading "PUT /api/v2/clubs/{clubId}/contacts/{id}.{_format}" [level=3] [ref=e928]':
+                      - generic [ref=e930]: PUT
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}.{_format}"
+                    - list [ref=e931]:
+                      - listitem [ref=e932]: Updates a complete contact with the submitted data.
+        - listitem [ref=e933]:
+          - 'heading "/api/v2/clubs/{clubId}/contacts/{id}/consented" [level=2] [ref=e935]'
+          - list [ref=e936]:
+            - listitem [ref=e937]:
+              - list [ref=e938]:
+                - listitem [ref=e939]:
+                  - generic [ref=e940] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/contacts/{id}/consented.{_format}" [level=3] [ref=e941]':
+                      - generic [ref=e943]: GET
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}/consented.{_format}"
+                    - list [ref=e944]:
+                      - listitem [ref=e945]: Returns contacts consented.
+        - listitem [ref=e946]:
+          - 'heading "/api/v2/clubs/{clubId}/contacts/{id}/membership-types" [level=2] [ref=e948]'
+          - list [ref=e949]:
+            - listitem [ref=e950]:
+              - list [ref=e951]:
+                - listitem [ref=e952]:
+                  - generic [ref=e953] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/contacts/{id}/membership-types.{_format}" [level=3] [ref=e954]':
+                      - generic [ref=e956]: GET
+                      - text: "/api/v2/clubs/{clubId}/contacts/{id}/membership-types.{_format}"
+                    - list [ref=e957]:
+                      - listitem [ref=e958]: Returns an array of Contact membership types.
+        - listitem [ref=e959]:
+          - 'heading "/{clubId}/api/v1/contacts/{id}/membership-types" [level=2] [ref=e961]'
+          - list [ref=e962]:
+            - listitem [ref=e963]:
+              - list [ref=e964]:
+                - listitem [ref=e965]:
+                  - generic [ref=e966] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/api/v1/contacts/{id}/membership-types.{_format}" [level=3] [ref=e967]':
+                      - generic [ref=e969]: GET
+                      - text: "/{clubId}/api/v1/contacts/{id}/membership-types.{_format}"
+                    - list [ref=e970]:
+                      - listitem [ref=e971]: Returns an array of Contact membership types.
+        - listitem [ref=e972]:
+          - 'heading "/{clubId}/webapi/contacts/{id}" [level=2] [ref=e974]'
+          - list [ref=e975]:
+            - listitem [ref=e976]:
+              - list [ref=e977]:
+                - listitem [ref=e978]:
+                  - generic [ref=e979] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/contacts/{id}.{_format}" [level=3] [ref=e980]':
+                      - generic [ref=e982]: GET
+                      - text: "/{clubId}/webapi/contacts/{id}.{_format}"
+                    - list [ref=e983]:
+                      - listitem [ref=e984]: Gets a contact.
+        - listitem [ref=e985]:
+          - 'heading "/{clubId}/webapi/contacts/{id}/consented" [level=2] [ref=e987]'
+          - list [ref=e988]:
+            - listitem [ref=e989]:
+              - list [ref=e990]:
+                - listitem [ref=e991]:
+                  - generic [ref=e992] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/contacts/{id}/consented.{_format}" [level=3] [ref=e993]':
+                      - generic [ref=e995]: GET
+                      - text: "/{clubId}/webapi/contacts/{id}/consented.{_format}"
+                    - list [ref=e996]:
+                      - listitem [ref=e997]: Returns contacts consented.
+        - listitem [ref=e998]:
+          - 'heading "/{clubId}/webapi/contacts/{id}/membership-types" [level=2] [ref=e1000]'
+          - list [ref=e1001]:
+            - listitem [ref=e1002]:
+              - list [ref=e1003]:
+                - listitem [ref=e1004]:
+                  - generic [ref=e1005] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/contacts/{id}/membership-types.{_format}" [level=3] [ref=e1006]':
+                      - generic [ref=e1008]: GET
+                      - text: "/{clubId}/webapi/contacts/{id}/membership-types.{_format}"
+                    - list [ref=e1009]:
+                      - listitem [ref=e1010]: Returns an array of Contact membership types.
+    - listitem [ref=e1011]:
+      - generic [ref=e1012]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Courses" [level=1] [ref=e1013]
+      - list [ref=e1014]:
+        - listitem [ref=e1015]:
+          - 'heading "/api/v2/clubs/{clubId}/courses" [level=2] [ref=e1017]'
+          - list [ref=e1018]:
+            - listitem [ref=e1019]:
+              - list [ref=e1020]:
+                - listitem [ref=e1021]:
+                  - generic [ref=e1022] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/courses.{_format}" [level=3] [ref=e1023]':
+                      - generic [ref=e1025]: GET
+                      - text: "/api/v2/clubs/{clubId}/courses.{_format}"
+                    - list [ref=e1026]:
+                      - listitem [ref=e1027]: Returns active courses for the club.
+    - listitem [ref=e1028]:
+      - generic [ref=e1029]: Show/hide List Operations Expand Operations
+      - heading "API v2 - G1 Green Fee Packages" [level=1] [ref=e1030]
+      - list [ref=e1031]:
+        - listitem [ref=e1032]:
+          - 'heading "/api/v2/clubs/{clubId}/g1-packages" [level=2] [ref=e1034]'
+          - list [ref=e1035]:
+            - listitem [ref=e1036]:
+              - list [ref=e1037]:
+                - listitem [ref=e1038]:
+                  - generic [ref=e1039] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/g1-packages.{_format} G1 Clubs Only" [level=3] [ref=e1040]':
+                      - generic [ref=e1042]: GET
+                      - text: "/api/v2/clubs/{clubId}/g1-packages.{_format} G1 Clubs Only"
+                    - list [ref=e1043]:
+                      - listitem [ref=e1044]: Gets a list of G1 Packages that contain a Green Fee Rate
+                - listitem [ref=e1045]:
+                  - generic [ref=e1046] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/g1-packages.{_format} G1 Clubs Only" [level=3] [ref=e1047]':
+                      - generic [ref=e1049]: POST
+                      - text: "/api/v2/clubs/{clubId}/g1-packages.{_format} G1 Clubs Only"
+                    - list [ref=e1050]:
+                      - listitem [ref=e1051]: Creates a new Tee-sheet G1 Package containing a Green Fee Rate.
+        - listitem [ref=e1052]:
+          - 'heading "/api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}" [level=2] [ref=e1054]'
+          - list [ref=e1055]:
+            - listitem [ref=e1056]:
+              - list [ref=e1057]:
+                - listitem [ref=e1058]:
+                  - generic [ref=e1059] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only" [level=3] [ref=e1060]':
+                      - generic [ref=e1062]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only"
+                    - list [ref=e1063]:
+                      - listitem [ref=e1064]: Deletes a Tee-sheet representation of a G1 Package
+                - listitem [ref=e1065]:
+                  - generic [ref=e1066] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only" [level=3] [ref=e1067]':
+                      - generic [ref=e1069]: GET
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only"
+                    - list [ref=e1070]:
+                      - listitem [ref=e1071]: Gets a Tee-sheet representation of a G1 Package
+                - listitem [ref=e1072]:
+                  - generic [ref=e1073] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only" [level=3] [ref=e1074]':
+                      - generic [ref=e1076]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only"
+                    - list [ref=e1077]:
+                      - listitem [ref=e1078]: Updates a partial Tee-sheet representation of a G1 Package
+                - listitem [ref=e1079]:
+                  - generic [ref=e1080] [cursor=pointer]:
+                    - 'heading "PUT /api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only" [level=3] [ref=e1081]':
+                      - generic [ref=e1083]: PUT
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/pos-{posIdentifier}.{_format} G1 Clubs Only"
+                    - list [ref=e1084]:
+                      - listitem [ref=e1085]: Updates a complete Tee-sheet representation of a G1 Package
+        - listitem [ref=e1086]:
+          - 'heading "/api/v2/clubs/{clubId}/g1-packages/{id}" [level=2] [ref=e1088]'
+          - list [ref=e1089]:
+            - listitem [ref=e1090]:
+              - list [ref=e1091]:
+                - listitem [ref=e1092]:
+                  - generic [ref=e1093] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only" [level=3] [ref=e1094]':
+                      - generic [ref=e1096]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only"
+                    - list [ref=e1097]:
+                      - listitem [ref=e1098]: Deletes a Tee-sheet representation of a G1 Package
+                - listitem [ref=e1099]:
+                  - generic [ref=e1100] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only" [level=3] [ref=e1101]':
+                      - generic [ref=e1103]: GET
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only"
+                    - list [ref=e1104]:
+                      - listitem [ref=e1105]: Gets a Tee-sheet representation of a G1 Package
+                - listitem [ref=e1106]:
+                  - generic [ref=e1107] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only" [level=3] [ref=e1108]':
+                      - generic [ref=e1110]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only"
+                    - list [ref=e1111]:
+                      - listitem [ref=e1112]: Updates a Tee Sheet Green Fee Package associated with G1.
+                - listitem [ref=e1113]:
+                  - generic [ref=e1114] [cursor=pointer]:
+                    - 'heading "PUT /api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only" [level=3] [ref=e1115]':
+                      - generic [ref=e1117]: PUT
+                      - text: "/api/v2/clubs/{clubId}/g1-packages/{id}.{_format} G1 Clubs Only"
+                    - list [ref=e1118]:
+                      - listitem [ref=e1119]: Updates a complete Tee-sheet representation of a G1 Package
+    - listitem [ref=e1120]:
+      - generic [ref=e1121]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Member Casual Booking Rules" [level=1] [ref=e1122]
+      - list [ref=e1123]:
+        - listitem [ref=e1124]:
+          - 'heading "/api/v2/clubs/{clubId}/member-casual-rules" [level=2] [ref=e1126]'
+          - list [ref=e1127]:
+            - listitem [ref=e1128]:
+              - list [ref=e1129]:
+                - listitem [ref=e1130]:
+                  - generic [ref=e1131] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/member-casual-rules.{_format}" [level=3] [ref=e1132]':
+                      - generic [ref=e1134]: GET
+                      - text: "/api/v2/clubs/{clubId}/member-casual-rules.{_format}"
+                    - list [ref=e1135]:
+                      - listitem [ref=e1136]: Returns the casual booking rules for a member.
+    - listitem [ref=e1137]:
+      - generic [ref=e1138]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Members" [level=1] [ref=e1139]
+      - list [ref=e1140]:
+        - listitem [ref=e1141]:
+          - 'heading "/api/v2/clubs/{clubId}/members" [level=2] [ref=e1143]'
+          - list [ref=e1144]:
+            - listitem [ref=e1145]:
+              - list [ref=e1146]:
+                - listitem [ref=e1147]:
+                  - generic [ref=e1148] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members.{_format}" [level=3] [ref=e1149]':
+                      - generic [ref=e1151]: GET
+                      - text: "/api/v2/clubs/{clubId}/members.{_format}"
+                    - list [ref=e1152]:
+                      - listitem [ref=e1153]: Returns a list of members.
+                - listitem [ref=e1154]:
+                  - generic [ref=e1155] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}.{_format}" [level=3] [ref=e1156]':
+                      - generic [ref=e1158]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}.{_format}"
+                    - list [ref=e1159]:
+                      - listitem [ref=e1160]: Returns tee sheet slots for a given course and date for a member.
+                - listitem [ref=e1161]:
+                  - generic [ref=e1162] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/messages.{_format}" [level=3] [ref=e1163]':
+                      - generic [ref=e1165]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/messages.{_format}"
+                    - list [ref=e1166]:
+                      - listitem [ref=e1167]: Returns messages on the tee sheet for a given course and date for a member.
+                - listitem [ref=e1168]:
+                  - generic [ref=e1169] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/tee-times/{time}.{_format}" [level=3] [ref=e1170]':
+                      - generic [ref=e1172]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/tee-times/{time}.{_format}"
+                    - list [ref=e1173]:
+                      - listitem [ref=e1174]: Returns tee time details for a given course, date and time for a member.
+                - listitem [ref=e1175]:
+                  - generic [ref=e1176] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/member-messages/{member}.{_format}" [level=3] [ref=e1177]':
+                      - generic [ref=e1179]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/member-messages/{member}.{_format}"
+                    - list [ref=e1180]:
+                      - listitem [ref=e1181]: Return member messages
+                - listitem [ref=e1182]:
+                  - generic [ref=e1183] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/member-messages/{member}/count.{_format}" [level=3] [ref=e1184]':
+                      - generic [ref=e1186]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/member-messages/{member}/count.{_format}"
+                    - list [ref=e1187]:
+                      - listitem [ref=e1188]: Return the count of unread member messages
+                - listitem [ref=e1189]:
+                  - generic [ref=e1190] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/members/member-messages/{messageId}/{member}/update-status.{_format}" [level=3] [ref=e1191]':
+                      - generic [ref=e1193]: POST
+                      - text: "/api/v2/clubs/{clubId}/members/member-messages/{messageId}/{member}/update-status.{_format}"
+                    - list [ref=e1194]:
+                      - listitem [ref=e1195]: Update a message's status to 'Read'
+        - listitem [ref=e1196]:
+          - 'heading "/api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/tee-times/{time}/eligible-members" [level=2] [ref=e1198]'
+          - list [ref=e1199]:
+            - listitem [ref=e1200]:
+              - list [ref=e1201]:
+                - listitem [ref=e1202]:
+                  - generic [ref=e1203] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/tee-times/{time}/eligible-members.{_format}" [level=3] [ref=e1204]':
+                      - generic [ref=e1206]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/courses/{course}/tee-sheets/{date}/tee-times/{time}/eligible-members.{_format}"
+                    - list [ref=e1207]:
+                      - listitem [ref=e1208]: Returns a list of eligible members for a tee time.
+        - listitem [ref=e1209]:
+          - 'heading "/api/v2/clubs/{clubId}/members/logged-in-user" [level=2] [ref=e1211]'
+          - list [ref=e1212]:
+            - listitem [ref=e1213]:
+              - list [ref=e1214]:
+                - listitem [ref=e1215]:
+                  - generic [ref=e1216] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/logged-in-user.{_format}" [level=3] [ref=e1217]':
+                      - generic [ref=e1219]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/logged-in-user.{_format}"
+                    - list [ref=e1220]:
+                      - listitem [ref=e1221]: Returns profile for logged in club member.
+        - listitem [ref=e1222]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}" [level=2] [ref=e1224]'
+          - list [ref=e1225]:
+            - listitem [ref=e1226]:
+              - list [ref=e1227]:
+                - listitem [ref=e1228]:
+                  - generic [ref=e1229] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}.{_format}" [level=3] [ref=e1230]':
+                      - generic [ref=e1232]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}.{_format}"
+                    - list [ref=e1233]:
+                      - listitem [ref=e1234]: Returns a club member.
+                - listitem [ref=e1235]:
+                  - generic [ref=e1236] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}.{_format}" [level=3] [ref=e1237]':
+                      - generic [ref=e1239]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}.{_format}"
+                    - list [ref=e1240]:
+                      - listitem [ref=e1241]: Returns a club member.
+                - listitem [ref=e1242]:
+                  - generic [ref=e1243] [cursor=pointer]:
+                    - 'heading "PUT /api/v2/clubs/{clubId}/members/{member}.{_format}" [level=3] [ref=e1244]':
+                      - generic [ref=e1246]: PUT
+                      - text: "/api/v2/clubs/{clubId}/members/{member}.{_format}"
+                    - list [ref=e1247]:
+                      - listitem [ref=e1248]: Updates a club members details.
+        - listitem [ref=e1249]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/bookings" [level=2] [ref=e1251]'
+          - list [ref=e1252]:
+            - listitem [ref=e1253]:
+              - list [ref=e1254]:
+                - listitem [ref=e1255]:
+                  - generic [ref=e1256] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}/bookings.{_format}" [level=3] [ref=e1257]':
+                      - generic [ref=e1259]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/bookings.{_format}"
+                    - list [ref=e1260]:
+                      - listitem [ref=e1261]: Returns a members bookings.
+                - listitem [ref=e1262]:
+                  - generic [ref=e1263] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/members/{member}/bookings.{_format}" [level=3] [ref=e1264]':
+                      - generic [ref=e1266]: POST
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/bookings.{_format}"
+                    - list [ref=e1267]:
+                      - listitem [ref=e1268]: Creates a new member booking from the submitted data.
+                - listitem [ref=e1269]:
+                  - generic [ref=e1270] [cursor=pointer]:
+                    - 'heading "PUT /api/v2/clubs/{clubId}/members/{member}/bookings.{_format}" [level=3] [ref=e1271]':
+                      - generic [ref=e1273]: PUT
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/bookings.{_format}"
+                    - list [ref=e1274]:
+                      - listitem [ref=e1275]: Edits an existing member booking.
+        - listitem [ref=e1276]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/bookings/count" [level=2] [ref=e1278]'
+          - list [ref=e1279]:
+            - listitem [ref=e1280]:
+              - list [ref=e1281]:
+                - listitem [ref=e1282]:
+                  - generic [ref=e1283] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}/bookings/count.{_format}" [level=3] [ref=e1284]':
+                      - generic [ref=e1286]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/bookings/count.{_format}"
+                    - list [ref=e1287]:
+                      - listitem [ref=e1288]: Returns a count of members bookings.
+        - listitem [ref=e1289]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/buddies" [level=2] [ref=e1291]'
+          - list [ref=e1292]:
+            - listitem [ref=e1293]:
+              - list [ref=e1294]:
+                - listitem [ref=e1295]:
+                  - generic [ref=e1296] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}/buddies.{_format}" [level=3] [ref=e1297]':
+                      - generic [ref=e1299]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/buddies.{_format}"
+                    - list [ref=e1300]:
+                      - listitem [ref=e1301]: Returns A list of Buddies for a Member.
+                - listitem [ref=e1302]:
+                  - generic [ref=e1303] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/members/{member}/buddies.{_format}" [level=3] [ref=e1304]':
+                      - generic [ref=e1306]: POST
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/buddies.{_format}"
+                    - list [ref=e1307]:
+                      - listitem [ref=e1308]: Adds a member to a list of member buddies.
+        - listitem [ref=e1309]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/buddies/{buddy}" [level=2] [ref=e1311]'
+          - list [ref=e1312]:
+            - listitem [ref=e1313]:
+              - list [ref=e1314]:
+                - listitem [ref=e1315]:
+                  - generic [ref=e1316] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/members/{member}/buddies/{buddy}.{_format}" [level=3] [ref=e1317]':
+                      - generic [ref=e1319]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/buddies/{buddy}.{_format}"
+                    - list [ref=e1320]:
+                      - listitem [ref=e1321]: Removes a Buddy from a Member.
+        - listitem [ref=e1322]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/customer" [level=2] [ref=e1324]'
+          - list [ref=e1325]:
+            - listitem [ref=e1326]:
+              - list [ref=e1327]:
+                - listitem [ref=e1328]:
+                  - generic [ref=e1329] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}/customer.{_format}" [level=3] [ref=e1330]':
+                      - generic [ref=e1332]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/customer.{_format}"
+                    - list [ref=e1333]:
+                      - listitem [ref=e1334]: Retrieves a customer record for the member.
+                - listitem [ref=e1335]:
+                  - generic [ref=e1336] [cursor=pointer]:
+                    - 'heading "PATCH /api/v2/clubs/{clubId}/members/{member}/customer.{_format}" [level=3] [ref=e1337]':
+                      - generic [ref=e1339]: PATCH
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/customer.{_format}"
+                    - list [ref=e1340]:
+                      - listitem [ref=e1341]: Updates a members customer facility record.
+                - listitem [ref=e1342]:
+                  - generic [ref=e1343] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/members/{member}/customer.{_format}" [level=3] [ref=e1344]':
+                      - generic [ref=e1346]: POST
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/customer.{_format}"
+                    - list [ref=e1347]:
+                      - listitem [ref=e1348]: Registers a customer record for the member.
+        - listitem [ref=e1349]:
+          - 'heading "/api/v2/clubs/{clubId}/members/{member}/wallets" [level=2] [ref=e1351]'
+          - list [ref=e1352]:
+            - listitem [ref=e1353]:
+              - list [ref=e1354]:
+                - listitem [ref=e1355]:
+                  - generic [ref=e1356] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/members/{member}/wallets.{_format}" [level=3] [ref=e1357]':
+                      - generic [ref=e1359]: GET
+                      - text: "/api/v2/clubs/{clubId}/members/{member}/wallets.{_format}"
+                    - list [ref=e1360]:
+                      - listitem [ref=e1361]: Returns a member's wallets.
+        - listitem [ref=e1362]:
+          - 'heading "/{clubId}/webapi/members/{id}" [level=2] [ref=e1364]'
+          - list [ref=e1365]:
+            - listitem [ref=e1366]:
+              - list [ref=e1367]:
+                - listitem [ref=e1368]:
+                  - generic [ref=e1369] [cursor=pointer]:
+                    - 'heading "GET /{clubId}/webapi/members/{id}.{_format}" [level=3] [ref=e1370]':
+                      - generic [ref=e1372]: GET
+                      - text: "/{clubId}/webapi/members/{id}.{_format}"
+                    - list [ref=e1373]:
+                      - listitem [ref=e1374]: Returns a club member.
+    - listitem [ref=e1375]:
+      - generic [ref=e1376]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Membership Types" [level=1] [ref=e1377]
+      - list [ref=e1378]:
+        - listitem [ref=e1379]:
+          - 'heading "/api/v2/clubs/{clubId}/membership-types" [level=2] [ref=e1381]'
+          - list [ref=e1382]:
+            - listitem [ref=e1383]:
+              - list [ref=e1384]:
+                - listitem [ref=e1385]:
+                  - generic [ref=e1386] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/membership-types.{_format}" [level=3] [ref=e1387]':
+                      - generic [ref=e1389]: GET
+                      - text: "/api/v2/clubs/{clubId}/membership-types.{_format}"
+                    - list [ref=e1390]:
+                      - listitem [ref=e1391]: Returns all active membership types.
+    - listitem [ref=e1392]:
+      - generic [ref=e1393]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Products" [level=1] [ref=e1394]
+      - list [ref=e1395]:
+        - listitem [ref=e1396]:
+          - 'heading "/api/v2/clubs/{clubId}/products/{id}" [level=2] [ref=e1398]'
+          - list [ref=e1399]:
+            - listitem [ref=e1400]:
+              - list [ref=e1401]:
+                - listitem [ref=e1402]:
+                  - generic [ref=e1403] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/products/{id}.{_format}" [level=3] [ref=e1404]':
+                      - generic [ref=e1406]: GET
+                      - text: "/api/v2/clubs/{clubId}/products/{id}.{_format}"
+                    - list [ref=e1407]:
+                      - listitem [ref=e1408]: Returns a product based on Id.
+    - listitem [ref=e1409]:
+      - generic [ref=e1410]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Reservation Types" [level=1] [ref=e1411]
+      - list [ref=e1412]:
+        - listitem [ref=e1413]:
+          - 'heading "/api/v2/clubs/{clubId}/reservation-types" [level=2] [ref=e1415]'
+          - list [ref=e1416]:
+            - listitem [ref=e1417]:
+              - list [ref=e1418]:
+                - listitem [ref=e1419]:
+                  - generic [ref=e1420] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/reservation-types.{_format}" [level=3] [ref=e1421]':
+                      - generic [ref=e1423]: GET
+                      - text: "/api/v2/clubs/{clubId}/reservation-types.{_format}"
+                    - list [ref=e1424]:
+                      - listitem [ref=e1425]: Returns all Reservation Types for the club.
+    - listitem [ref=e1426]:
+      - generic [ref=e1427]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Sunrise and Sunset" [level=1] [ref=e1428]
+      - list [ref=e1429]:
+        - listitem [ref=e1430]:
+          - 'heading "/api/v2/clubs/{clubId}/sunrise-sunset/{date}" [level=2] [ref=e1432]'
+          - list [ref=e1433]:
+            - listitem [ref=e1434]:
+              - list [ref=e1435]:
+                - listitem [ref=e1436]:
+                  - generic [ref=e1437] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/sunrise-sunset/{date}.{_format}" [level=3] [ref=e1438]':
+                      - generic [ref=e1440]: GET
+                      - text: "/api/v2/clubs/{clubId}/sunrise-sunset/{date}.{_format}"
+                    - list [ref=e1441]:
+                      - listitem [ref=e1442]: Returns the sunrise and sunset.
+    - listitem [ref=e1443]:
+      - generic [ref=e1444]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Tee Sheets" [level=1] [ref=e1445]
+      - list [ref=e1446]:
+        - listitem [ref=e1447]:
+          - 'heading "/api/v2/clubs/{clubId}/courses" [level=2] [ref=e1449]'
+          - list [ref=e1450]:
+            - listitem [ref=e1451]:
+              - list [ref=e1452]:
+                - listitem [ref=e1453]:
+                  - generic [ref=e1454] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/available-green-fees.{_format}" [level=3] [ref=e1455]':
+                      - generic [ref=e1457]: GET
+                      - text: "/api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/available-green-fees.{_format}"
+                    - list [ref=e1458]:
+                      - listitem [ref=e1459]: Returns green fees for a given course and date. This can further be filtered by a tee time range, a member username or a contact Id.
+                - listitem [ref=e1460]:
+                  - generic [ref=e1461] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/available-products.{_format}" [level=3] [ref=e1462]':
+                      - generic [ref=e1464]: GET
+                      - text: "/api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/available-products.{_format}"
+                    - list [ref=e1465]:
+                      - listitem [ref=e1466]: Returns product inventory. This can be filtered by a tee time range.
+                - listitem [ref=e1467]:
+                  - generic [ref=e1468] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/utilisation.{_format}" [level=3] [ref=e1469]':
+                      - generic [ref=e1471]: GET
+                      - text: "/api/v2/clubs/{clubId}/courses/{courseId}/tee-sheets/{date}/utilisation.{_format}"
+                    - list [ref=e1472]:
+                      - listitem [ref=e1473]: Returns Hourly Course Utilisation, for a given Course and Date
+                - listitem [ref=e1474]:
+                  - generic [ref=e1475] [cursor=pointer]:
+                    - 'heading "GET /api/v2/clubs/{clubId}/courses/{courseId}/teesheets/{date}.{_format}" [level=3] [ref=e1476]':
+                      - generic [ref=e1478]: GET
+                      - text: "/api/v2/clubs/{clubId}/courses/{courseId}/teesheets/{date}.{_format}"
+                    - list [ref=e1479]:
+                      - listitem [ref=e1480]: Returns tee sheet slots for a given course and date.
+    - listitem [ref=e1481]:
+      - generic [ref=e1482]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Tee Times" [level=1] [ref=e1483]
+      - list [ref=e1484]:
+        - listitem [ref=e1485]:
+          - 'heading "/api/v2/clubs/{clubId}/courses" [level=2] [ref=e1487]'
+          - list [ref=e1488]:
+            - listitem [ref=e1489]:
+              - list [ref=e1490]:
+                - listitem [ref=e1491]:
+                  - generic [ref=e1492] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/courses/{courseId}/teesheets/{date}/tee-times/{time}/lock.{_format}" [level=3] [ref=e1493]':
+                      - generic [ref=e1495]: POST
+                      - text: "/api/v2/clubs/{clubId}/courses/{courseId}/teesheets/{date}/tee-times/{time}/lock.{_format}"
+                    - list [ref=e1496]:
+                      - listitem [ref=e1497]: Creates a lock on the tee time.
+                - listitem [ref=e1498]:
+                  - generic [ref=e1499] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/courses/{course}/tee-sheets/{date}/tee-times/{time}/lock.{_format}" [level=3] [ref=e1500]':
+                      - generic [ref=e1502]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/courses/{course}/tee-sheets/{date}/tee-times/{time}/lock.{_format}"
+                    - list [ref=e1503]:
+                      - listitem [ref=e1504]: Deletes a lock on the tee time.
+        - listitem [ref=e1505]:
+          - 'heading "/api/v2/clubs/{clubId}/tee-times/lock/{username}" [level=2] [ref=e1507]'
+          - list [ref=e1508]:
+            - listitem [ref=e1509]:
+              - list [ref=e1510]:
+                - listitem [ref=e1511]:
+                  - generic [ref=e1512] [cursor=pointer]:
+                    - 'heading "DELETE /api/v2/clubs/{clubId}/tee-times/lock/{username}.{_format}" [level=3] [ref=e1513]':
+                      - generic [ref=e1515]: DELETE
+                      - text: "/api/v2/clubs/{clubId}/tee-times/lock/{username}.{_format}"
+                    - list [ref=e1516]:
+                      - listitem [ref=e1517]: Deletes all tee time locks by username
+    - listitem [ref=e1518]:
+      - generic [ref=e1519]: Show/hide List Operations Expand Operations
+      - heading "API v2 - Users" [level=1] [ref=e1520]
+      - list [ref=e1521]:
+        - listitem [ref=e1522]:
+          - 'heading "/api/v2/clubs/{clubId}/users/forgot-password" [level=2] [ref=e1524]'
+          - list [ref=e1525]:
+            - listitem [ref=e1526]:
+              - list [ref=e1527]:
+                - listitem [ref=e1528]:
+                  - generic [ref=e1529] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/users/forgot-password.{_format}" [level=3] [ref=e1530]':
+                      - generic [ref=e1532]: POST
+                      - text: "/api/v2/clubs/{clubId}/users/forgot-password.{_format}"
+                    - list [ref=e1533]:
+                      - listitem [ref=e1534]: Sends a forgot password email with generated token to the specified user.
+        - listitem [ref=e1535]:
+          - 'heading "/api/v2/clubs/{clubId}/users/forgot-username" [level=2] [ref=e1537]'
+          - list [ref=e1538]:
+            - listitem [ref=e1539]:
+              - list [ref=e1540]:
+                - listitem [ref=e1541]:
+                  - generic [ref=e1542] [cursor=pointer]:
+                    - 'heading "POST /api/v2/clubs/{clubId}/users/forgot-username.{_format}" [level=3] [ref=e1543]':
+                      - generic [ref=e1545]: POST
+                      - text: "/api/v2/clubs/{clubId}/users/forgot-username.{_format}"
+                    - list [ref=e1546]:
+                      - listitem [ref=e1547]: Sends an email to the specified user with their username.
+    - listitem [ref=e1548]:
+      - generic [ref=e1549]: Show/hide List Operations Expand Operations
+      - heading "API v3 - AWS" [level=1] [ref=e1550]
+      - list [ref=e1551]:
+        - listitem [ref=e1552]:
+          - 'heading "/api/v3/clubs/{clubId}/aws/sns" [level=2] [ref=e1554]'
+          - list [ref=e1555]:
+            - listitem [ref=e1556]:
+              - list [ref=e1557]:
+                - listitem [ref=e1558]:
+                  - generic [ref=e1559] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/aws/sns.{_format}" [level=3] [ref=e1560]':
+                      - generic [ref=e1562]: POST
+                      - text: "/api/v3/clubs/{clubId}/aws/sns.{_format}"
+                    - list [ref=e1563]:
+                      - listitem [ref=e1564]: SNS HTTPS endpoint
+    - listitem [ref=e1565]:
+      - generic [ref=e1566]: Show/hide List Operations Expand Operations
+      - heading "API v3 - AerisWeather API" [level=1] [ref=e1567]
+      - list [ref=e1568]:
+        - listitem [ref=e1569]:
+          - 'heading "/api/v3/clubs/{clubId}/aeris-weather/forecast/{timestamp}" [level=2] [ref=e1571]'
+          - list [ref=e1572]:
+            - listitem [ref=e1573]:
+              - list [ref=e1574]:
+                - listitem [ref=e1575]:
+                  - generic [ref=e1576] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/aeris-weather/forecast/{timestamp}.{_format}" [level=3] [ref=e1577]':
+                      - generic [ref=e1579]: GET
+                      - text: "/api/v3/clubs/{clubId}/aeris-weather/forecast/{timestamp}.{_format}"
+                    - list [ref=e1580]:
+                      - listitem [ref=e1581]: Returns an Aeris Weather forecast object
+        - listitem [ref=e1582]:
+          - 'heading "/api/v3/clubs/{clubId}/aeris-weather/past-conditions/{timestamp}" [level=2] [ref=e1584]'
+          - list [ref=e1585]:
+            - listitem [ref=e1586]:
+              - list [ref=e1587]:
+                - listitem [ref=e1588]:
+                  - generic [ref=e1589] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/aeris-weather/past-conditions/{timestamp}.{_format}" [level=3] [ref=e1590]':
+                      - generic [ref=e1592]: GET
+                      - text: "/api/v3/clubs/{clubId}/aeris-weather/past-conditions/{timestamp}.{_format}"
+                    - list [ref=e1593]:
+                      - listitem [ref=e1594]: Returns an Aeris Weather past conditions object
+    - listitem [ref=e1595]:
+      - generic [ref=e1596]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Authorisation" [level=1] [ref=e1597]
+      - list [ref=e1598]:
+        - listitem [ref=e1599]:
+          - 'heading "/api/v3/clubs/{clubId}/authorisation/jwt" [level=2] [ref=e1601]'
+          - list [ref=e1602]:
+            - listitem [ref=e1603]:
+              - list [ref=e1604]:
+                - listitem [ref=e1605]:
+                  - generic [ref=e1606] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/authorisation/jwt.{_format}" [level=3] [ref=e1607]':
+                      - generic [ref=e1609]: GET
+                      - text: "/api/v3/clubs/{clubId}/authorisation/jwt.{_format}"
+                    - list [ref=e1610]:
+                      - listitem [ref=e1611]: Returns a JWT for the authorised user
+    - listitem [ref=e1612]:
+      - generic [ref=e1613]: Show/hide List Operations Expand Operations
+      - heading "API v3 - BCG" [level=1] [ref=e1614]
+      - list [ref=e1615]:
+        - listitem [ref=e1616]:
+          - 'heading "/api/v3/clubs/{clubId}/bcg/teesheets" [level=2] [ref=e1618]'
+          - list [ref=e1619]:
+            - listitem [ref=e1620]:
+              - list [ref=e1621]:
+                - listitem [ref=e1622]:
+                  - generic [ref=e1623] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/bcg/teesheets.{_format}" [level=3] [ref=e1624]':
+                      - generic [ref=e1626]: GET
+                      - text: "/api/v3/clubs/{clubId}/bcg/teesheets.{_format}"
+                    - list [ref=e1627]:
+                      - listitem [ref=e1628]: Returns a complete Teesheet(s) slots for a given Course or all Courses * for a date range and/or time range.
+    - listitem [ref=e1629]:
+      - generic [ref=e1630]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Bookings" [level=1] [ref=e1631]
+      - list [ref=e1632]:
+        - listitem [ref=e1633]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings" [level=2] [ref=e1635]'
+          - list [ref=e1636]:
+            - listitem [ref=e1637]:
+              - list [ref=e1638]:
+                - listitem [ref=e1639]:
+                  - generic [ref=e1640] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/bookings.{_format}" [level=3] [ref=e1641]':
+                      - generic [ref=e1643]: GET
+                      - text: "/api/v3/clubs/{clubId}/bookings.{_format}"
+                    - list [ref=e1644]:
+                      - listitem [ref=e1645]: Returns a collection of booking representations
+                - listitem [ref=e1646]:
+                  - generic [ref=e1647] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/bookings.{_format}" [level=3] [ref=e1648]':
+                      - generic [ref=e1650]: POST
+                      - text: "/api/v3/clubs/{clubId}/bookings.{_format}"
+                    - list [ref=e1651]:
+                      - listitem [ref=e1652]: Creates a new booking
+        - listitem [ref=e1653]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/batch" [level=2] [ref=e1655]'
+          - list [ref=e1656]:
+            - listitem [ref=e1657]:
+              - list [ref=e1658]:
+                - listitem [ref=e1659]:
+                  - generic [ref=e1660] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/bookings/batch.{_format}" [level=3] [ref=e1661]':
+                      - generic [ref=e1663]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/bookings/batch.{_format}"
+                    - list [ref=e1664]:
+                      - listitem [ref=e1665]: Update one or more bookings
+                - listitem [ref=e1666]:
+                  - generic [ref=e1667] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/bookings/batch.{_format}" [level=3] [ref=e1668]':
+                      - generic [ref=e1670]: POST
+                      - text: "/api/v3/clubs/{clubId}/bookings/batch.{_format}"
+                    - list [ref=e1671]:
+                      - listitem [ref=e1672]: Creates one or more new bookings
+        - listitem [ref=e1673]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/orders" [level=2] [ref=e1675]'
+          - list [ref=e1676]:
+            - listitem [ref=e1677]:
+              - list [ref=e1678]:
+                - listitem [ref=e1679]:
+                  - generic [ref=e1680] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/bookings/orders.{_format}" [level=3] [ref=e1681]':
+                      - generic [ref=e1683]: POST
+                      - text: "/api/v3/clubs/{clubId}/bookings/orders.{_format}"
+                    - list [ref=e1684]:
+                      - listitem [ref=e1685]: Batch update to add (mark as paid) an EPOS order on existing Bookings.
+        - listitem [ref=e1686]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/{booking}" [level=2] [ref=e1688]'
+          - list [ref=e1689]:
+            - listitem [ref=e1690]:
+              - list [ref=e1691]:
+                - listitem [ref=e1692]:
+                  - generic [ref=e1693] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/bookings/{booking}.{_format}" [level=3] [ref=e1694]':
+                      - generic [ref=e1696]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}.{_format}"
+                    - list [ref=e1697]:
+                      - listitem [ref=e1698]: Delete a booking
+                - listitem [ref=e1699]:
+                  - generic [ref=e1700] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/bookings/{booking}.{_format}" [level=3] [ref=e1701]':
+                      - generic [ref=e1703]: GET
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}.{_format}"
+                    - list [ref=e1704]:
+                      - listitem [ref=e1705]: Returns a booking representation
+                - listitem [ref=e1706]:
+                  - generic [ref=e1707] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/bookings/{booking}.{_format}" [level=3] [ref=e1708]':
+                      - generic [ref=e1710]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}.{_format}"
+                    - list [ref=e1711]:
+                      - listitem [ref=e1712]: Update a booking
+                - listitem [ref=e1713]:
+                  - generic [ref=e1714] [cursor=pointer]:
+                    - 'heading "PUT /api/v3/clubs/{clubId}/bookings/{booking}.{_format}" [level=3] [ref=e1715]':
+                      - generic [ref=e1717]: PUT
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}.{_format}"
+                    - list [ref=e1718]:
+                      - listitem [ref=e1719]: Update a booking
+        - listitem [ref=e1720]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/{booking}/orders" [level=2] [ref=e1722]'
+          - list [ref=e1723]:
+            - listitem [ref=e1724]:
+              - list [ref=e1725]:
+                - listitem [ref=e1726]:
+                  - generic [ref=e1727] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/bookings/{booking}/orders.{_format}" [level=3] [ref=e1728]':
+                      - generic [ref=e1730]: POST
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}/orders.{_format}"
+                    - list [ref=e1731]:
+                      - listitem [ref=e1732]: Adds (marks paid) an EPOS order on an existing Booking.
+        - listitem [ref=e1733]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/{booking}/orders/{orderRef}" [level=2] [ref=e1735]'
+          - list [ref=e1736]:
+            - listitem [ref=e1737]:
+              - list [ref=e1738]:
+                - listitem [ref=e1739]:
+                  - generic [ref=e1740] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/bookings/{booking}/orders/{orderRef}.{_format}" [level=3] [ref=e1741]':
+                      - generic [ref=e1743]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}/orders/{orderRef}.{_format}"
+                    - list [ref=e1744]:
+                      - listitem [ref=e1745]: Deletes (voids) an EPOS order on an existing Booking.
+        - listitem [ref=e1746]:
+          - 'heading "/api/v3/clubs/{clubId}/bookings/{booking}/slots/{index}" [level=2] [ref=e1748]'
+          - list [ref=e1749]:
+            - listitem [ref=e1750]:
+              - list [ref=e1751]:
+                - listitem [ref=e1752]:
+                  - generic [ref=e1753] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/bookings/{booking}/slots/{index}.{_format}" [level=3] [ref=e1754]':
+                      - generic [ref=e1756]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/bookings/{booking}/slots/{index}.{_format}"
+                    - list [ref=e1757]:
+                      - listitem [ref=e1758]: Update a booking slot
+        - listitem [ref=e1759]:
+          - 'heading "/api/v3/clubs/{clubId}/multiple-bookings" [level=2] [ref=e1761]'
+          - list [ref=e1762]:
+            - listitem [ref=e1763]:
+              - list [ref=e1764]:
+                - listitem [ref=e1765]:
+                  - generic [ref=e1766] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/multiple-bookings.{_format}" [level=3] [ref=e1767]':
+                      - generic [ref=e1769]: GET
+                      - text: "/api/v3/clubs/{clubId}/multiple-bookings.{_format}"
+                    - list [ref=e1770]:
+                      - listitem [ref=e1771]: Returns a collection of bookings given a list of IDs.
+    - listitem [ref=e1772]:
+      - generic [ref=e1773]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Check" [level=1] [ref=e1774]
+      - list [ref=e1775]:
+        - listitem [ref=e1776]:
+          - 'heading "/api/v3/clubs/{clubId}/check/{rule}" [level=2] [ref=e1778]'
+          - list [ref=e1779]:
+            - listitem [ref=e1780]:
+              - list [ref=e1781]:
+                - listitem [ref=e1782]:
+                  - generic [ref=e1783] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/check/{rule}.{_format}" [level=3] [ref=e1784]':
+                      - generic [ref=e1786]: POST
+                      - text: "/api/v3/clubs/{clubId}/check/{rule}.{_format}"
+                    - list [ref=e1787]:
+                      - listitem [ref=e1788]: Check if the specified action is allowed on a resource.
+    - listitem [ref=e1789]:
+      - generic [ref=e1790]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Club Messages" [level=1] [ref=e1791]
+      - list [ref=e1792]:
+        - listitem [ref=e1793]:
+          - 'heading "/api/v3/clubs/{clubId}/club-messages" [level=2] [ref=e1795]'
+          - list [ref=e1796]:
+            - listitem [ref=e1797]:
+              - list [ref=e1798]:
+                - listitem [ref=e1799]:
+                  - generic [ref=e1800] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-messages.{_format}" [level=3] [ref=e1801]':
+                      - generic [ref=e1803]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-messages.{_format}"
+                    - list [ref=e1804]:
+                      - listitem [ref=e1805]: Returns all messages for a club.
+                - listitem [ref=e1806]:
+                  - generic [ref=e1807] [cursor=pointer]:
+                    - 'heading "HEAD /api/v3/clubs/{clubId}/club-messages.{_format}" [level=3] [ref=e1808]':
+                      - generic [ref=e1810]: HEAD
+                      - text: "/api/v3/clubs/{clubId}/club-messages.{_format}"
+                    - list [ref=e1811]:
+                      - listitem [ref=e1812]: Returns an 'X-Total-Count' http header for the total number of club messages.
+                - listitem [ref=e1813]:
+                  - generic [ref=e1814] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/club-messages.{_format}" [level=3] [ref=e1815]':
+                      - generic [ref=e1817]: POST
+                      - text: "/api/v3/clubs/{clubId}/club-messages.{_format}"
+                    - list [ref=e1818]:
+                      - listitem [ref=e1819]: Creates a new message for a club.
+        - listitem [ref=e1820]:
+          - 'heading "/api/v3/clubs/{clubId}/club-messages/{message}" [level=2] [ref=e1822]'
+          - list [ref=e1823]:
+            - listitem [ref=e1824]:
+              - list [ref=e1825]:
+                - listitem [ref=e1826]:
+                  - generic [ref=e1827] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/club-messages/{message}.{_format}" [level=3] [ref=e1828]':
+                      - generic [ref=e1830]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/club-messages/{message}.{_format}"
+                    - list [ref=e1831]:
+                      - listitem [ref=e1832]: Delete a club message for a member.
+                - listitem [ref=e1833]:
+                  - generic [ref=e1834] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-messages/{message}.{_format}" [level=3] [ref=e1835]':
+                      - generic [ref=e1837]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-messages/{message}.{_format}"
+                    - list [ref=e1838]:
+                      - listitem [ref=e1839]: Retrieves a club message for a member.
+                - listitem [ref=e1840]:
+                  - generic [ref=e1841] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/club-messages/{message}.{_format}" [level=3] [ref=e1842]':
+                      - generic [ref=e1844]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/club-messages/{message}.{_format}"
+                    - list [ref=e1845]:
+                      - listitem [ref=e1846]: Updates an existing club message.
+    - listitem [ref=e1847]:
+      - generic [ref=e1848]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Club News" [level=1] [ref=e1849]
+      - list [ref=e1850]:
+        - listitem [ref=e1851]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e1853]'
+          - list [ref=e1854]:
+            - listitem [ref=e1855]:
+              - list [ref=e1856]:
+                - listitem [ref=e1857]:
+                  - generic [ref=e1858] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-news.{_format}" [level=3] [ref=e1859]':
+                      - generic [ref=e1861]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-news.{_format}"
+                    - list [ref=e1862]:
+                      - listitem [ref=e1863]: Returns all published club news articles
+                - listitem [ref=e1864]:
+                  - generic [ref=e1865] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-news/public.{_format}" [level=3] [ref=e1866]':
+                      - generic [ref=e1868]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-news/public.{_format}"
+                    - list [ref=e1869]:
+                      - listitem [ref=e1870]: Returns all published club news articles that are public
+                - listitem [ref=e1871]:
+                  - generic [ref=e1872] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-news/public/{id}.{_format}" [level=3] [ref=e1873]':
+                      - generic [ref=e1875]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-news/public/{id}.{_format}"
+                    - list [ref=e1876]:
+                      - listitem [ref=e1877]: Returns a single published public club news article
+                - listitem [ref=e1878]:
+                  - generic [ref=e1879] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-news/{id}.{_format}" [level=3] [ref=e1880]':
+                      - generic [ref=e1882]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-news/{id}.{_format}"
+                    - list [ref=e1883]:
+                      - listitem [ref=e1884]: Returns a single published club news article
+    - listitem [ref=e1885]:
+      - generic [ref=e1886]: Show/hide List Operations Expand Operations
+      - heading "API v3 - ClubUp" [level=1] [ref=e1887]
+      - list [ref=e1888]:
+        - listitem [ref=e1889]:
+          - 'heading "/api/v3/clubs/{clubId}/club-up/bookings" [level=2] [ref=e1891]'
+          - list [ref=e1892]:
+            - listitem [ref=e1893]:
+              - list [ref=e1894]:
+                - listitem [ref=e1895]:
+                  - generic [ref=e1896] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/club-up/bookings.{_format}" [level=3] [ref=e1897]':
+                      - generic [ref=e1899]: GET
+                      - text: "/api/v3/clubs/{clubId}/club-up/bookings.{_format}"
+                    - list [ref=e1900]:
+                      - listitem [ref=e1901]: Get Bookings for given date.
+    - listitem [ref=e1902]:
+      - generic [ref=e1903]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Clubs" [level=1] [ref=e1904]
+      - list [ref=e1905]:
+        - listitem [ref=e1906]:
+          - heading "/api/v3/clubs" [level=2] [ref=e1908]
+          - list [ref=e1909]:
+            - listitem [ref=e1910]:
+              - list [ref=e1911]:
+                - listitem [ref=e1912]:
+                  - generic [ref=e1913] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs.{_format}" [level=3] [ref=e1914]':
+                      - generic [ref=e1916]: GET
+                      - text: "/api/v3/clubs.{_format}"
+                    - list [ref=e1917]:
+                      - listitem [ref=e1918]: Returns a list of clubs.
+        - listitem [ref=e1919]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e1921]'
+          - list [ref=e1922]:
+            - listitem [ref=e1923]:
+              - list [ref=e1924]:
+                - listitem [ref=e1925]:
+                  - generic [ref=e1926] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/.{_format}" [level=3] [ref=e1927]':
+                      - generic [ref=e1929]: GET
+                      - text: "/api/v3/clubs/{clubId}/.{_format}"
+                    - list [ref=e1930]:
+                      - listitem [ref=e1931]: Returns a collection of configuration resources for a club.
+    - listitem [ref=e1932]:
+      - generic [ref=e1933]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Competition Pairings" [level=1] [ref=e1934]
+      - list [ref=e1935]:
+        - listitem [ref=e1936]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-pairings" [level=2] [ref=e1938]'
+          - list [ref=e1939]:
+            - listitem [ref=e1940]:
+              - list [ref=e1941]:
+                - listitem [ref=e1942]:
+                  - generic [ref=e1943] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/competition-pairings.{_format}" [level=3] [ref=e1944]':
+                      - generic [ref=e1946]: POST
+                      - text: "/api/v3/clubs/{clubId}/competition-pairings.{_format}"
+                    - list [ref=e1947]:
+                      - listitem [ref=e1948]: Create competition pairings
+        - listitem [ref=e1949]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-pairings/golf-genius-pairings" [level=2] [ref=e1951]'
+          - list [ref=e1952]:
+            - listitem [ref=e1953]:
+              - list [ref=e1954]:
+                - listitem [ref=e1955]:
+                  - generic [ref=e1956] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/competition-pairings/golf-genius-pairings.{_format}" [level=3] [ref=e1957]':
+                      - generic [ref=e1959]: POST
+                      - text: "/api/v3/clubs/{clubId}/competition-pairings/golf-genius-pairings.{_format}"
+                    - list [ref=e1960]:
+                      - listitem [ref=e1961]: Create Golf Genius pairings
+    - listitem [ref=e1962]:
+      - generic [ref=e1963]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Competition Purse" [level=1] [ref=e1964]
+      - list [ref=e1965]:
+        - listitem [ref=e1966]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-purse/balance/{member}" [level=2] [ref=e1968]'
+          - list [ref=e1969]:
+            - listitem [ref=e1970]:
+              - list [ref=e1971]:
+                - listitem [ref=e1972]:
+                  - generic [ref=e1973] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/competition-purse/balance/{member}.{_format}" [level=3] [ref=e1974]':
+                      - generic [ref=e1976]: GET
+                      - text: "/api/v3/clubs/{clubId}/competition-purse/balance/{member}.{_format}"
+                    - list [ref=e1977]:
+                      - listitem [ref=e1978]: Returns the Competition Purse balance for a member
+        - listitem [ref=e1979]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-purse/top-up/{member}" [level=2] [ref=e1981]'
+          - list [ref=e1982]:
+            - listitem [ref=e1983]:
+              - list [ref=e1984]:
+                - listitem [ref=e1985]:
+                  - generic [ref=e1986] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/competition-purse/top-up/{member}.{_format}" [level=3] [ref=e1987]':
+                      - generic [ref=e1989]: POST
+                      - text: "/api/v3/clubs/{clubId}/competition-purse/top-up/{member}.{_format}"
+                    - list [ref=e1990]:
+                      - listitem [ref=e1991]: Complete Stripe Payment, top-up competition purse.
+        - listitem [ref=e1992]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-purse/transactions/pending/{member}" [level=2] [ref=e1994]'
+          - list [ref=e1995]:
+            - listitem [ref=e1996]:
+              - list [ref=e1997]:
+                - listitem [ref=e1998]:
+                  - generic [ref=e1999] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/competition-purse/transactions/pending/{member}.{_format}" [level=3] [ref=e2000]':
+                      - generic [ref=e2002]: GET
+                      - text: "/api/v3/clubs/{clubId}/competition-purse/transactions/pending/{member}.{_format}"
+                    - list [ref=e2003]:
+                      - listitem [ref=e2004]: Returns the pending Competition Purse transactions for a member
+        - listitem [ref=e2005]:
+          - 'heading "/api/v3/clubs/{clubId}/competition-purse/transactions/{member}" [level=2] [ref=e2007]'
+          - list [ref=e2008]:
+            - listitem [ref=e2009]:
+              - list [ref=e2010]:
+                - listitem [ref=e2011]:
+                  - generic [ref=e2012] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/competition-purse/transactions/{member}.{_format}" [level=3] [ref=e2013]':
+                      - generic [ref=e2015]: GET
+                      - text: "/api/v3/clubs/{clubId}/competition-purse/transactions/{member}.{_format}"
+                    - list [ref=e2016]:
+                      - listitem [ref=e2017]: Returns the Competition Purse transaction history for a member
+    - listitem [ref=e2018]:
+      - generic [ref=e2019]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Configuration" [level=1] [ref=e2020]
+      - list [ref=e2021]:
+        - listitem [ref=e2022]:
+          - 'heading "/api/v3/clubs/{clubId}/configurations" [level=2] [ref=e2024]'
+          - list [ref=e2025]:
+            - listitem [ref=e2026]:
+              - list [ref=e2027]:
+                - listitem [ref=e2028]:
+                  - generic [ref=e2029] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/configurations.{_format}" [level=3] [ref=e2030]':
+                      - generic [ref=e2032]: GET
+                      - text: "/api/v3/clubs/{clubId}/configurations.{_format}"
+                    - list [ref=e2033]:
+                      - listitem [ref=e2034]: Returns a collection of configuration resources by keys for a club.
+        - listitem [ref=e2035]:
+          - 'heading "/api/v3/clubs/{clubId}/external-configuration/member-comp-purse-supported" [level=2] [ref=e2037]'
+          - list [ref=e2038]:
+            - listitem [ref=e2039]:
+              - list [ref=e2040]:
+                - listitem [ref=e2041]:
+                  - generic [ref=e2042] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/external-configuration/member-comp-purse-supported.{_format}" [level=3] [ref=e2043]':
+                      - generic [ref=e2045]: GET
+                      - text: "/api/v3/clubs/{clubId}/external-configuration/member-comp-purse-supported.{_format}"
+                    - list [ref=e2046]:
+                      - listitem [ref=e2047]: Returns the member_comp_purse_supported configuration for the specified club.
+    - listitem [ref=e2048]:
+      - generic [ref=e2049]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Consents Proxy" [level=1] [ref=e2050]
+      - list [ref=e2051]:
+        - listitem [ref=e2052]:
+          - 'heading "/api/v3/clubs/{clubId}/consented" [level=2] [ref=e2054]'
+          - list [ref=e2055]:
+            - listitem [ref=e2056]:
+              - list [ref=e2057]:
+                - listitem [ref=e2058]:
+                  - generic [ref=e2059] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/consented.{_format}" [level=3] [ref=e2060]':
+                      - generic [ref=e2062]: GET
+                      - text: "/api/v3/clubs/{clubId}/consented.{_format}"
+                    - list
+                - listitem [ref=e2063]:
+                  - generic [ref=e2064] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/consented.{_format}" [level=3] [ref=e2065]':
+                      - generic [ref=e2067]: POST
+                      - text: "/api/v3/clubs/{clubId}/consented.{_format}"
+                    - list
+        - listitem [ref=e2068]:
+          - heading "/api/v3/unsubscribe-email" [level=2] [ref=e2070]
+          - list [ref=e2071]:
+            - listitem [ref=e2072]:
+              - list [ref=e2073]:
+                - listitem [ref=e2074]:
+                  - generic [ref=e2075] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/unsubscribe-email.{_format}" [level=3] [ref=e2076]':
+                      - generic [ref=e2078]: DELETE
+                      - text: "/api/v3/unsubscribe-email.{_format}"
+                    - list [ref=e2079]:
+                      - listitem [ref=e2080]: Endpoint for third-party to Opt Out of Marking Email Messages.
+    - listitem [ref=e2081]:
+      - generic [ref=e2082]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Contacts" [level=1] [ref=e2083]
+      - list [ref=e2084]:
+        - listitem [ref=e2085]:
+          - 'heading "/api/v3/clubs/{clubId}/contacts" [level=2] [ref=e2087]'
+          - list [ref=e2088]:
+            - listitem [ref=e2089]:
+              - list [ref=e2090]:
+                - listitem [ref=e2091]:
+                  - generic [ref=e2092] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/contacts.{_format}" [level=3] [ref=e2093]':
+                      - generic [ref=e2095]: POST
+                      - text: "/api/v3/clubs/{clubId}/contacts.{_format}"
+                    - list [ref=e2096]:
+                      - listitem [ref=e2097]: Find a contact by their first name & email address or creates one if not found
+    - listitem [ref=e2098]:
+      - generic [ref=e2099]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Contacts Summary" [level=1] [ref=e2100]
+      - list [ref=e2101]:
+        - listitem [ref=e2102]:
+          - 'heading "/api/v3/clubs/{clubId}/contacts-summary" [level=2] [ref=e2104]'
+          - list [ref=e2105]:
+            - listitem [ref=e2106]:
+              - list [ref=e2107]:
+                - listitem [ref=e2108]:
+                  - generic [ref=e2109] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/contacts-summary.{_format}" [level=3] [ref=e2110]':
+                      - generic [ref=e2112]: POST
+                      - text: "/api/v3/clubs/{clubId}/contacts-summary.{_format}"
+                    - list [ref=e2113]:
+                      - listitem [ref=e2114]: Creates a new contact - returns contact details in response
+    - listitem [ref=e2115]:
+      - generic [ref=e2116]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Courses" [level=1] [ref=e2117]
+      - list [ref=e2118]:
+        - listitem [ref=e2119]:
+          - 'heading "/api/v3/clubs/{clubId}/courses" [level=2] [ref=e2121]'
+          - list [ref=e2122]:
+            - listitem [ref=e2123]:
+              - list [ref=e2124]:
+                - listitem [ref=e2125]:
+                  - generic [ref=e2126] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/courses.{_format}" [level=3] [ref=e2127]':
+                      - generic [ref=e2129]: GET
+                      - text: "/api/v3/clubs/{clubId}/courses.{_format}"
+                    - list [ref=e2130]:
+                      - listitem [ref=e2131]: Returns active courses for the club.
+        - listitem [ref=e2132]:
+          - 'heading "/api/v3/clubs/{clubId}/courses/{courseId}" [level=2] [ref=e2134]'
+          - list [ref=e2135]:
+            - listitem [ref=e2136]:
+              - list [ref=e2137]:
+                - listitem [ref=e2138]:
+                  - generic [ref=e2139] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/courses/{courseId}.{_format}" [level=3] [ref=e2140]':
+                      - generic [ref=e2142]: GET
+                      - text: "/api/v3/clubs/{clubId}/courses/{courseId}.{_format}"
+                    - list [ref=e2143]:
+                      - listitem [ref=e2144]: Returns active course with ID of 'courseId' for the club.
+    - listitem [ref=e2145]:
+      - generic [ref=e2146]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Features" [level=1] [ref=e2147]
+      - list [ref=e2148]:
+        - listitem [ref=e2149]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2151]'
+          - list [ref=e2152]:
+            - listitem [ref=e2153]:
+              - list [ref=e2154]:
+                - listitem [ref=e2155]:
+                  - generic [ref=e2156] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/features/{feature}/disable.{_format}" [level=3] [ref=e2157]':
+                      - generic [ref=e2159]: POST
+                      - text: "/api/v3/clubs/{clubId}/features/{feature}/disable.{_format}"
+                    - list [ref=e2160]:
+                      - listitem [ref=e2161]: Disables a particular feature.
+                - listitem [ref=e2162]:
+                  - generic [ref=e2163] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/features/{feature}/enable.{_format}" [level=3] [ref=e2164]':
+                      - generic [ref=e2166]: POST
+                      - text: "/api/v3/clubs/{clubId}/features/{feature}/enable.{_format}"
+                    - list [ref=e2167]:
+                      - listitem [ref=e2168]: Enables a particular feature.
+    - listitem [ref=e2169]:
+      - generic [ref=e2170]: Show/hide List Operations Expand Operations
+      - heading "API v3 - G1 API" [level=1] [ref=e2171]
+      - list [ref=e2172]:
+        - listitem [ref=e2173]:
+          - 'heading "/api/v3/clubs/{clubId}/clear-cached-g1-user-tokens" [level=2] [ref=e2175]'
+          - list [ref=e2176]:
+            - listitem [ref=e2177]:
+              - list [ref=e2178]:
+                - listitem [ref=e2179]:
+                  - generic [ref=e2180] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/clear-cached-g1-user-tokens.{_format}" [level=3] [ref=e2181]':
+                      - generic [ref=e2183]: POST
+                      - text: "/api/v3/clubs/{clubId}/clear-cached-g1-user-tokens.{_format}"
+                    - list [ref=e2184]:
+                      - listitem [ref=e2185]: Clear cached G1 user tokens
+        - listitem [ref=e2186]:
+          - 'heading "/api/v3/clubs/{clubId}/g1-api" [level=2] [ref=e2188]'
+          - list [ref=e2189]:
+            - listitem [ref=e2190]:
+              - list [ref=e2191]:
+                - listitem [ref=e2192]:
+                  - generic [ref=e2193] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/g1-api.{_format}" [level=3] [ref=e2194]':
+                      - generic [ref=e2196]: GET
+                      - text: "/api/v3/clubs/{clubId}/g1-api.{_format}"
+                    - list [ref=e2197]:
+                      - listitem [ref=e2198]: Send a GET request to the G1 API
+                - listitem [ref=e2199]:
+                  - generic [ref=e2200] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/g1-api.{_format}" [level=3] [ref=e2201]':
+                      - generic [ref=e2203]: POST
+                      - text: "/api/v3/clubs/{clubId}/g1-api.{_format}"
+                    - list [ref=e2204]:
+                      - listitem [ref=e2205]: Send a POST request to the G1 API
+    - listitem [ref=e2206]:
+      - generic [ref=e2207]: Show/hide List Operations Expand Operations
+      - heading "API v3 - G1 Contact" [level=1] [ref=e2208]
+      - list [ref=e2209]:
+        - listitem [ref=e2210]:
+          - 'heading "/api/v3/clubs/{clubId}/g1-contact/{g1CustomerId}" [level=2] [ref=e2212]'
+          - list [ref=e2213]:
+            - listitem [ref=e2214]:
+              - list [ref=e2215]:
+                - listitem [ref=e2216]:
+                  - generic [ref=e2217] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/g1-contact/{g1CustomerId}.{_format}" [level=3] [ref=e2218]':
+                      - generic [ref=e2220]: GET
+                      - text: "/api/v3/clubs/{clubId}/g1-contact/{g1CustomerId}.{_format}"
+                    - list [ref=e2221]:
+                      - listitem [ref=e2222]: Returns a BRS contact fom a G1 customer ID
+    - listitem [ref=e2223]:
+      - generic [ref=e2224]: Show/hide List Operations Expand Operations
+      - heading "API v3 - G1 Player Slot Lock" [level=1] [ref=e2225]
+      - list [ref=e2226]:
+        - listitem [ref=e2227]:
+          - 'heading "/api/v3/clubs/{clubId}/tee-times/player-slot-lock" [level=2] [ref=e2229]'
+          - list [ref=e2230]:
+            - listitem [ref=e2231]:
+              - list [ref=e2232]:
+                - listitem [ref=e2233]:
+                  - generic [ref=e2234] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/tee-times/player-slot-lock.{_format}" [level=3] [ref=e2235]':
+                      - generic [ref=e2237]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/tee-times/player-slot-lock.{_format}"
+                    - list [ref=e2238]:
+                      - listitem [ref=e2239]: Unlock player slot on a G1 club
+                - listitem [ref=e2240]:
+                  - generic [ref=e2241] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/tee-times/player-slot-lock.{_format}" [level=3] [ref=e2242]':
+                      - generic [ref=e2244]: POST
+                      - text: "/api/v3/clubs/{clubId}/tee-times/player-slot-lock.{_format}"
+                    - list [ref=e2245]:
+                      - listitem [ref=e2246]: Lock player slot on a G1 club
+        - listitem [ref=e2247]:
+          - 'heading "/api/v3/clubs/{clubId}/tee-times/player-slot-locks" [level=2] [ref=e2249]'
+          - list [ref=e2250]:
+            - listitem [ref=e2251]:
+              - list [ref=e2252]:
+                - listitem [ref=e2253]:
+                  - generic [ref=e2254] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/tee-times/player-slot-locks.{_format}" [level=3] [ref=e2255]':
+                      - generic [ref=e2257]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/tee-times/player-slot-locks.{_format}"
+                    - list [ref=e2258]:
+                      - listitem [ref=e2259]: Delete one or more player slot locks
+                - listitem [ref=e2260]:
+                  - generic [ref=e2261] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/tee-times/player-slot-locks.{_format}" [level=3] [ref=e2262]':
+                      - generic [ref=e2264]: POST
+                      - text: "/api/v3/clubs/{clubId}/tee-times/player-slot-locks.{_format}"
+                    - list [ref=e2265]:
+                      - listitem [ref=e2266]: Create one or more player slot locks
+    - listitem [ref=e2267]:
+      - generic [ref=e2268]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Golf Genius" [level=1] [ref=e2269]
+      - list [ref=e2270]:
+        - listitem [ref=e2271]:
+          - 'heading "/api/v3/clubs/{clubId}/golf-genius/comp-purse/charge" [level=2] [ref=e2273]'
+          - list [ref=e2274]:
+            - listitem [ref=e2275]:
+              - list [ref=e2276]:
+                - listitem [ref=e2277]:
+                  - generic [ref=e2278] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/golf-genius/comp-purse/charge.{_format}" [level=3] [ref=e2279]':
+                      - generic [ref=e2281]: POST
+                      - text: "/api/v3/clubs/{clubId}/golf-genius/comp-purse/charge.{_format}"
+                    - list [ref=e2282]:
+                      - listitem [ref=e2283]: Charges a member's competition purse.
+        - listitem [ref=e2284]:
+          - 'heading "/api/v3/clubs/{clubId}/golf-genius/comp-purse/refund" [level=2] [ref=e2286]'
+          - list [ref=e2287]:
+            - listitem [ref=e2288]:
+              - list [ref=e2289]:
+                - listitem [ref=e2290]:
+                  - generic [ref=e2291] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/golf-genius/comp-purse/refund.{_format}" [level=3] [ref=e2292]':
+                      - generic [ref=e2294]: POST
+                      - text: "/api/v3/clubs/{clubId}/golf-genius/comp-purse/refund.{_format}"
+                    - list [ref=e2295]:
+                      - listitem [ref=e2296]: Refunds a member's competition purse transaction.
+        - listitem [ref=e2297]:
+          - 'heading "/api/v3/clubs/{clubId}/golf-genius/comp-purse/validate/{commonId}" [level=2] [ref=e2299]'
+          - list [ref=e2300]:
+            - listitem [ref=e2301]:
+              - list [ref=e2302]:
+                - listitem [ref=e2303]:
+                  - generic [ref=e2304] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/golf-genius/comp-purse/validate/{commonId}.{_format}" [level=3] [ref=e2305]':
+                      - generic [ref=e2307]: GET
+                      - text: "/api/v3/clubs/{clubId}/golf-genius/comp-purse/validate/{commonId}.{_format}"
+                    - list [ref=e2308]:
+                      - listitem [ref=e2309]: Returns the member's active status and competition purse balance.
+    - listitem [ref=e2310]:
+      - generic [ref=e2311]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Golf Plus" [level=1] [ref=e2312]
+      - list [ref=e2313]:
+        - listitem [ref=e2314]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2316]'
+          - list [ref=e2317]:
+            - listitem [ref=e2318]:
+              - list [ref=e2319]:
+                - listitem [ref=e2320]:
+                  - generic [ref=e2321] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/golf-plus/configuration.{_format}" [level=3] [ref=e2322]':
+                      - generic [ref=e2324]: GET
+                      - text: "/api/v3/clubs/{clubId}/golf-plus/configuration.{_format}"
+                    - list [ref=e2325]:
+                      - listitem [ref=e2326]: Return Golf Plus configuration
+        - listitem [ref=e2327]:
+          - 'heading "/api/v3/clubs/{clubId}/golf-plus/users" [level=2] [ref=e2329]'
+          - list [ref=e2330]:
+            - listitem [ref=e2331]:
+              - list [ref=e2332]:
+                - listitem [ref=e2333]:
+                  - generic [ref=e2334] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/golf-plus/users.{_format}" [level=3] [ref=e2335]':
+                      - generic [ref=e2337]: GET
+                      - text: "/api/v3/clubs/{clubId}/golf-plus/users.{_format}"
+                    - list [ref=e2338]:
+                      - listitem [ref=e2339]: Returns a list of Users - Members, Contacts, and Staff.
+    - listitem [ref=e2340]:
+      - generic [ref=e2341]: Show/hide List Operations Expand Operations
+      - heading "API v3 - GolfNow Pricing" [level=1] [ref=e2342]
+      - list [ref=e2343]:
+        - listitem [ref=e2344]:
+          - 'heading "/api/v3/clubs/{clubId}/golfnow-pricing" [level=2] [ref=e2346]'
+          - list [ref=e2347]:
+            - listitem [ref=e2348]:
+              - list [ref=e2349]:
+                - listitem [ref=e2350]:
+                  - generic [ref=e2351] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/golfnow-pricing.{_format}" [level=3] [ref=e2352]':
+                      - generic [ref=e2354]: GET
+                      - text: "/api/v3/clubs/{clubId}/golfnow-pricing.{_format}"
+                    - list [ref=e2355]:
+                      - listitem [ref=e2356]: List all GolfNow tee times by date
+    - listitem [ref=e2357]:
+      - generic [ref=e2358]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Green Fees" [level=1] [ref=e2359]
+      - list [ref=e2360]:
+        - listitem [ref=e2361]:
+          - 'heading "/api/v3/clubs/{clubId}/flexible-green-fees" [level=2] [ref=e2363]'
+          - list [ref=e2364]:
+            - listitem [ref=e2365]:
+              - list [ref=e2366]:
+                - listitem [ref=e2367]:
+                  - generic [ref=e2368] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/flexible-green-fees.{_format}" [level=3] [ref=e2369]':
+                      - generic [ref=e2371]: GET
+                      - text: "/api/v3/clubs/{clubId}/flexible-green-fees.{_format}"
+                    - list [ref=e2372]:
+                      - listitem [ref=e2373]: Returns active flexible green fees for the club.
+        - listitem [ref=e2374]:
+          - 'heading "/api/v3/clubs/{clubId}/green-fee-list" [level=2] [ref=e2376]'
+          - list [ref=e2377]:
+            - listitem [ref=e2378]:
+              - list [ref=e2379]:
+                - listitem [ref=e2380]:
+                  - generic [ref=e2381] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/green-fee-list.{_format}" [level=3] [ref=e2382]':
+                      - generic [ref=e2384]: GET
+                      - text: "/api/v3/clubs/{clubId}/green-fee-list.{_format}"
+                    - list [ref=e2385]:
+                      - listitem [ref=e2386]: Returns active green fees list for the club.
+        - listitem [ref=e2387]:
+          - 'heading "/api/v3/clubs/{clubId}/green-fees" [level=2] [ref=e2389]'
+          - list [ref=e2390]:
+            - listitem [ref=e2391]:
+              - list [ref=e2392]:
+                - listitem [ref=e2393]:
+                  - generic [ref=e2394] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/green-fees.{_format}" [level=3] [ref=e2395]':
+                      - generic [ref=e2397]: GET
+                      - text: "/api/v3/clubs/{clubId}/green-fees.{_format}"
+                    - list [ref=e2398]:
+                      - listitem [ref=e2399]: Returns active green fees for the club.
+        - listitem [ref=e2400]:
+          - 'heading "/api/v3/clubs/{clubId}/green-fees/{greenFee}" [level=2] [ref=e2402]'
+          - list [ref=e2403]:
+            - listitem [ref=e2404]:
+              - list [ref=e2405]:
+                - listitem [ref=e2406]:
+                  - generic [ref=e2407] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/green-fees/{greenFee}.{_format}" [level=3] [ref=e2408]':
+                      - generic [ref=e2410]: GET
+                      - text: "/api/v3/clubs/{clubId}/green-fees/{greenFee}.{_format}"
+                    - list [ref=e2411]:
+                      - listitem [ref=e2412]: Returns a green fee for the club.
+    - listitem [ref=e2413]:
+      - generic [ref=e2414]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Handicaddie" [level=1] [ref=e2415]
+      - list [ref=e2416]:
+        - listitem [ref=e2417]:
+          - 'heading "/api/v3/clubs/{clubId}/handicaddie/bookings" [level=2] [ref=e2419]'
+          - list [ref=e2420]:
+            - listitem [ref=e2421]:
+              - list [ref=e2422]:
+                - listitem [ref=e2423]:
+                  - generic [ref=e2424] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/handicaddie/bookings.{_format}" [level=3] [ref=e2425]':
+                      - generic [ref=e2427]: GET
+                      - text: "/api/v3/clubs/{clubId}/handicaddie/bookings.{_format}"
+                    - list [ref=e2428]:
+                      - listitem [ref=e2429]: Get Bookings for given date.
+    - listitem [ref=e2430]:
+      - generic [ref=e2431]: Show/hide List Operations Expand Operations
+      - heading "API v3 - HotDeals" [level=1] [ref=e2432]
+      - list [ref=e2433]:
+        - listitem [ref=e2434]:
+          - 'heading "/api/v3/clubs/{clubId}/hot-deals" [level=2] [ref=e2436]'
+          - list [ref=e2437]:
+            - listitem [ref=e2438]:
+              - list [ref=e2439]:
+                - listitem [ref=e2440]:
+                  - generic [ref=e2441] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/hot-deals.{_format}" [level=3] [ref=e2442]':
+                      - generic [ref=e2444]: GET
+                      - text: "/api/v3/clubs/{clubId}/hot-deals.{_format}"
+                    - list [ref=e2445]:
+                      - listitem [ref=e2446]: List hot deals by date
+    - listitem [ref=e2447]:
+      - generic [ref=e2448]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Licensing" [level=1] [ref=e2449]
+      - list [ref=e2450]:
+        - listitem [ref=e2451]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2453]'
+          - list [ref=e2454]:
+            - listitem [ref=e2455]:
+              - list [ref=e2456]:
+                - listitem [ref=e2457]:
+                  - generic [ref=e2458] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/licenses.{_format}" [level=3] [ref=e2459]':
+                      - generic [ref=e2461]: GET
+                      - text: "/api/v3/clubs/{clubId}/licenses.{_format}"
+                    - list [ref=e2462]:
+                      - listitem [ref=e2463]: Returns all product licenses for a given club.
+                - listitem [ref=e2464]:
+                  - generic [ref=e2465] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/licenses/{product}.{_format}" [level=3] [ref=e2466]':
+                      - generic [ref=e2468]: GET
+                      - text: "/api/v3/clubs/{clubId}/licenses/{product}.{_format}"
+                    - list [ref=e2469]:
+                      - listitem [ref=e2470]: Returns a specific product license for a given club.
+    - listitem [ref=e2471]:
+      - generic [ref=e2472]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Master Roster" [level=1] [ref=e2473]
+      - list [ref=e2474]:
+        - listitem [ref=e2475]:
+          - 'heading "/api/v3/clubs/{clubId}/master-roster" [level=2] [ref=e2477]'
+          - list [ref=e2478]:
+            - listitem [ref=e2479]:
+              - list [ref=e2480]:
+                - listitem [ref=e2481]:
+                  - generic [ref=e2482] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/master-roster.{_format}" [level=3] [ref=e2483]':
+                      - generic [ref=e2485]: GET
+                      - text: "/api/v3/clubs/{clubId}/master-roster.{_format}"
+                    - list [ref=e2486]:
+                      - listitem [ref=e2487]: Return roster of all members.
+    - listitem [ref=e2488]:
+      - generic [ref=e2489]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Member App Navigation" [level=1] [ref=e2490]
+      - list [ref=e2491]:
+        - listitem [ref=e2492]:
+          - 'heading "/api/v3/clubs/{clubId}/members/navigation" [level=2] [ref=e2494]'
+          - list [ref=e2495]:
+            - listitem [ref=e2496]:
+              - list [ref=e2497]:
+                - listitem [ref=e2498]:
+                  - generic [ref=e2499] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/members/navigation.{_format}" [level=3] [ref=e2500]':
+                      - generic [ref=e2502]: GET
+                      - text: "/api/v3/clubs/{clubId}/members/navigation.{_format}"
+                    - list [ref=e2503]:
+                      - listitem [ref=e2504]: Returns a collection of navigation items for the Member App
+    - listitem [ref=e2505]:
+      - generic [ref=e2506]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Member Green Fee Rates" [level=1] [ref=e2507]
+      - list [ref=e2508]:
+        - listitem [ref=e2509]:
+          - 'heading "/api/v3/clubs/{clubId}/member-green-fees" [level=2] [ref=e2511]'
+          - list [ref=e2512]:
+            - listitem [ref=e2513]:
+              - list [ref=e2514]:
+                - listitem [ref=e2515]:
+                  - generic [ref=e2516] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/member-green-fees.{_format}" [level=3] [ref=e2517]':
+                      - generic [ref=e2519]: GET
+                      - text: "/api/v3/clubs/{clubId}/member-green-fees.{_format}"
+                    - list [ref=e2520]:
+                      - listitem [ref=e2521]: Returns active green fee rates for members.
+    - listitem [ref=e2522]:
+      - generic [ref=e2523]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Member Guest Green Fees" [level=1] [ref=e2524]
+      - list [ref=e2525]:
+        - listitem [ref=e2526]:
+          - 'heading "/api/v3/clubs/{clubId}/member/guest/green-fees" [level=2] [ref=e2528]'
+          - list [ref=e2529]:
+            - listitem [ref=e2530]:
+              - list [ref=e2531]:
+                - listitem [ref=e2532]:
+                  - generic [ref=e2533] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/member/guest/green-fees.{_format}" [level=3] [ref=e2534]':
+                      - generic [ref=e2536]: GET
+                      - text: "/api/v3/clubs/{clubId}/member/guest/green-fees.{_format}"
+                    - list [ref=e2537]:
+                      - listitem [ref=e2538]: Returns a guest green fees for the club.
+    - listitem [ref=e2539]:
+      - generic [ref=e2540]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Members" [level=1] [ref=e2541]
+      - list [ref=e2542]:
+        - listitem [ref=e2543]:
+          - 'heading "/api/v3/clubs/{clubId}/members" [level=2] [ref=e2545]'
+          - list [ref=e2546]:
+            - listitem [ref=e2547]:
+              - list [ref=e2548]:
+                - listitem [ref=e2549]:
+                  - generic [ref=e2550] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/members.{_format}" [level=3] [ref=e2551]':
+                      - generic [ref=e2553]: POST
+                      - text: "/api/v3/clubs/{clubId}/members.{_format}"
+                    - list [ref=e2554]:
+                      - listitem [ref=e2555]: Register a member.
+    - listitem [ref=e2556]:
+      - generic [ref=e2557]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Membership Types" [level=1] [ref=e2558]
+      - list [ref=e2559]:
+        - listitem [ref=e2560]:
+          - 'heading "/api/v3/clubs/{clubId}/membership-types" [level=2] [ref=e2562]'
+          - list [ref=e2563]:
+            - listitem [ref=e2564]:
+              - list [ref=e2565]:
+                - listitem [ref=e2566]:
+                  - generic [ref=e2567] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/membership-types.{_format}" [level=3] [ref=e2568]':
+                      - generic [ref=e2570]: GET
+                      - text: "/api/v3/clubs/{clubId}/membership-types.{_format}"
+                    - list [ref=e2571]:
+                      - listitem [ref=e2572]: Returns active membership types for the club.
+                - listitem [ref=e2573]:
+                  - generic [ref=e2574] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/membership-types.{_format}" [level=3] [ref=e2575]':
+                      - generic [ref=e2577]: POST
+                      - text: "/api/v3/clubs/{clubId}/membership-types.{_format}"
+                    - list [ref=e2578]:
+                      - listitem [ref=e2579]: Creates a new membership type.
+                - listitem [ref=e2580]:
+                  - generic [ref=e2581] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/membership-types/all.{_format}" [level=3] [ref=e2582]':
+                      - generic [ref=e2584]: GET
+                      - text: "/api/v3/clubs/{clubId}/membership-types/all.{_format}"
+                    - list [ref=e2585]:
+                      - listitem [ref=e2586]: Returns all membership types for the club.
+                - listitem [ref=e2587]:
+                  - generic [ref=e2588] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/membership-types/checksum.{_format}" [level=3] [ref=e2589]':
+                      - generic [ref=e2591]: GET
+                      - text: "/api/v3/clubs/{clubId}/membership-types/checksum.{_format}"
+                    - list [ref=e2592]:
+                      - listitem [ref=e2593]: Fetch membership type data checksum.
+        - listitem [ref=e2594]:
+          - 'heading "/api/v3/clubs/{clubId}/membership-types/publish" [level=2] [ref=e2596]'
+          - list [ref=e2597]:
+            - listitem [ref=e2598]:
+              - list [ref=e2599]:
+                - listitem [ref=e2600]:
+                  - generic [ref=e2601] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/membership-types/publish.{_format}" [level=3] [ref=e2602]':
+                      - generic [ref=e2604]: POST
+                      - text: "/api/v3/clubs/{clubId}/membership-types/publish.{_format}"
+                    - list [ref=e2605]:
+                      - listitem [ref=e2606]: Publish membership type records to an external service.
+        - listitem [ref=e2607]:
+          - 'heading "/api/v3/clubs/{clubId}/membership-types/{id}" [level=2] [ref=e2609]'
+          - list [ref=e2610]:
+            - listitem [ref=e2611]:
+              - list [ref=e2612]:
+                - listitem [ref=e2613]:
+                  - generic [ref=e2614] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/membership-types/{id}.{_format}" [level=3] [ref=e2615]':
+                      - generic [ref=e2617]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/membership-types/{id}.{_format}"
+                    - list [ref=e2618]:
+                      - listitem [ref=e2619]: Delete active membership type.
+                - listitem [ref=e2620]:
+                  - generic [ref=e2621] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/membership-types/{id}.{_format}" [level=3] [ref=e2622]':
+                      - generic [ref=e2624]: GET
+                      - text: "/api/v3/clubs/{clubId}/membership-types/{id}.{_format}"
+                    - list [ref=e2625]:
+                      - listitem [ref=e2626]: Returns an active membership type for the club.
+                - listitem [ref=e2627]:
+                  - generic [ref=e2628] [cursor=pointer]:
+                    - 'heading "PUT /api/v3/clubs/{clubId}/membership-types/{id}.{_format}" [level=3] [ref=e2629]':
+                      - generic [ref=e2631]: PUT
+                      - text: "/api/v3/clubs/{clubId}/membership-types/{id}.{_format}"
+                    - list [ref=e2632]:
+                      - listitem [ref=e2633]: Updates a membership type.
+    - listitem [ref=e2634]:
+      - generic [ref=e2635]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Merchants" [level=1] [ref=e2636]
+      - list [ref=e2637]:
+        - listitem [ref=e2638]:
+          - 'heading "/api/v3/clubs/{clubId}/merchant" [level=2] [ref=e2640]'
+          - list [ref=e2641]:
+            - listitem [ref=e2642]:
+              - list [ref=e2643]:
+                - listitem [ref=e2644]:
+                  - generic [ref=e2645] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/merchant.{_format}" [level=3] [ref=e2646]':
+                      - generic [ref=e2648]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/merchant.{_format}"
+                    - list [ref=e2649]:
+                      - listitem [ref=e2650]: Updates an existing merchant transaction identified by vendor_tx_code
+                - listitem [ref=e2651]:
+                  - generic [ref=e2652] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/merchant.{_format}" [level=3] [ref=e2653]':
+                      - generic [ref=e2655]: POST
+                      - text: "/api/v3/clubs/{clubId}/merchant.{_format}"
+                    - list [ref=e2656]:
+                      - listitem [ref=e2657]: Create a new merchant transaction record
+    - listitem [ref=e2658]:
+      - generic [ref=e2659]: Show/hide List Operations Expand Operations
+      - heading "API v3 - No Show Reasons" [level=1] [ref=e2660]
+      - list [ref=e2661]:
+        - listitem [ref=e2662]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2664]'
+          - list [ref=e2665]:
+            - listitem [ref=e2666]:
+              - list [ref=e2667]:
+                - listitem [ref=e2668]:
+                  - generic [ref=e2669] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/no-show-reasons.{_format}" [level=3] [ref=e2670]':
+                      - generic [ref=e2672]: GET
+                      - text: "/api/v3/clubs/{clubId}/no-show-reasons.{_format}"
+                    - list [ref=e2673]:
+                      - listitem [ref=e2674]: Return no show reasons
+    - listitem [ref=e2675]:
+      - generic [ref=e2676]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Open Competitions" [level=1] [ref=e2677]
+      - list [ref=e2678]:
+        - listitem [ref=e2679]:
+          - 'heading "/api/v3/clubs/{clubId}/open-competitions" [level=2] [ref=e2681]'
+          - list [ref=e2682]:
+            - listitem [ref=e2683]:
+              - list [ref=e2684]:
+                - listitem [ref=e2685]:
+                  - generic [ref=e2686] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/open-competitions.{_format}" [level=3] [ref=e2687]':
+                      - generic [ref=e2689]: GET
+                      - text: "/api/v3/clubs/{clubId}/open-competitions.{_format}"
+                    - list [ref=e2690]:
+                      - listitem [ref=e2691]: Returns a list of Open Competitons for a given Club
+        - listitem [ref=e2692]:
+          - 'heading "/api/v3/clubs/{clubId}/open-competitions/{id}" [level=2] [ref=e2694]'
+          - list [ref=e2695]:
+            - listitem [ref=e2696]:
+              - list [ref=e2697]:
+                - listitem [ref=e2698]:
+                  - generic [ref=e2699] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/open-competitions/{id}.{_format}" [level=3] [ref=e2700]':
+                      - generic [ref=e2702]: GET
+                      - text: "/api/v3/clubs/{clubId}/open-competitions/{id}.{_format}"
+                    - list [ref=e2703]:
+                      - listitem [ref=e2704]: Returns an Open Competiton for a given Id
+        - listitem [ref=e2705]:
+          - 'heading "/api/v3/clubs/{clubId}/open-competitions/{id}/teesheet" [level=2] [ref=e2707]'
+          - list [ref=e2708]:
+            - listitem [ref=e2709]:
+              - list [ref=e2710]:
+                - listitem [ref=e2711]:
+                  - generic [ref=e2712] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/open-competitions/{id}/teesheet.{_format}" [level=3] [ref=e2713]':
+                      - generic [ref=e2715]: GET
+                      - text: "/api/v3/clubs/{clubId}/open-competitions/{id}/teesheet.{_format}"
+                    - list [ref=e2716]:
+                      - listitem [ref=e2717]: Returns the Teesheet for an Open Competiton
+    - listitem [ref=e2718]:
+      - generic [ref=e2719]: Show/hide List Operations Expand Operations
+      - heading "API v3 - People" [level=1] [ref=e2720]
+      - list [ref=e2721]:
+        - listitem [ref=e2722]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2724]'
+          - list [ref=e2725]:
+            - listitem [ref=e2726]:
+              - list [ref=e2727]:
+                - listitem [ref=e2728]:
+                  - generic [ref=e2729] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/people.{_format}" [level=3] [ref=e2730]':
+                      - generic [ref=e2732]: GET
+                      - text: "/api/v3/clubs/{clubId}/people.{_format}"
+                    - list [ref=e2733]:
+                      - listitem [ref=e2734]: Fetch all person records.
+                - listitem [ref=e2735]:
+                  - generic [ref=e2736] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/people/checksum.{_format}" [level=3] [ref=e2737]':
+                      - generic [ref=e2739]: GET
+                      - text: "/api/v3/clubs/{clubId}/people/checksum.{_format}"
+                    - list [ref=e2740]:
+                      - listitem [ref=e2741]: Fetch person data checksum.
+                - listitem [ref=e2742]:
+                  - generic [ref=e2743] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/people/report.{_format}" [level=3] [ref=e2744]':
+                      - generic [ref=e2746]: GET
+                      - text: "/api/v3/clubs/{clubId}/people/report.{_format}"
+                    - list [ref=e2747]:
+                      - listitem [ref=e2748]: Fetch person data report.
+        - listitem [ref=e2749]:
+          - 'heading "/api/v3/clubs/{clubId}/people/merge" [level=2] [ref=e2751]'
+          - list [ref=e2752]:
+            - listitem [ref=e2753]:
+              - list [ref=e2754]:
+                - listitem [ref=e2755]:
+                  - generic [ref=e2756] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/people/merge.{_format}" [level=3] [ref=e2757]':
+                      - generic [ref=e2759]: POST
+                      - text: "/api/v3/clubs/{clubId}/people/merge.{_format}"
+                    - list [ref=e2760]:
+                      - listitem [ref=e2761]: Identifies potential duplicate player records based on specified criteria.
+        - listitem [ref=e2762]:
+          - 'heading "/api/v3/clubs/{clubId}/people/normalise" [level=2] [ref=e2764]'
+          - list [ref=e2765]:
+            - listitem [ref=e2766]:
+              - list [ref=e2767]:
+                - listitem [ref=e2768]:
+                  - generic [ref=e2769] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/people/normalise.{_format}" [level=3] [ref=e2770]':
+                      - generic [ref=e2772]: POST
+                      - text: "/api/v3/clubs/{clubId}/people/normalise.{_format}"
+                    - list [ref=e2773]:
+                      - listitem [ref=e2774]: Normalise person records.
+        - listitem [ref=e2775]:
+          - 'heading "/api/v3/clubs/{clubId}/people/publish" [level=2] [ref=e2777]'
+          - list [ref=e2778]:
+            - listitem [ref=e2779]:
+              - list [ref=e2780]:
+                - listitem [ref=e2781]:
+                  - generic [ref=e2782] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/people/publish.{_format}" [level=3] [ref=e2783]':
+                      - generic [ref=e2785]: POST
+                      - text: "/api/v3/clubs/{clubId}/people/publish.{_format}"
+                    - list [ref=e2786]:
+                      - listitem [ref=e2787]: Publish person records to an external service.
+    - listitem [ref=e2788]:
+      - generic [ref=e2789]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Players" [level=1] [ref=e2790]
+      - list [ref=e2791]:
+        - listitem [ref=e2792]:
+          - 'heading "/api/v3/clubs/{clubId}/players" [level=2] [ref=e2794]'
+          - list [ref=e2795]:
+            - listitem [ref=e2796]:
+              - list [ref=e2797]:
+                - listitem [ref=e2798]:
+                  - generic [ref=e2799] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/players.{_format}" [level=3] [ref=e2800]':
+                      - generic [ref=e2802]: GET
+                      - text: "/api/v3/clubs/{clubId}/players.{_format}"
+                    - list [ref=e2803]:
+                      - listitem [ref=e2804]: Returns a list of Players - Members & Contacts.
+        - listitem [ref=e2805]:
+          - 'heading "/api/v3/clubs/{clubId}/players/{key}" [level=2] [ref=e2807]'
+          - list [ref=e2808]:
+            - listitem [ref=e2809]:
+              - list [ref=e2810]:
+                - listitem [ref=e2811]:
+                  - generic [ref=e2812] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/players/{key}.{_format}" [level=3] [ref=e2813]':
+                      - generic [ref=e2815]: GET
+                      - text: "/api/v3/clubs/{clubId}/players/{key}.{_format}"
+                    - list [ref=e2816]:
+                      - listitem [ref=e2817]: Returns a player - either a member, contact or both. Members are searched first by username by default.
+    - listitem [ref=e2818]:
+      - generic [ref=e2819]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Push Tokens" [level=1] [ref=e2820]
+      - list [ref=e2821]:
+        - listitem [ref=e2822]:
+          - 'heading "/api/v3/clubs/{clubId}/push-tokens" [level=2] [ref=e2824]'
+          - list [ref=e2825]:
+            - listitem [ref=e2826]:
+              - list [ref=e2827]:
+                - listitem [ref=e2828]:
+                  - generic [ref=e2829] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/push-tokens.{_format}" [level=3] [ref=e2830]':
+                      - generic [ref=e2832]: GET
+                      - text: "/api/v3/clubs/{clubId}/push-tokens.{_format}"
+                    - list [ref=e2833]:
+                      - listitem [ref=e2834]: Returns all push tokens registered against a club.
+                - listitem [ref=e2835]:
+                  - generic [ref=e2836] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/push-tokens.{_format}" [level=3] [ref=e2837]':
+                      - generic [ref=e2839]: POST
+                      - text: "/api/v3/clubs/{clubId}/push-tokens.{_format}"
+                    - list [ref=e2840]:
+                      - listitem [ref=e2841]: Creates a new push token for a club member.
+        - listitem [ref=e2842]:
+          - 'heading "/api/v3/clubs/{clubId}/push-tokens/{token}" [level=2] [ref=e2844]'
+          - list [ref=e2845]:
+            - listitem [ref=e2846]:
+              - list [ref=e2847]:
+                - listitem [ref=e2848]:
+                  - generic [ref=e2849] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/push-tokens/{token}.{_format}" [level=3] [ref=e2850]':
+                      - generic [ref=e2852]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/push-tokens/{token}.{_format}"
+                    - list [ref=e2853]:
+                      - listitem [ref=e2854]: Deletes a push token.
+                - listitem [ref=e2855]:
+                  - generic [ref=e2856] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/push-tokens/{token}.{_format}" [level=3] [ref=e2857]':
+                      - generic [ref=e2859]: GET
+                      - text: "/api/v3/clubs/{clubId}/push-tokens/{token}.{_format}"
+                    - list [ref=e2860]:
+                      - listitem [ref=e2861]: Retrieves a push token created by a user.
+                - listitem [ref=e2862]:
+                  - generic [ref=e2863] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/push-tokens/{token}.{_format}" [level=3] [ref=e2864]':
+                      - generic [ref=e2866]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/push-tokens/{token}.{_format}"
+                    - list [ref=e2867]:
+                      - listitem [ref=e2868]: Updates an existing push token.
+    - listitem [ref=e2869]:
+      - generic [ref=e2870]: Show/hide List Operations Expand Operations
+      - heading "API v3 - RTS Tee Sheets" [level=1] [ref=e2871]
+      - list [ref=e2872]:
+        - listitem [ref=e2873]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e2875]'
+          - list [ref=e2876]:
+            - listitem [ref=e2877]:
+              - list [ref=e2878]:
+                - listitem [ref=e2879]:
+                  - generic [ref=e2880] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/rts-teesheet/.{_format}" [level=3] [ref=e2881]':
+                      - generic [ref=e2883]: GET
+                      - text: "/api/v3/clubs/{clubId}/rts-teesheet/.{_format}"
+                    - list [ref=e2884]:
+                      - listitem [ref=e2885]: Returns a complete Teesheet(s) slots for a given Course or all Courses * for a date range and/or time range.
+    - listitem [ref=e2886]:
+      - generic [ref=e2887]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Reports" [level=1] [ref=e2888]
+      - list [ref=e2889]:
+        - listitem [ref=e2890]:
+          - 'heading "/api/v3/clubs/{clubId}/g1-bookings-report" [level=2] [ref=e2892]'
+          - list [ref=e2893]:
+            - listitem [ref=e2894]:
+              - list [ref=e2895]:
+                - listitem [ref=e2896]:
+                  - generic [ref=e2897] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/g1-bookings-report.{_format}" [level=3] [ref=e2898]':
+                      - generic [ref=e2900]: GET
+                      - text: "/api/v3/clubs/{clubId}/g1-bookings-report.{_format}"
+                    - list [ref=e2901]:
+                      - listitem [ref=e2902]: Returns a booking report for G1 customers
+    - listitem [ref=e2903]:
+      - generic [ref=e2904]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Reservation Types" [level=1] [ref=e2905]
+      - list [ref=e2906]:
+        - listitem [ref=e2907]:
+          - 'heading "/api/v3/clubs/{clubId}/reservation-types" [level=2] [ref=e2909]'
+          - list [ref=e2910]:
+            - listitem [ref=e2911]:
+              - list [ref=e2912]:
+                - listitem [ref=e2913]:
+                  - generic [ref=e2914] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/reservation-types.{_format}" [level=3] [ref=e2915]':
+                      - generic [ref=e2917]: GET
+                      - text: "/api/v3/clubs/{clubId}/reservation-types.{_format}"
+                    - list [ref=e2918]:
+                      - listitem [ref=e2919]: Returns all Reservation Types for the club.
+    - listitem [ref=e2920]:
+      - generic [ref=e2921]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Squeeze Tee Times" [level=1] [ref=e2922]
+      - list [ref=e2923]:
+        - listitem [ref=e2924]:
+          - 'heading "/api/v3/clubs/{clubId}/squeeze-tee-time" [level=2] [ref=e2926]'
+          - list [ref=e2927]:
+            - listitem [ref=e2928]:
+              - list [ref=e2929]:
+                - listitem [ref=e2930]:
+                  - generic [ref=e2931] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/squeeze-tee-time.{_format}" [level=3] [ref=e2932]':
+                      - generic [ref=e2934]: POST
+                      - text: "/api/v3/clubs/{clubId}/squeeze-tee-time.{_format}"
+                    - list [ref=e2935]:
+                      - listitem [ref=e2936]: Create a squeezed tee time
+    - listitem [ref=e2937]:
+      - generic [ref=e2938]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Statistics" [level=1] [ref=e2939]
+      - list [ref=e2940]:
+        - listitem [ref=e2941]:
+          - 'heading "/api/v3/clubs/{clubId}/rounds-summary" [level=2] [ref=e2943]'
+          - list [ref=e2944]:
+            - listitem [ref=e2945]:
+              - list [ref=e2946]:
+                - listitem [ref=e2947]:
+                  - generic [ref=e2948] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/rounds-summary.{_format}" [level=3] [ref=e2949]':
+                      - generic [ref=e2951]: GET
+                      - text: "/api/v3/clubs/{clubId}/rounds-summary.{_format}"
+                    - list [ref=e2952]:
+                      - listitem [ref=e2953]: Rounds summary for a course on a date
+    - listitem [ref=e2954]:
+      - generic [ref=e2955]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Stripe" [level=1] [ref=e2956]
+      - list [ref=e2957]:
+        - listitem [ref=e2958]:
+          - 'heading "/api/v3/clubs/{clubId}/stripe/payment/confirm" [level=2] [ref=e2960]'
+          - list [ref=e2961]:
+            - listitem [ref=e2962]:
+              - list [ref=e2963]:
+                - listitem [ref=e2964]:
+                  - generic [ref=e2965] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/stripe/payment/confirm.{_format}" [level=3] [ref=e2966]':
+                      - generic [ref=e2968]: POST
+                      - text: "/api/v3/clubs/{clubId}/stripe/payment/confirm.{_format}"
+                    - list [ref=e2969]:
+                      - listitem [ref=e2970]: Confirms stripe payment intent
+        - listitem [ref=e2971]:
+          - 'heading "/api/v3/clubs/{clubId}/stripe/payment/prepare" [level=2] [ref=e2973]'
+          - list [ref=e2974]:
+            - listitem [ref=e2975]:
+              - list [ref=e2976]:
+                - listitem [ref=e2977]:
+                  - generic [ref=e2978] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/stripe/payment/prepare.{_format}" [level=3] [ref=e2979]':
+                      - generic [ref=e2981]: POST
+                      - text: "/api/v3/clubs/{clubId}/stripe/payment/prepare.{_format}"
+                    - list [ref=e2982]:
+                      - listitem [ref=e2983]: Creates a new stripe payment intent
+    - listitem [ref=e2984]:
+      - generic [ref=e2985]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Tee Sheet Data" [level=1] [ref=e2986]
+      - list [ref=e2987]:
+        - listitem [ref=e2988]:
+          - 'heading "/api/v3/clubs/{clubId}/teesheetdata" [level=2] [ref=e2990]'
+          - list [ref=e2991]:
+            - listitem [ref=e2992]:
+              - list [ref=e2993]:
+                - listitem [ref=e2994]:
+                  - generic [ref=e2995] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/teesheetdata.{_format}" [level=3] [ref=e2996]':
+                      - generic [ref=e2998]: GET
+                      - text: "/api/v3/clubs/{clubId}/teesheetdata.{_format}"
+                    - list [ref=e2999]:
+                      - listitem [ref=e3000]: Returns all tee sheet pricing data for the club.
+    - listitem [ref=e3001]:
+      - generic [ref=e3002]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Tee Sheets" [level=1] [ref=e3003]
+      - list [ref=e3004]:
+        - listitem [ref=e3005]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e3007]'
+          - list [ref=e3008]:
+            - listitem [ref=e3009]:
+              - list [ref=e3010]:
+                - listitem [ref=e3011]:
+                  - generic [ref=e3012] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/teesheets/.{_format}" [level=3] [ref=e3013]':
+                      - generic [ref=e3015]: GET
+                      - text: "/api/v3/clubs/{clubId}/teesheets/.{_format}"
+                    - list [ref=e3016]:
+                      - listitem [ref=e3017]: Returns a complete Teesheet(s) slots for a given Course or all Courses * for a date range and/or time range.
+    - listitem [ref=e3018]:
+      - generic [ref=e3019]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Tee Time Transactions" [level=1] [ref=e3020]
+      - list [ref=e3021]:
+        - listitem [ref=e3022]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e3024]'
+          - list [ref=e3025]:
+            - listitem [ref=e3026]:
+              - list [ref=e3027]:
+                - listitem [ref=e3028]:
+                  - generic [ref=e3029] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/tee-time-transactions.{_format}" [level=3] [ref=e3030]':
+                      - generic [ref=e3032]: GET
+                      - text: "/api/v3/clubs/{clubId}/tee-time-transactions.{_format}"
+                    - list [ref=e3033]:
+                      - listitem [ref=e3034]: Returns a tee-time's transactions
+    - listitem [ref=e3035]:
+      - generic [ref=e3036]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Tee Times" [level=1] [ref=e3037]
+      - list [ref=e3038]:
+        - listitem [ref=e3039]:
+          - 'heading "/api/v3/clubs/{clubId}/tee-times/reserve" [level=2] [ref=e3041]'
+          - list [ref=e3042]:
+            - listitem [ref=e3043]:
+              - list [ref=e3044]:
+                - listitem [ref=e3045]:
+                  - generic [ref=e3046] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/tee-times/reserve.{_format}" [level=3] [ref=e3047]':
+                      - generic [ref=e3049]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/tee-times/reserve.{_format}"
+                    - list [ref=e3050]:
+                      - listitem [ref=e3051]: Clear the reservation type on a set of tee times.
+                - listitem [ref=e3052]:
+                  - generic [ref=e3053] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/tee-times/reserve.{_format}" [level=3] [ref=e3054]':
+                      - generic [ref=e3056]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/tee-times/reserve.{_format}"
+                    - list [ref=e3057]:
+                      - listitem [ref=e3058]: Update the reservation type, reservation name or holes on a set of tee times.
+                - listitem [ref=e3059]:
+                  - generic [ref=e3060] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/tee-times/reserve.{_format}" [level=3] [ref=e3061]':
+                      - generic [ref=e3063]: POST
+                      - text: "/api/v3/clubs/{clubId}/tee-times/reserve.{_format}"
+                    - list [ref=e3064]:
+                      - listitem [ref=e3065]: Set the reservation type on a set of tee times.
+        - listitem [ref=e3066]:
+          - 'heading "/api/v3/clubs/{clubId}/tee-times/reserve/batch" [level=2] [ref=e3068]'
+          - list [ref=e3069]:
+            - listitem [ref=e3070]:
+              - list [ref=e3071]:
+                - listitem [ref=e3072]:
+                  - generic [ref=e3073] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/tee-times/reserve/batch.{_format}" [level=3] [ref=e3074]':
+                      - generic [ref=e3076]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/tee-times/reserve/batch.{_format}"
+                    - list [ref=e3077]:
+                      - listitem [ref=e3078]: Update the reservation type, reservation name or holes on one or more sets of tee times.
+                - listitem [ref=e3079]:
+                  - generic [ref=e3080] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/tee-times/reserve/batch.{_format}" [level=3] [ref=e3081]':
+                      - generic [ref=e3083]: POST
+                      - text: "/api/v3/clubs/{clubId}/tee-times/reserve/batch.{_format}"
+                    - list [ref=e3084]:
+                      - listitem [ref=e3085]: Set the reservation type on one or more sets of tee times.
+    - listitem [ref=e3086]:
+      - generic [ref=e3087]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Text Messaging" [level=1] [ref=e3088]
+      - list [ref=e3089]:
+        - listitem [ref=e3090]:
+          - heading "/api/v3/clickatell/stops" [level=2] [ref=e3092]
+          - list [ref=e3093]:
+            - listitem [ref=e3094]:
+              - list [ref=e3095]:
+                - listitem [ref=e3096]:
+                  - generic [ref=e3097] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clickatell/stops.{_format}" [level=3] [ref=e3098]':
+                      - generic [ref=e3100]: POST
+                      - text: "/api/v3/clickatell/stops.{_format}"
+                    - list [ref=e3101]:
+                      - listitem [ref=e3102]: Endpoint for Clickatell Users/Contact to Opt Out of Marking SMS Messages.
+    - listitem [ref=e3103]:
+      - generic [ref=e3104]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Users" [level=1] [ref=e3105]
+      - list [ref=e3106]:
+        - listitem [ref=e3107]:
+          - 'heading "/api/v3/clubs/{clubId}/users" [level=2] [ref=e3109]'
+          - list [ref=e3110]:
+            - listitem [ref=e3111]:
+              - list [ref=e3112]:
+                - listitem [ref=e3113]:
+                  - generic [ref=e3114] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/users.{_format}" [level=3] [ref=e3115]':
+                      - generic [ref=e3117]: POST
+                      - text: "/api/v3/clubs/{clubId}/users.{_format}"
+                    - list [ref=e3118]:
+                      - listitem [ref=e3119]: Creates Users form an array
+    - listitem [ref=e3120]:
+      - generic [ref=e3121]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Visitor Green Fee Rates" [level=1] [ref=e3122]
+      - list [ref=e3123]:
+        - listitem [ref=e3124]:
+          - 'heading "/api/v3/clubs/{clubId}/visitor-green-fee-rates" [level=2] [ref=e3126]'
+          - list [ref=e3127]:
+            - listitem [ref=e3128]:
+              - list [ref=e3129]:
+                - listitem [ref=e3130]:
+                  - generic [ref=e3131] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/visitor-green-fee-rates.{_format}" [level=3] [ref=e3132]':
+                      - generic [ref=e3134]: GET
+                      - text: "/api/v3/clubs/{clubId}/visitor-green-fee-rates.{_format}"
+                    - list [ref=e3135]:
+                      - listitem [ref=e3136]: Returns a collection of visitor green fee rates
+                - listitem [ref=e3137]:
+                  - generic [ref=e3138] [cursor=pointer]:
+                    - 'heading "POST /api/v3/clubs/{clubId}/visitor-green-fee-rates.{_format}" [level=3] [ref=e3139]':
+                      - generic [ref=e3141]: POST
+                      - text: "/api/v3/clubs/{clubId}/visitor-green-fee-rates.{_format}"
+                    - list [ref=e3142]:
+                      - listitem [ref=e3143]: Create a new visitor green fee rate.
+        - listitem [ref=e3144]:
+          - 'heading "/api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}" [level=2] [ref=e3146]'
+          - list [ref=e3147]:
+            - listitem [ref=e3148]:
+              - list [ref=e3149]:
+                - listitem [ref=e3150]:
+                  - generic [ref=e3151] [cursor=pointer]:
+                    - 'heading "DELETE /api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}" [level=3] [ref=e3152]':
+                      - generic [ref=e3154]: DELETE
+                      - text: "/api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}"
+                    - list [ref=e3155]:
+                      - listitem [ref=e3156]: Delete a single visitor green fee rate
+                - listitem [ref=e3157]:
+                  - generic [ref=e3158] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}" [level=3] [ref=e3159]':
+                      - generic [ref=e3161]: GET
+                      - text: "/api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}"
+                    - list [ref=e3162]:
+                      - listitem [ref=e3163]: Returns a single visitor green fee rate
+                - listitem [ref=e3164]:
+                  - generic [ref=e3165] [cursor=pointer]:
+                    - 'heading "PATCH /api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}" [level=3] [ref=e3166]':
+                      - generic [ref=e3168]: PATCH
+                      - text: "/api/v3/clubs/{clubId}/visitor-green-fee-rates/{id}.{_format}"
+                    - list [ref=e3169]:
+                      - listitem [ref=e3170]: Updates a single visitor green fee rate
+    - listitem [ref=e3171]:
+      - generic [ref=e3172]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Visitor Tee Sheets" [level=1] [ref=e3173]
+      - list [ref=e3174]:
+        - listitem [ref=e3175]:
+          - 'heading "/api/v3/clubs/{clubId}/visitor-teesheets" [level=2] [ref=e3177]'
+          - list [ref=e3178]:
+            - listitem [ref=e3179]:
+              - list [ref=e3180]:
+                - listitem [ref=e3181]:
+                  - generic [ref=e3182] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/visitor-teesheets.{_format}" [level=3] [ref=e3183]':
+                      - generic [ref=e3185]: GET
+                      - text: "/api/v3/clubs/{clubId}/visitor-teesheets.{_format}"
+                    - list [ref=e3186]:
+                      - listitem [ref=e3187]: Returns complete Visitor Teesheet slots & prices for a given Course and date
+    - listitem [ref=e3188]:
+      - generic [ref=e3189]: Show/hide List Operations Expand Operations
+      - heading "API v3 - Weather" [level=1] [ref=e3190]
+      - list [ref=e3191]:
+        - listitem [ref=e3192]:
+          - 'heading /api/v3/clubs/{clubId}/ [level=2] [ref=e3194]'
+          - list [ref=e3195]:
+            - listitem [ref=e3196]:
+              - list [ref=e3197]:
+                - listitem [ref=e3198]:
+                  - generic [ref=e3199] [cursor=pointer]:
+                    - 'heading "GET /api/v3/clubs/{clubId}/weather/.{_format}" [level=3] [ref=e3200]':
+                      - generic [ref=e3202]: GET
+                      - text: "/api/v3/clubs/{clubId}/weather/.{_format}"
+                    - list [ref=e3203]:
+                      - listitem [ref=e3204]: Returns weather data for a club/date.
+    - listitem [ref=e3205]:
+      - 'heading "/api/v3/clubs/{clubId}/validate-member-username/{username}" [level=2] [ref=e3207]'
+      - list [ref=e3208]:
+        - listitem [ref=e3209]:
+          - list [ref=e3210]:
+            - listitem [ref=e3211]:
+              - generic [ref=e3212] [cursor=pointer]:
+                - 'heading "GET /api/v3/clubs/{clubId}/validate-member-username/{username}.{_format}" [level=3] [ref=e3213]':
+                  - generic [ref=e3215]: GET
+                  - text: "/api/v3/clubs/{clubId}/validate-member-username/{username}.{_format}"
+                - list [ref=e3216]:
+                  - listitem [ref=e3217]: Check username availability starting from a given numeric value and return the next available username
+  - paragraph [ref=e3218]: Documentation auto-generated on Mon, 08 Jun 26 10:36:34 +0100

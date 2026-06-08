@@ -111,7 +111,7 @@ export default function IntegrationsPage() {
     try {
       const newIntegration = await apiClient.createIntegration(data);
       setSelectedIntegration(newIntegration);
-      setSelectedAuthType(data.auth_type);
+      setSelectedAuthType(data.auth_type as 'oauth' | 'api_key' | 'pat');
       setShowCreateModal(false);
       setShowCredentialModal(true);
     } catch (err) {
@@ -183,7 +183,7 @@ export default function IntegrationsPage() {
     setSelectedHealthId(id);
 
     try {
-      const result = await apiClient.testIntegrationHealth(id);
+      const result = await apiClient.checkIntegrationHealth(id);
       setHealthStatus((prev) => ({
         ...prev,
         [id]: result,
@@ -191,7 +191,7 @@ export default function IntegrationsPage() {
       setSuccessMessage(
         result.status === 'healthy'
           ? 'Integration is healthy'
-          : `Health check completed: ${result.message}`
+          : `Health check completed: ${result.status}`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to test integration');
@@ -203,7 +203,7 @@ export default function IntegrationsPage() {
 
   const fetchHealthStatus = async (integrationId: number) => {
     try {
-      const result = await apiClient.testIntegrationHealth(integrationId);
+      const result = await apiClient.checkIntegrationHealth(integrationId);
       setHealthStatus((prev) => ({
         ...prev,
         [integrationId]: result,

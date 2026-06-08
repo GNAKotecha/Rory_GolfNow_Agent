@@ -1,0 +1,116 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "0"
+          - generic [ref=e15]: "1"
+        - generic [ref=e16]: Issue
+      - button "Collapse issues badge" [ref=e17]:
+        - img [ref=e18]
+  - alert [ref=e20]
+  - generic [ref=e21]:
+    - generic [ref=e22]:
+      - button "New chat" [ref=e24]:
+        - img [ref=e25]
+        - text: New chat
+      - generic [ref=e27]:
+        - button "I need to reinstate a deleted user" [ref=e98]
+        - button "I need to reinstate a deleted user account" [ref=e28]
+        - button "Can you execute the complete REINSTATE_USER workfl" [ref=e29]
+        - button "I need to reinstate user 98765432. Can you walk me" [ref=e30]
+        - button "list tools" [ref=e31]
+        - button "test" [ref=e32]
+        - button "count tools" [ref=e33]
+        - button "What tools do you have? List all of them." [ref=e34]
+        - button "Chat - 19:14:23" [ref=e35]
+        - button "Chat - 19:13:01" [ref=e36]
+        - button "Chat - 19:11:36" [ref=e37]
+        - button "What tools do you have access to? Please list all" [ref=e38]
+        - button "What tools do you have?" [ref=e39]
+        - button "What tools do you have?" [ref=e40]
+        - button "what brs tools do you have access to" [ref=e41]
+        - button "What tools do you have?" [ref=e42]
+        - button "What tools do you have?" [ref=e43]
+        - button "What tools do you have access to? List all of them" [ref=e44]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e45]
+        - button "What tools and skills do you have access to? Can y" [ref=e46]
+        - button "I need to reinstate user 98765432" [ref=e47]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e48]
+        - button "hello" [ref=e49]
+        - button "Find a user in brsgolfclubsales" [ref=e50]
+        - button "New Chat" [ref=e51]
+        - button "New Chat" [ref=e52]
+        - button "Final Test" [ref=e53]
+        - button "Create Club Test" [ref=e54]
+        - button "Test Session" [ref=e55]
+        - button "New Chat" [ref=e56]
+        - button "Create Club Test 2" [ref=e57]
+        - button "Create Club Test" [ref=e58]
+        - button "Create Club Test" [ref=e59]
+        - button "Debug Test" [ref=e60]
+        - button "Test Create Club" [ref=e61]
+        - button "Test Session 2" [ref=e62]
+        - button "Test Session" [ref=e63]
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: Armaan
+          - generic [ref=e68]: admin
+        - button "Logout" [ref=e69]:
+          - img [ref=e70]
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - button [ref=e74]:
+          - img [ref=e75]
+        - heading "I need to reinstate a deleted user" [level=1] [ref=e99] [cursor=pointer]
+        - generic [ref=e78]:
+          - generic [ref=e79]: Haiku 4.5
+          - generic [ref=e80]: Live
+          - generic [ref=e81]:
+            - link "Skills" [ref=e82] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e83] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e84] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e85] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e87]:
+        - generic [ref=e100]:
+          - img [ref=e102]
+          - generic [ref=e104]:
+            - generic [ref=e105]: You
+            - paragraph [ref=e107]: I need to reinstate a deleted user
+        - generic [ref=e114]:
+          - img [ref=e116]
+          - generic [ref=e118]:
+            - generic [ref=e119]: Assistant
+            - generic [ref=e122]:
+              - paragraph [ref=e123]: "I'd be happy to help you reinstate a deleted user. However, I need some additional information:"
+              - list [ref=e124]:
+                - listitem [ref=e125]:
+                  - strong [ref=e126]: User Identifier
+                  - text: ": What is the user's ID, username, or email address?"
+                - listitem [ref=e127]:
+                  - strong [ref=e128]: System/Platform
+                  - text: ": Which system or platform is this user being deleted from? (e.g., a golf club management system, membership database, etc.)"
+                - listitem [ref=e129]:
+                  - strong [ref=e130]: Any Additional Context
+                  - text: ": Do you have any other details about the user, such as:"
+                  - list [ref=e131]:
+                    - listitem [ref=e132]: Their full name
+                    - listitem [ref=e133]: When they were deleted
+                    - listitem [ref=e134]: Why they were deleted
+                    - listitem [ref=e135]: Their membership status before deletion
+              - paragraph [ref=e136]: "Unfortunately, my current tools don't have direct access to user management systems or databases. Depending on your system, you may need to:"
+              - list [ref=e137]:
+                - listitem [ref=e138]: Contact your system administrator or IT support
+                - listitem [ref=e139]: Access your database management interface directly
+                - listitem [ref=e140]: Use your application's admin panel if one is available
+              - paragraph [ref=e141]: Could you provide more details about the system and the user so I can better assist you?
+      - generic [ref=e93]:
+        - textbox "Message Assistant... (type / for skills)" [ref=e94]
+        - button [disabled] [ref=e95]:
+          - img [ref=e96]

@@ -1,0 +1,56 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e19]
+        - button "hello" [ref=e20]
+        - button "Find a user in brsgolfclubsales" [ref=e21]
+        - button "New Chat" [ref=e22]
+        - button "New Chat" [ref=e23]
+        - button "Final Test" [ref=e24]
+        - button "Create Club Test" [ref=e25]
+        - button "Test Session" [ref=e26]
+        - button "New Chat" [ref=e27]
+        - button "Create Club Test 2" [ref=e28]
+        - button "Create Club Test" [ref=e29]
+        - button "Create Club Test" [ref=e30]
+        - button "Debug Test" [ref=e31]
+        - button "Test Create Club" [ref=e32]
+        - button "Test Session 2" [ref=e33]
+        - button "Test Session" [ref=e34]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: Armaan
+          - generic [ref=e39]: admin
+        - button "Logout" [ref=e40]:
+          - img [ref=e41]
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - button [ref=e45]:
+          - img [ref=e46]
+        - heading "New Chat" [level=1] [ref=e48] [cursor=pointer]
+        - generic [ref=e49]:
+          - generic [ref=e50]: Haiku 4.5
+          - generic [ref=e51]: Live
+          - generic [ref=e52]:
+            - link "Skills" [ref=e53] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e54] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e55] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e56] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e59]:
+        - heading "How can I help you today?" [level=2] [ref=e60]
+        - paragraph [ref=e61]: Ask me anything about BRS teesheet management.
+      - generic [ref=e64]:
+        - textbox "Message Assistant..." [ref=e65]
+        - button [disabled] [ref=e66]:
+          - img [ref=e67]

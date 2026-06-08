@@ -366,6 +366,8 @@ async def chat_websocket(websocket: WebSocket):
                             workflow_type=workflow_type_enum,
                         ),
                         run_id=run_id,  # PRESERVED run_id from token
+                        session=db,  # Database session for skill loading
+                        tenant_id=authenticated_user.tenant_id,  # Tenant ID for skill filtering
                     )
                     
                     result = await agentic_service.execute(
@@ -577,6 +579,8 @@ async def chat_websocket(websocket: WebSocket):
                         workflow_type=workflow_type_enum,  # Task D2: Workflow-scoped exposure
                     ),
                     run_id=run_id,  # Pass run_id for workspace isolation
+                    session=db,  # Database session for skill loading
+                    tenant_id=authenticated_user.tenant_id,  # Tenant ID for skill filtering
                 )
 
                 result = await agentic_service.execute(

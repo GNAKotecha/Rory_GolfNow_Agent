@@ -39,6 +39,7 @@ class TenantSkillResponse(BaseModel):
     skill_name: str
     description: Optional[str]
     skill_data: Dict[str, Any]
+    intent_patterns: Optional[List[str]] = []
     version: int
     is_active: bool
     created_at: datetime

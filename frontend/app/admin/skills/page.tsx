@@ -71,7 +71,7 @@ export default function SkillsManagementPage() {
       }
 
       setSkills(filtered);
-      setTotal(response.total);
+      setTotal(response.total || filtered.length);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to fetch skills'
@@ -106,7 +106,7 @@ export default function SkillsManagementPage() {
       // Skip re-filter since we just created and moved to page 1
       const response = await apiClient.getSkills(DEFAULT_LIMIT, 0);
       setSkills(response.skills);
-      setTotal(response.total);
+      setTotal(response.total || response.skills.length);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to create skill'
@@ -134,7 +134,7 @@ export default function SkillsManagementPage() {
       const offset = (page - 1) * DEFAULT_LIMIT;
       const response = await apiClient.getSkills(DEFAULT_LIMIT, offset);
       setSkills(response.skills);
-      setTotal(response.total);
+      setTotal(response.total || response.skills.length);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to update skill'
@@ -160,7 +160,7 @@ export default function SkillsManagementPage() {
       // Skip re-filter since we're already on page 1
       const response = await apiClient.getSkills(DEFAULT_LIMIT, 0);
       setSkills(response.skills);
-      setTotal(response.total);
+      setTotal(response.total || response.skills.length);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to delete skill'
@@ -184,7 +184,7 @@ export default function SkillsManagementPage() {
       const offset = (page - 1) * DEFAULT_LIMIT;
       const response = await apiClient.getSkills(DEFAULT_LIMIT, offset);
       setSkills(response.skills);
-      setTotal(response.total);
+      setTotal(response.total || response.skills.length);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to update skill status'

@@ -1,0 +1,146 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "What tools and skills do you have access to? Can y" [ref=e70]
+        - button "I need to reinstate user 98765432" [ref=e19]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e20]
+        - button "hello" [ref=e21]
+        - button "Find a user in brsgolfclubsales" [ref=e22]
+        - button "New Chat" [ref=e23]
+        - button "New Chat" [ref=e24]
+        - button "Final Test" [ref=e25]
+        - button "Create Club Test" [ref=e26]
+        - button "Test Session" [ref=e27]
+        - button "New Chat" [ref=e28]
+        - button "Create Club Test 2" [ref=e29]
+        - button "Create Club Test" [ref=e30]
+        - button "Create Club Test" [ref=e31]
+        - button "Debug Test" [ref=e32]
+        - button "Test Create Club" [ref=e33]
+        - button "Test Session 2" [ref=e34]
+        - button "Test Session" [ref=e35]
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Armaan
+          - generic [ref=e40]: admin
+        - button "Logout" [ref=e41]:
+          - img [ref=e42]
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - button [ref=e46]:
+          - img [ref=e47]
+        - heading "What tools and skills do you have access to? Can y" [level=1] [ref=e71] [cursor=pointer]
+        - generic [ref=e50]:
+          - generic [ref=e51]: Haiku 4.5
+          - generic [ref=e52]: Live
+          - generic [ref=e53]:
+            - link "Skills" [ref=e54] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e55] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e56] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e57] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e59]:
+        - generic [ref=e72]:
+          - img [ref=e74]
+          - generic [ref=e76]:
+            - generic [ref=e77]: You
+            - paragraph [ref=e79]: What tools and skills do you have access to? Can you list them?
+        - generic [ref=e86]:
+          - img [ref=e88]
+          - generic [ref=e90]:
+            - generic [ref=e91]: Assistant
+            - generic [ref=e94]:
+              - paragraph [ref=e95]: "I have access to the following tools and skills:"
+              - heading "Available Tools:" [level=2] [ref=e96]
+              - list [ref=e97]:
+                - listitem [ref=e98]:
+                  - paragraph [ref=e99]:
+                    - strong [ref=e100]: store_memory
+                    - text: "- Store information in memory for later retrieval"
+                  - list [ref=e101]:
+                    - listitem [ref=e102]: Useful for remembering facts, calculations, or intermediate results
+                    - listitem [ref=e103]:
+                      - text: "Parameters:"
+                      - code [ref=e104]: key
+                      - text: (storage identifier) and
+                      - code [ref=e105]: value
+                      - text: (data to store)
+                - listitem [ref=e106]:
+                  - paragraph [ref=e107]:
+                    - strong [ref=e108]: retrieve_memory
+                    - text: "- Retrieve previously stored information from memory"
+                  - list [ref=e109]:
+                    - listitem [ref=e110]: Access data you've saved in earlier conversations
+                    - listitem [ref=e111]:
+                      - text: "Parameters:"
+                      - code [ref=e112]: key
+                      - text: (identifier of stored data)
+                - listitem [ref=e113]:
+                  - paragraph [ref=e114]:
+                    - strong [ref=e115]: list_memory_keys
+                    - text: "- List all keys currently stored in memory"
+                  - list [ref=e116]:
+                    - listitem [ref=e117]: See what information you have stored
+                    - listitem [ref=e118]: No parameters required
+                - listitem [ref=e119]:
+                  - paragraph [ref=e120]:
+                    - strong [ref=e121]: calculate
+                    - text: "- Perform mathematical calculations"
+                  - list [ref=e122]:
+                    - listitem [ref=e123]: "Supports: addition (+), subtraction (-), multiplication (*), division (/), and parentheses"
+                    - listitem [ref=e124]:
+                      - text: "Parameters:"
+                      - code [ref=e125]: expression
+                      - text: (mathematical formula to evaluate)
+                    - listitem [ref=e126]:
+                      - text: "Examples:"
+                      - code [ref=e127]: 2 + 2
+                      - text: ","
+                      - code [ref=e128]: 10 * (5 + 3)
+                      - text: ","
+                      - code [ref=e129]: 100 / 4
+                - listitem [ref=e130]:
+                  - paragraph [ref=e131]:
+                    - strong [ref=e132]: retrieve_historical_context
+                    - text: "- Search historical data from previous sessions"
+                  - list [ref=e133]:
+                    - listitem [ref=e134]: Retrieve relevant summaries from past session memory
+                    - listitem [ref=e135]:
+                      - text: "Parameters:"
+                      - code [ref=e136]: query
+                      - text: (keyword or phrase to search),
+                      - code [ref=e137]: limit
+                      - text: (max results, default 5)
+                    - listitem [ref=e138]: Useful for finding context about past decisions or information
+              - heading "Core Skills:" [level=2] [ref=e139]
+              - list [ref=e140]:
+                - listitem [ref=e141]:
+                  - strong [ref=e142]: Information Storage & Retrieval
+                  - text: "- Remember facts and data across conversations"
+                - listitem [ref=e143]:
+                  - strong [ref=e144]: Mathematical Computation
+                  - text: "- Solve calculations and mathematical problems"
+                - listitem [ref=e145]:
+                  - strong [ref=e146]: Context Research
+                  - text: "- Search through historical information"
+                - listitem [ref=e147]:
+                  - strong [ref=e148]: Problem Solving
+                  - text: "- Help analyze situations and provide solutions"
+                - listitem [ref=e149]:
+                  - strong [ref=e150]: Clear Communication
+                  - text: "- Explain concepts and provide detailed responses"
+              - paragraph [ref=e151]: Is there anything specific you'd like me to help you with using these tools?
+      - generic [ref=e65]:
+        - textbox "Message Assistant..." [ref=e66]
+        - button [disabled] [ref=e67]:
+          - img [ref=e68]

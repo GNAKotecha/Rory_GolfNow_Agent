@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "Reinstate user 98765432" [ref=e53]
+        - button "Reinstate user 98765432" [ref=e54]
+        - button "Reinstate user 98765432" [ref=e55]
+        - button "Reinstate user 98765432" [ref=e56]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: Admin User
+          - generic [ref=e23]: admin
+        - button "Logout" [ref=e24]:
+          - img [ref=e25]
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - heading "Reinstate user 98765432" [level=1] [ref=e57] [cursor=pointer]
+        - generic [ref=e33]:
+          - generic [ref=e34]: Haiku 4.5
+          - generic [ref=e35]: Live
+          - generic [ref=e36]:
+            - link "Skills" [ref=e37] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e38] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e39] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e40] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e42]:
+        - generic [ref=e58]:
+          - img [ref=e60]
+          - generic [ref=e62]:
+            - generic [ref=e63]: You
+            - paragraph [ref=e65]: Reinstate user 98765432
+        - generic [ref=e69]:
+          - generic [ref=e70]: Assistant
+          - generic [ref=e71]: Processing...
+      - generic [ref=e48]:
+        - textbox "Message Assistant... (type / for skills)" [disabled] [ref=e49]
+        - button [ref=e50]:
+          - img [ref=e51]

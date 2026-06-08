@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432" [ref=e19]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e20]
+        - button "hello" [ref=e21]
+        - button "Find a user in brsgolfclubsales" [ref=e22]
+        - button "New Chat" [ref=e23]
+        - button "New Chat" [ref=e24]
+        - button "Final Test" [ref=e25]
+        - button "Create Club Test" [ref=e26]
+        - button "Test Session" [ref=e27]
+        - button "New Chat" [ref=e28]
+        - button "Create Club Test 2" [ref=e29]
+        - button "Create Club Test" [ref=e30]
+        - button "Create Club Test" [ref=e31]
+        - button "Debug Test" [ref=e32]
+        - button "Test Create Club" [ref=e33]
+        - button "Test Session 2" [ref=e34]
+        - button "Test Session" [ref=e35]
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Armaan
+          - generic [ref=e40]: admin
+        - button "Logout" [ref=e41]:
+          - img [ref=e42]
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - button [ref=e46]:
+          - img [ref=e47]
+        - heading "New Chat" [level=1] [ref=e49] [cursor=pointer]
+        - generic [ref=e50]:
+          - generic [ref=e51]: Haiku 4.5
+          - generic [ref=e52]: Live
+          - generic [ref=e53]:
+            - link "Skills" [ref=e54] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e55] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e56] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e57] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e60]:
+        - heading "How can I help you today?" [level=2] [ref=e61]
+        - paragraph [ref=e62]: Ask me anything about BRS teesheet management.
+      - generic [ref=e65]:
+        - textbox "Message Assistant..." [ref=e66]
+        - button [disabled] [ref=e67]:
+          - img [ref=e68]

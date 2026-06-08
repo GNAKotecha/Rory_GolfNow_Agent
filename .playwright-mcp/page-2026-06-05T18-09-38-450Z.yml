@@ -1,0 +1,72 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "What tools do you have access to? Please list all" [ref=e78]
+        - button "What tools do you have?" [ref=e53]
+        - button "What tools do you have?" [ref=e54]
+        - button "what brs tools do you have access to" [ref=e55]
+        - button "What tools do you have?" [ref=e56]
+        - button "What tools do you have?" [ref=e57]
+        - button "What tools do you have access to? List all of them" [ref=e58]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e59]
+        - button "What tools and skills do you have access to? Can y" [ref=e60]
+        - button "I need to reinstate user 98765432" [ref=e61]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e62]
+        - button "hello" [ref=e63]
+        - button "Find a user in brsgolfclubsales" [ref=e64]
+        - button "New Chat" [ref=e65]
+        - button "New Chat" [ref=e66]
+        - button "Final Test" [ref=e67]
+        - button "Create Club Test" [ref=e68]
+        - button "Test Session" [ref=e69]
+        - button "New Chat" [ref=e70]
+        - button "Create Club Test 2" [ref=e71]
+        - button "Create Club Test" [ref=e72]
+        - button "Create Club Test" [ref=e73]
+        - button "Debug Test" [ref=e74]
+        - button "Test Create Club" [ref=e75]
+        - button "Test Session 2" [ref=e76]
+        - button "Test Session" [ref=e77]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: Armaan
+          - generic [ref=e23]: admin
+        - button "Logout" [ref=e24]:
+          - img [ref=e25]
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - button [ref=e29]:
+          - img [ref=e30]
+        - heading "What tools do you have access to? Please list all" [level=1] [ref=e79] [cursor=pointer]
+        - generic [ref=e33]:
+          - generic [ref=e34]: Haiku 4.5
+          - generic [ref=e35]: Live
+          - generic [ref=e36]:
+            - link "Skills" [ref=e37] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e38] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e39] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e40] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e42]:
+        - generic [ref=e80]:
+          - img [ref=e82]
+          - generic [ref=e84]:
+            - generic [ref=e85]: You
+            - paragraph [ref=e87]: What tools do you have access to? Please list all of them.
+        - generic [ref=e91]:
+          - generic [ref=e92]: Assistant
+          - generic [ref=e93]: Processing...
+      - generic [ref=e48]:
+        - textbox "Message Assistant..." [disabled] [ref=e49]
+        - button [ref=e50]:
+          - img [ref=e51]

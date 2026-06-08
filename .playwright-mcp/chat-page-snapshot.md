@@ -1,0 +1,65 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e19] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e20]:
+      - img [ref=e21]
+    - generic [ref=e26]:
+      - button "Open issues overlay" [ref=e27]:
+        - generic [ref=e36]:
+          - generic [ref=e37]: "3"
+          - generic [ref=e38]: "4"
+        - generic [ref=e31]:
+          - text: Issue
+          - generic [ref=e32]: s
+      - button "Collapse issues badge" [ref=e33]:
+        - img [ref=e34]
+  - alert [ref=e24]
+  - generic [ref=e39]:
+    - generic [ref=e40]:
+      - button "New chat" [ref=e42]:
+        - img [ref=e43]
+        - text: New chat
+      - generic [ref=e45]:
+        - button "hello" [ref=e46]
+        - button "Find a user in brsgolfclubsales" [ref=e47]
+        - button "New Chat" [ref=e48]
+        - button "New Chat" [ref=e49]
+        - button "Final Test" [ref=e50]
+        - button "Create Club Test" [ref=e51]
+        - button "Test Session" [ref=e52]
+        - button "New Chat" [ref=e53]
+        - button "Create Club Test 2" [ref=e54]
+        - button "Create Club Test" [ref=e55]
+        - button "Create Club Test" [ref=e56]
+        - button "Debug Test" [ref=e57]
+        - button "Test Create Club" [ref=e58]
+        - button "Test Session 2" [ref=e59]
+        - button "Test Session" [ref=e60]
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - generic [ref=e64]: Armaan
+          - generic [ref=e65]: admin
+        - button "Logout" [ref=e66]:
+          - img [ref=e67]
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - button [ref=e71]:
+          - img [ref=e72]
+        - heading "New Chat" [level=1] [ref=e74] [cursor=pointer]
+        - generic [ref=e75]:
+          - generic [ref=e76]: Haiku 4.5
+          - generic [ref=e77]:
+            - link "Skills" [ref=e78] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e79] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e80] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e81] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e84]:
+        - heading "How can I help you today?" [level=2] [ref=e85]
+        - paragraph [ref=e86]: Ask me anything about BRS teesheet management.
+      - generic [ref=e89]:
+        - textbox "Message Assistant..." [ref=e90]
+        - button [disabled] [ref=e91]:
+          - img [ref=e92]

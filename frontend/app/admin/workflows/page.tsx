@@ -13,13 +13,15 @@ interface Workflow {
   id: number;
   tenant_id?: number;
   workflow_name: string;
-  description: string;
+  description: string | null;
   definition?: Record<string, any>;
+  workflow_definition?: Record<string, any>;
   version: number;
   is_active: boolean;
+  active_version?: number | null;
   created_at: string;
   updated_at: string;
-  created_by?: number;
+  created_by?: number | null;
 }
 
 interface SuccessMessage {

@@ -1,0 +1,127 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "What tools do you have? List all of them." [ref=e82]
+        - button "Chat - 19:14:23" [ref=e19]
+        - button "Chat - 19:13:01" [ref=e20]
+        - button "Chat - 19:11:36" [ref=e21]
+        - button "What tools do you have access to? Please list all" [ref=e22]
+        - button "What tools do you have?" [ref=e23]
+        - button "What tools do you have?" [ref=e24]
+        - button "what brs tools do you have access to" [ref=e25]
+        - button "What tools do you have?" [ref=e26]
+        - button "What tools do you have?" [ref=e27]
+        - button "What tools do you have access to? List all of them" [ref=e28]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e29]
+        - button "What tools and skills do you have access to? Can y" [ref=e30]
+        - button "I need to reinstate user 98765432" [ref=e31]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e32]
+        - button "hello" [ref=e33]
+        - button "Find a user in brsgolfclubsales" [ref=e34]
+        - button "New Chat" [ref=e35]
+        - button "New Chat" [ref=e36]
+        - button "Final Test" [ref=e37]
+        - button "Create Club Test" [ref=e38]
+        - button "Test Session" [ref=e39]
+        - button "New Chat" [ref=e40]
+        - button "Create Club Test 2" [ref=e41]
+        - button "Create Club Test" [ref=e42]
+        - button "Create Club Test" [ref=e43]
+        - button "Debug Test" [ref=e44]
+        - button "Test Create Club" [ref=e45]
+        - button "Test Session 2" [ref=e46]
+        - button "Test Session" [ref=e47]
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: Armaan
+          - generic [ref=e52]: admin
+        - button "Logout" [ref=e53]:
+          - img [ref=e54]
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - button [ref=e58]:
+          - img [ref=e59]
+        - heading "What tools do you have? List all of them." [level=1] [ref=e83] [cursor=pointer]
+        - generic [ref=e62]:
+          - generic [ref=e63]: Haiku 4.5
+          - generic [ref=e64]: Live
+          - generic [ref=e65]:
+            - link "Skills" [ref=e66] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e67] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e68] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e69] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e71]:
+        - generic [ref=e84]:
+          - img [ref=e86]
+          - generic [ref=e88]:
+            - generic [ref=e89]: You
+            - paragraph [ref=e91]: What tools do you have? List all of them.
+        - generic [ref=e98]:
+          - img [ref=e100]
+          - generic [ref=e102]:
+            - generic [ref=e103]: Assistant
+            - generic [ref=e106]:
+              - paragraph [ref=e107]: "I have access to the following tools:"
+              - list [ref=e108]:
+                - listitem [ref=e109]:
+                  - paragraph [ref=e110]:
+                    - strong [ref=e111]: store_memory
+                    - text: "- Store information in memory for later retrieval. Useful for remembering facts, calculations, or intermediate results."
+                  - list [ref=e112]:
+                    - listitem [ref=e113]:
+                      - text: "Parameters:"
+                      - code [ref=e114]: key
+                      - text: (string),
+                      - code [ref=e115]: value
+                      - text: (string)
+                - listitem [ref=e116]:
+                  - paragraph [ref=e117]:
+                    - strong [ref=e118]: retrieve_memory
+                    - text: "- Retrieve previously stored information from memory."
+                  - list [ref=e119]:
+                    - listitem [ref=e120]:
+                      - text: "Parameters:"
+                      - code [ref=e121]: key
+                      - text: (string)
+                - listitem [ref=e122]:
+                  - paragraph [ref=e123]:
+                    - strong [ref=e124]: list_memory_keys
+                    - text: "- List all keys currently stored in memory."
+                  - list [ref=e125]:
+                    - listitem [ref=e126]: "Parameters: None required"
+                - listitem [ref=e127]:
+                  - paragraph [ref=e128]:
+                    - strong [ref=e129]: calculate
+                    - text: "- Perform mathematical calculations. Supports +, -, *, /, and parentheses."
+                  - list [ref=e130]:
+                    - listitem [ref=e131]:
+                      - text: "Parameters:"
+                      - code [ref=e132]: expression
+                      - text: (string, e.g., '2 + 2', '10 * (5 + 3)')
+                - listitem [ref=e133]:
+                  - paragraph [ref=e134]:
+                    - strong [ref=e135]: retrieve_historical_context
+                    - text: "- Retrieve historical context from previous sessions by searching for relevant keywords. Returns summaries from past session memory to help inform current decisions."
+                  - list [ref=e136]:
+                    - listitem [ref=e137]:
+                      - text: "Parameters:"
+                      - code [ref=e138]: query
+                      - text: (string - keyword or phrase to search for),
+                      - code [ref=e139]: limit
+                      - text: (integer, default 5, max 20)
+              - paragraph [ref=e140]: These tools allow me to help you with memory management, calculations, and retrieving contextual information from previous sessions.
+      - generic [ref=e77]:
+        - textbox "Message Assistant..." [ref=e78]
+        - button [disabled] [ref=e79]:
+          - img [ref=e80]

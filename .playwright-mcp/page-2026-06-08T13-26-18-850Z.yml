@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e8] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e9]:
+      - img [ref=e10]
+    - generic [ref=e27]:
+      - button "Open issues overlay" [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: "1"
+          - generic [ref=e31]: "2"
+        - generic [ref=e32]:
+          - text: Issue
+          - generic [ref=e33]: s
+      - button "Collapse issues badge" [ref=e34]:
+        - img [ref=e35]
+  - alert [ref=e13]
+  - generic [ref=e37]:
+    - generic [ref=e38]:
+      - button "New chat" [ref=e40]:
+        - img [ref=e41]
+        - text: New chat
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]: Admin User
+          - generic [ref=e48]: admin
+        - button "Logout" [ref=e49]:
+          - img [ref=e50]
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - button [ref=e54]:
+          - img [ref=e55]
+        - heading "New Chat" [level=1] [ref=e57] [cursor=pointer]
+        - generic [ref=e58]:
+          - generic [ref=e59]: Haiku 4.5
+          - generic [ref=e60]:
+            - link "Skills" [ref=e61] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e62] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e63] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e64] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e67]:
+        - heading "How can I help you today?" [level=2] [ref=e68]
+        - paragraph [ref=e69]: Ask me anything about BRS teesheet management.
+      - generic [ref=e72]:
+        - textbox "Message Assistant... (type / for skills)" [ref=e73]
+        - button [disabled] [ref=e74]:
+          - img [ref=e75]

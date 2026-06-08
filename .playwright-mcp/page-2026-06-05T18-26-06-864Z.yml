@@ -1,0 +1,78 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "test" [ref=e84]
+        - button "count tools" [ref=e19]
+        - button "What tools do you have? List all of them." [ref=e20]
+        - button "Chat - 19:14:23" [ref=e21]
+        - button "Chat - 19:13:01" [ref=e22]
+        - button "Chat - 19:11:36" [ref=e23]
+        - button "What tools do you have access to? Please list all" [ref=e24]
+        - button "What tools do you have?" [ref=e25]
+        - button "What tools do you have?" [ref=e26]
+        - button "what brs tools do you have access to" [ref=e27]
+        - button "What tools do you have?" [ref=e28]
+        - button "What tools do you have?" [ref=e29]
+        - button "What tools do you have access to? List all of them" [ref=e30]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e31]
+        - button "What tools and skills do you have access to? Can y" [ref=e32]
+        - button "I need to reinstate user 98765432" [ref=e33]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e34]
+        - button "hello" [ref=e35]
+        - button "Find a user in brsgolfclubsales" [ref=e36]
+        - button "New Chat" [ref=e37]
+        - button "New Chat" [ref=e38]
+        - button "Final Test" [ref=e39]
+        - button "Create Club Test" [ref=e40]
+        - button "Test Session" [ref=e41]
+        - button "New Chat" [ref=e42]
+        - button "Create Club Test 2" [ref=e43]
+        - button "Create Club Test" [ref=e44]
+        - button "Create Club Test" [ref=e45]
+        - button "Debug Test" [ref=e46]
+        - button "Test Create Club" [ref=e47]
+        - button "Test Session 2" [ref=e48]
+        - button "Test Session" [ref=e49]
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]: Armaan
+          - generic [ref=e54]: admin
+        - button "Logout" [ref=e55]:
+          - img [ref=e56]
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - button [ref=e60]:
+          - img [ref=e61]
+        - heading "test" [level=1] [ref=e85] [cursor=pointer]
+        - generic [ref=e64]:
+          - generic [ref=e65]: Haiku 4.5
+          - generic [ref=e66]: Live
+          - generic [ref=e67]:
+            - link "Skills" [ref=e68] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e69] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e70] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e71] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e73]:
+        - generic [ref=e86]:
+          - img [ref=e88]
+          - generic [ref=e90]:
+            - generic [ref=e91]: You
+            - paragraph [ref=e93]: test
+        - generic [ref=e97]:
+          - generic [ref=e98]: Assistant
+          - generic [ref=e99]: Processing...
+      - generic [ref=e79]:
+        - textbox "Message Assistant..." [disabled] [ref=e80]
+        - button [ref=e81]:
+          - img [ref=e82]

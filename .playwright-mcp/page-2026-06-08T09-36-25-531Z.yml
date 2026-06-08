@@ -1,0 +1,79 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "BRS Admin API Documentation":
+      - /url: /api/admin/documentation/
+      - heading "BRS Admin API Documentation" [level=1] [ref=e3] [cursor=pointer]
+    - generic [ref=e4]:
+      - text: "body format:"
+      - combobox [ref=e5]:
+        - option "Form Data" [selected]
+        - option "JSON"
+      - text: "request format:"
+      - combobox [ref=e6]:
+        - option "json" [selected]
+        - option "xml"
+  - list [ref=e9]:
+    - list [ref=e11]:
+      - listitem [ref=e12]:
+        - link "API v1 - Clubs" [ref=e13] [cursor=pointer]:
+          - /url: "#section-API v1 - Clubs"
+    - listitem [ref=e14]:
+      - generic [ref=e15]: Show/hide List Operations Expand Operations
+      - heading "API v1 - Clubs" [level=1] [ref=e16]
+      - list [ref=e17]:
+        - listitem [ref=e18]:
+          - heading "/api/admin/v1/clubs" [level=2] [ref=e20]
+          - list [ref=e21]:
+            - listitem [ref=e22]:
+              - list [ref=e23]:
+                - listitem [ref=e24]:
+                  - generic [ref=e25] [cursor=pointer]:
+                    - 'heading "GET /api/admin/v1/clubs.{_format}" [level=3] [ref=e26]':
+                      - generic [ref=e28]: GET
+                      - text: "/api/admin/v1/clubs.{_format}"
+                    - list [ref=e29]:
+                      - listitem [ref=e30]: Search clubs
+  - paragraph [ref=e31]: Documentation auto-generated on Mon, 08 Jun 26 10:36:25 +0100
+  - region "Symfony Web Debug Toolbar" [ref=e32]:
+    - generic [ref=e34]:
+      - link "200 @ nelmio_api_doc_admin_index" [ref=e36] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=request
+        - generic [ref=e37]:
+          - generic [ref=e38]: "200"
+          - text: "@"
+          - generic [ref=e39]: nelmio_api_doc_admin_index
+      - link "629 ms" [ref=e41] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=time
+        - generic [ref=e42]: 629 ms
+      - link "8.0 MiB" [ref=e44] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=time
+        - generic [ref=e45]: 8.0 MiB
+      - link "62" [ref=e47] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=logger
+        - generic [ref=e48]:
+          - img [ref=e49]
+          - text: "62"
+      - link "777 in 12.20 ms" [ref=e52] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=cache
+        - generic [ref=e53]:
+          - img [ref=e54]
+          - text: "777"
+          - generic [ref=e56]: in 12.20 ms
+      - link "anon." [ref=e58] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=security
+        - generic [ref=e59]:
+          - img [ref=e60]
+          - text: anon.
+      - link "20 ms" [ref=e63] [cursor=pointer]:
+        - /url: http://localhost:8056/_profiler/030969?panel=twig
+        - generic [ref=e64]:
+          - img [ref=e65]
+          - text: 20 ms
+      - generic "This Symfony version will no longer receive security fixes." [ref=e67]:
+        - link "3.4.49" [ref=e68] [cursor=pointer]:
+          - /url: http://localhost:8056/_profiler/030969?panel=config
+          - generic [ref=e69]:
+            - img [ref=e71]
+            - text: 3.4.49
+      - generic "Close Toolbar" [ref=e73] [cursor=pointer]:
+        - img [ref=e74]

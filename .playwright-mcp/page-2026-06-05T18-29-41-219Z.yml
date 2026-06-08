@@ -1,0 +1,124 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "I need to reinstate user 98765432. Can you walk me" [ref=e86]
+        - button "list tools" [ref=e19]
+        - button "test" [ref=e20]
+        - button "count tools" [ref=e21]
+        - button "What tools do you have? List all of them." [ref=e22]
+        - button "Chat - 19:14:23" [ref=e23]
+        - button "Chat - 19:13:01" [ref=e24]
+        - button "Chat - 19:11:36" [ref=e25]
+        - button "What tools do you have access to? Please list all" [ref=e26]
+        - button "What tools do you have?" [ref=e27]
+        - button "What tools do you have?" [ref=e28]
+        - button "what brs tools do you have access to" [ref=e29]
+        - button "What tools do you have?" [ref=e30]
+        - button "What tools do you have?" [ref=e31]
+        - button "What tools do you have access to? List all of them" [ref=e32]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e33]
+        - button "What tools and skills do you have access to? Can y" [ref=e34]
+        - button "I need to reinstate user 98765432" [ref=e35]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e36]
+        - button "hello" [ref=e37]
+        - button "Find a user in brsgolfclubsales" [ref=e38]
+        - button "New Chat" [ref=e39]
+        - button "New Chat" [ref=e40]
+        - button "Final Test" [ref=e41]
+        - button "Create Club Test" [ref=e42]
+        - button "Test Session" [ref=e43]
+        - button "New Chat" [ref=e44]
+        - button "Create Club Test 2" [ref=e45]
+        - button "Create Club Test" [ref=e46]
+        - button "Create Club Test" [ref=e47]
+        - button "Debug Test" [ref=e48]
+        - button "Test Create Club" [ref=e49]
+        - button "Test Session 2" [ref=e50]
+        - button "Test Session" [ref=e51]
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: Armaan
+          - generic [ref=e56]: admin
+        - button "Logout" [ref=e57]:
+          - img [ref=e58]
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - button [ref=e62]:
+          - img [ref=e63]
+        - heading "I need to reinstate user 98765432. Can you walk me" [level=1] [ref=e87] [cursor=pointer]
+        - generic [ref=e66]:
+          - generic [ref=e67]: Haiku 4.5
+          - generic [ref=e68]: Live
+          - generic [ref=e69]:
+            - link "Skills" [ref=e70] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e71] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e72] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e73] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e75]:
+        - generic [ref=e88]:
+          - img [ref=e90]
+          - generic [ref=e92]:
+            - generic [ref=e93]: You
+            - paragraph [ref=e95]: I need to reinstate user 98765432. Can you walk me through the Reinstate User workflow?
+        - generic [ref=e102]:
+          - img [ref=e104]
+          - generic [ref=e106]:
+            - generic [ref=e107]: Assistant
+            - generic [ref=e110]:
+              - paragraph [ref=e215]: I'd be happy to help you with the Reinstate User workflow. However, I need a bit more information to guide you properly.
+              - paragraph [ref=e216]: "First, let me clarify a few things:"
+              - list [ref=e217]:
+                - listitem [ref=e218]:
+                  - paragraph [ref=e219]:
+                    - strong [ref=e220]: What system are we working with?
+                    - text: "Are we talking about:"
+                  - list [ref=e221]:
+                    - listitem [ref=e222]: A golf club management system (BRS - Booking & Reservation System)?
+                    - listitem [ref=e223]: A Jira ticketing system?
+                    - listitem [ref=e224]: Another system?
+                - listitem [ref=e225]:
+                  - paragraph [ref=e226]:
+                    - strong [ref=e227]: What type of user is this?
+                    - text: (e.g., member, contact, staff member, etc.)
+                - listitem [ref=e228]:
+                  - paragraph [ref=e229]:
+                    - strong [ref=e230]: Do you have access to documentation
+                    - text: "for the Reinstate User workflow, or would you like me to:"
+                  - list [ref=e231]:
+                    - listitem [ref=e232]: Search for available API endpoints related to user/member reinstatement?
+                    - listitem [ref=e233]: Query the database to understand the current status of user 98765432?
+                    - listitem [ref=e234]: Help you create a ticket to track this reinstatement request?
+                - listitem [ref=e235]:
+                  - paragraph [ref=e236]:
+                    - strong [ref=e237]: What club or system ID
+                    - text: should I be looking at?
+              - paragraph [ref=e238]: "Once you provide these details, I can either:"
+              - list [ref=e239]:
+                - listitem [ref=e240]: Guide you through the workflow step-by-step
+                - listitem [ref=e241]: Make API calls to execute the reinstatement
+                - listitem [ref=e242]: Query the database to check the user's current status
+                - listitem [ref=e243]: Help document the process
+              - paragraph [ref=e244]: What additional information can you provide?
+        - generic [ref=e201]:
+          - img [ref=e203]
+          - generic [ref=e205]:
+            - generic [ref=e206]: You
+            - paragraph [ref=e208]: This is for BRS system. The user is in the brsgolfclubsales club. I want to use the REINSTATE_USER workflow that should be available to you.
+        - generic [ref=e212]:
+          - generic [ref=e213]: Assistant
+          - generic [ref=e214]: ✓ list_routes
+      - generic [ref=e81]:
+        - textbox "Message Assistant..." [disabled] [ref=e82]
+        - button [active] [ref=e83]:
+          - img [ref=e84]

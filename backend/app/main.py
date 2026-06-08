@@ -1,3 +1,14 @@
+import logging
+import sys
+from contextlib import asynccontextmanager
+
+# Configure Python logging to output to stdout (captured by uvicorn)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
@@ -17,10 +28,54 @@ from app.api.workflows import router as workflows_router
 from app.api.test_results import router as test_results_router
 from app.api.traces import router as traces_router
 
+# Global MCP registry instance
+_global_mcp_registry = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager."""
+    global _global_mcp_registry
+
+    # Startup
+    from app.db.init_db import init_db
+    from app.services.ollama import startup_ollama_client_pool
+    from app.services.mcp_registry import MCPToolRegistry
+    from app.config.mcp_config import Environment
+    import os
+
+    # Initialize database
+    init_db()
+
+    # Task C1: Start shared HTTP client pool for Ollama
+    await startup_ollama_client_pool()
+
+    # Initialize MCP registry with aiohttp sessions
+    env_name = os.environ.get("ENVIRONMENT", "development")
+    env = Environment[env_name.upper()] if env_name.upper() in Environment.__members__ else Environment.DEVELOPMENT
+    _global_mcp_registry = MCPToolRegistry(env)
+    await _global_mcp_registry.initialize()
+    logging.info("MCP registry initialized with pre-created aiohttp sessions")
+
+    yield
+
+    # Shutdown
+    from app.services.ollama import shutdown_ollama_client_pool
+
+    # Task C1: Shutdown shared HTTP client pool
+    await shutdown_ollama_client_pool()
+
+    # Close MCP registry sessions
+    if _global_mcp_registry:
+        await _global_mcp_registry.close()
+        logging.info("MCP registry sessions closed")
+
+
 app = FastAPI(
     title="Internal Agent MVP",
     description="Backend orchestration service for hosted agent",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan
 )
 
 # Configure CORS
@@ -56,25 +111,9 @@ app.include_router(test_results_router, tags=["test-results"])  # Test result tr
 app.include_router(traces_router, prefix="/api", tags=["admin"])  # Langfuse trace exploration
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and HTTP client pools on startup."""
-    from app.db.init_db import init_db
-    from app.services.ollama import startup_ollama_client_pool
-    
-    init_db()
-    
-    # Task C1: Start shared HTTP client pool for Ollama
-    await startup_ollama_client_pool()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup HTTP client pools on shutdown."""
-    from app.services.ollama import shutdown_ollama_client_pool
-    
-    # Task C1: Shutdown shared HTTP client pool
-    await shutdown_ollama_client_pool()
+def get_global_mcp_registry():
+    """Get the global MCP registry instance."""
+    return _global_mcp_registry
 
 
 @app.get("/")

@@ -1,0 +1,170 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - button "New chat" [ref=e15]:
+        - img [ref=e16]
+        - text: New chat
+      - generic [ref=e18]:
+        - button "list tools" [ref=e85]
+        - button "test" [ref=e19]
+        - button "count tools" [ref=e20]
+        - button "What tools do you have? List all of them." [ref=e21]
+        - button "Chat - 19:14:23" [ref=e22]
+        - button "Chat - 19:13:01" [ref=e23]
+        - button "Chat - 19:11:36" [ref=e24]
+        - button "What tools do you have access to? Please list all" [ref=e25]
+        - button "What tools do you have?" [ref=e26]
+        - button "What tools do you have?" [ref=e27]
+        - button "what brs tools do you have access to" [ref=e28]
+        - button "What tools do you have?" [ref=e29]
+        - button "What tools do you have?" [ref=e30]
+        - button "What tools do you have access to? List all of them" [ref=e31]
+        - button "I need to reinstate user 98765432. This user was d" [ref=e32]
+        - button "What tools and skills do you have access to? Can y" [ref=e33]
+        - button "I need to reinstate user 98765432" [ref=e34]
+        - button "I need to reinstate user 98765432. Can you help me" [ref=e35]
+        - button "hello" [ref=e36]
+        - button "Find a user in brsgolfclubsales" [ref=e37]
+        - button "New Chat" [ref=e38]
+        - button "New Chat" [ref=e39]
+        - button "Final Test" [ref=e40]
+        - button "Create Club Test" [ref=e41]
+        - button "Test Session" [ref=e42]
+        - button "New Chat" [ref=e43]
+        - button "Create Club Test 2" [ref=e44]
+        - button "Create Club Test" [ref=e45]
+        - button "Create Club Test" [ref=e46]
+        - button "Debug Test" [ref=e47]
+        - button "Test Create Club" [ref=e48]
+        - button "Test Session 2" [ref=e49]
+        - button "Test Session" [ref=e50]
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: Armaan
+          - generic [ref=e55]: admin
+        - button "Logout" [ref=e56]:
+          - img [ref=e57]
+    - generic [ref=e59]:
+      - generic [ref=e60]:
+        - button [ref=e61]:
+          - img [ref=e62]
+        - heading "list tools" [level=1] [ref=e86] [cursor=pointer]
+        - generic [ref=e65]:
+          - generic [ref=e66]: Haiku 4.5
+          - generic [ref=e67]: Live
+          - generic [ref=e68]:
+            - link "Skills" [ref=e69] [cursor=pointer]:
+              - /url: /admin/skills
+            - link "MCPs" [ref=e70] [cursor=pointer]:
+              - /url: /admin/mcp-connections
+            - link "Workflows" [ref=e71] [cursor=pointer]:
+              - /url: /admin/workflows
+            - link "Traces" [ref=e72] [cursor=pointer]:
+              - /url: /admin/traces
+      - generic [ref=e74]:
+        - generic [ref=e87]:
+          - img [ref=e89]
+          - generic [ref=e91]:
+            - generic [ref=e92]: You
+            - paragraph [ref=e94]: list tools
+        - generic [ref=e101]:
+          - img [ref=e103]
+          - generic [ref=e105]:
+            - generic [ref=e106]: Assistant
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: "Here are all the available tools I have access to:"
+              - heading "Golf Club Management" [level=2] [ref=e111]
+              - list [ref=e112]:
+                - listitem [ref=e113]:
+                  - strong [ref=e114]: create_club
+                  - text: "- Create a new golf club in the BRS system with database and initial configuration"
+                - listitem [ref=e115]:
+                  - strong [ref=e116]: get_club_by_name
+                  - text: "- Look up a golf club by name and return its details"
+                - listitem [ref=e117]:
+                  - strong [ref=e118]: verify_club_setup
+                  - text: "- Verify that a club's setup is complete (database, config, admin, features)"
+                - listitem [ref=e119]:
+                  - strong [ref=e120]: get_club_config
+                  - text: "- Retrieve configuration settings for a golf club including enabled modules"
+                - listitem [ref=e121]:
+                  - strong [ref=e122]: authenticate_club
+                  - text: "- Authenticate a golf club for API access"
+              - heading "Session Memory Management" [level=2] [ref=e123]
+              - list [ref=e124]:
+                - listitem [ref=e125]:
+                  - strong [ref=e126]: get_working_memory
+                  - text: "- Retrieve session working memory (live facts, 2KB limit)"
+                - listitem [ref=e127]:
+                  - strong [ref=e128]: update_working_memory
+                  - text: "- Update session working memory with new facts"
+                - listitem [ref=e129]:
+                  - strong [ref=e130]: store_session_summary
+                  - text: "- Store end-of-session memory summary for historical retrieval"
+                - listitem [ref=e131]:
+                  - strong [ref=e132]: get_historical_context
+                  - text: "- Retrieve historical context via keyword search across past sessions"
+              - heading "API & Database" [level=2] [ref=e133]
+              - list [ref=e134]:
+                - listitem [ref=e135]:
+                  - strong [ref=e136]: list_routes
+                  - text: "- Discover available API routes from the Teesheet Symfony application"
+                - listitem [ref=e137]:
+                  - strong [ref=e138]: call_api
+                  - text: "- Make an HTTP request to the Teesheet API (supports GET, POST, PUT, PATCH, DELETE)"
+                - listitem [ref=e139]:
+                  - strong [ref=e140]: run_sql
+                  - text: "- Execute a SQL query against the Teesheet MySQL database (SELECT only)"
+                - listitem [ref=e141]:
+                  - strong [ref=e142]: get_schema
+                  - text: "- Discover database structure (databases, tables, columns)"
+                - listitem [ref=e143]:
+                  - strong [ref=e144]: get_config
+                  - text: "- Retrieve configuration settings from the Teesheet database"
+              - heading "Golf Operations" [level=2] [ref=e145]
+              - list [ref=e146]:
+                - listitem [ref=e147]:
+                  - strong [ref=e148]: update_casual_booking_rule
+                  - text: "- Create or update member casual booking rules"
+                - listitem [ref=e149]:
+                  - strong [ref=e150]: update_configuration
+                  - text: "- Update system configuration settings via the BRS API"
+                - listitem [ref=e151]:
+                  - strong [ref=e152]: create_visitor_green_fee
+                  - text: "- Create a visitor green fee rate for a golf club"
+                - listitem [ref=e153]:
+                  - strong [ref=e154]: create_booking
+                  - text: "- Create a tee time booking via the BRS API"
+              - heading "Ticketing" [level=2] [ref=e155]
+              - list [ref=e156]:
+                - listitem [ref=e157]:
+                  - strong [ref=e158]: create_ticket
+                  - text: "- Create a new Jira ticket in a project"
+                - listitem [ref=e159]:
+                  - strong [ref=e160]: get_ticket_status
+                  - text: "- Get the current status of a Jira ticket"
+              - heading "Memory & Calculation" [level=2] [ref=e161]
+              - list [ref=e162]:
+                - listitem [ref=e163]:
+                  - strong [ref=e164]: store_memory
+                  - text: "- Store information in memory for later retrieval"
+                - listitem [ref=e165]:
+                  - strong [ref=e166]: retrieve_memory
+                  - text: "- Retrieve previously stored information from memory"
+                - listitem [ref=e167]:
+                  - strong [ref=e168]: list_memory_keys
+                  - text: "- List all keys currently stored in memory"
+                - listitem [ref=e169]:
+                  - strong [ref=e170]: calculate
+                  - text: "- Perform mathematical calculations"
+                - listitem [ref=e171]:
+                  - strong [ref=e172]: retrieve_historical_context
+                  - text: "- Retrieve historical context from previous sessions by keyword search"
+              - paragraph [ref=e173]: Is there a specific tool or task you'd like help with?
+      - generic [ref=e80]:
+        - textbox "Message Assistant..." [ref=e81]
+        - button [disabled] [ref=e82]:
+          - img [ref=e83]

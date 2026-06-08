@@ -251,6 +251,7 @@ class MCPToolRegistry:
 
         for config in server_configs:
             client = MCPClient(config)
+            await client.initialize()  # Initialize aiohttp session during startup
             self.clients[config.name] = client
 
             logger.info(
@@ -483,13 +484,40 @@ class MCPToolRegistry:
         """
         all_tools = []
 
-        for client in self.clients.values():
+        # DEBUG: Log per-server tool cache status
+        for server_name, client in self.clients.items():
+            cache_size = len(client._tools_cache) if client._tools_cache else 0
+            logger.info(
+                f"[DEBUG RBAC] get_available_tools checking server: {server_name}",
+                extra={
+                    "server": server_name,
+                    "cache_size": cache_size,
+                    "has_cache": client._tools_cache is not None,
+                }
+            )
             if client._tools_cache:
                 tool_names = [tool.name for tool in client._tools_cache]
                 all_tools.extend(tool_names)
+                logger.info(
+                    f"[DEBUG RBAC] Added {len(tool_names)} tools from {server_name}",
+                    extra={"server": server_name, "tool_names": tool_names[:5]}
+                )
 
         # Filter by role allowlist
-        return filter_tools_by_role(all_tools, role)
+        filtered = filter_tools_by_role(all_tools, role)
+
+        logger.info(
+            f"[DEBUG RBAC] get_available_tools result",
+            extra={
+                "role": role,
+                "all_tools_count": len(all_tools),
+                "filtered_count": len(filtered),
+                "all_tools_sample": all_tools[:5],
+                "filtered_sample": filtered[:5],
+            }
+        )
+
+        return filtered
     
     async def execute_tool_with_catalog(
         self,

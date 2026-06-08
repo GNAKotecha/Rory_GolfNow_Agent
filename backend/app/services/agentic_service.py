@@ -2349,7 +2349,7 @@ You have been matched to this skill based on the user's intent. You MUST begin e
 **Step 2: Query User Details (MAX 1 QUERY)**
 - IMMEDIATELY execute: `run_sql` with query:
   ```sql
-  SELECT uid, username, email, name, usergroup FROM fe_users WHERE username LIKE '%extracted_username%' OR username = 'extracted_username_deleted' LIMIT 5;
+  SELECT uid, username, email, firstname, surname, usergroup FROM fe_users WHERE username LIKE '%extracted_username%' OR username = 'extracted_username_deleted' LIMIT 5;
   ```
 - **If no results → STOP and return:** "User {{extracted_username}} not found in database. No account to reinstate."
 - **If results found → Continue to Step 3**
@@ -2378,7 +2378,7 @@ You have been matched to this skill based on the user's intent. You MUST begin e
 **Step 6: Verify Restoration**
 - Execute: `run_sql` query:
   ```sql
-  SELECT uid, username, email, name FROM fe_users WHERE uid = {{restored_uid}};
+  SELECT uid, username, email, firstname, surname FROM fe_users WHERE uid = {{restored_uid}};
   ```
 - Confirm username no longer has "_deleted" suffix
 - Report success to user with restored user details
