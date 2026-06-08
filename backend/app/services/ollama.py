@@ -459,6 +459,12 @@ class OllamaClient:
             status = e.response.status_code
             if status in (401, 403):
                 raise OllamaError("Authentication failed for API backend token")
+            # Log response body for debugging 400 errors
+            try:
+                error_body = e.response.text
+                logger.error(f"LLM HTTP {status} error response: {error_body[:500]}")
+            except Exception:
+                pass
             raise OllamaError(f"LLM HTTP error: {status}")
         except Exception as e:
             if isinstance(e, OllamaError):
@@ -836,6 +842,12 @@ class OllamaClient:
             status = e.response.status_code
             if status in (401, 403):
                 raise OllamaError("Authentication failed for API backend token")
+            # Log response body for debugging 400 errors
+            try:
+                error_body = e.response.text
+                logger.error(f"LLM HTTP {status} error response: {error_body[:500]}")
+            except Exception:
+                pass
             raise OllamaError(f"LLM HTTP error: {status}")
         except Exception as e:
             if isinstance(e, OllamaError):
