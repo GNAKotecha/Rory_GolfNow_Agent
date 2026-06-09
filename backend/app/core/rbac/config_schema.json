@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RBAC Configuration Schema",
+  "description": "Schema for role-to-permission mapping configuration",
+  "type": "object",
+  "required": ["version", "local_roles", "sso_roles", "teesheet_roles"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Configuration version",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "local_roles": {
+      "type": "object",
+      "description": "Role mappings for local (email/password) users",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "$ref": "#/definitions/permission_profile"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sso_roles": {
+      "type": "object",
+      "description": "Role mappings for SSO users (by Job_Role claim)",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "$ref": "#/definitions/permission_profile"
+        }
+      },
+      "required": ["_default"],
+      "additionalProperties": false
+    },
+    "teesheet_roles": {
+      "type": "object",
+      "description": "Role mappings for teesheet embedded users",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "$ref": "#/definitions/permission_profile"
+        }
+      },
+      "required": ["_default"],
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "permission_profile": {
+      "type": "object",
+      "required": ["profile_id", "description", "scope_type"],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "description": "Unique identifier for this permission profile",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this profile"
+        },
+        "scope_type": {
+          "type": "string",
+          "enum": ["global", "tenant", "club"],
+          "description": "Scope of permissions (global/tenant/club)"
+        },
+        "scope_id": {
+          "type": ["integer", "null"],
+          "description": "Scope ID (tenant_id or club_id) if scoped"
+        },
+        "allowed_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of allowed tool names or patterns (e.g., 'brs_*', '*')"
+        },
+        "denied_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of explicitly denied tools (overrides allows)"
+        },
+        "can_read_all_conversations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can read all conversations across tenant/club"
+        },
+        "can_read_own_conversations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Can read own conversations"
+        },
+        "can_write_conversations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can create/modify conversations"
+        },
+        "can_access_admin_apis": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can access administrative API endpoints"
+        },
+        "can_create_skills": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can create new skills"
+        },
+        "can_modify_skills": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can modify existing skills"
+        },
+        "can_delete_skills": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can delete skills"
+        },
+        "can_create_workflows": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can create new workflows"
+        },
+        "can_modify_workflows": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can modify existing workflows"
+        },
+        "can_delete_workflows": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can delete workflows"
+        },
+        "can_approve_users": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can approve pending user registrations"
+        },
+        "can_trigger_workflows": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can trigger workflow execution"
+        },
+        "max_workflow_cost": {
+          "type": ["integer", "null"],
+          "description": "Maximum tokens per workflow execution (null = unlimited)"
+        },
+        "max_requests_per_minute": {
+          "type": "integer",
+          "default": 60,
+          "minimum": -1,
+          "description": "Rate limit: requests per minute (-1 = unlimited)"
+        },
+        "max_tokens_per_day": {
+          "type": ["integer", "null"],
+          "description": "Rate limit: tokens per day (null = unlimited)"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
