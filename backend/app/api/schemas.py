@@ -18,6 +18,12 @@ class UserResponse(UserBase):
     id: int
     role: str
     created_at: datetime
+    # Phase 6: RBAC authentication fields
+    auth_source: Optional[str] = None
+    external_id: Optional[str] = None
+    sso_claims: Optional[dict] = None
+    club_context: Optional[dict] = None
+    last_login: Optional[datetime] = None
 
     class Config:
         from_attributes = True
