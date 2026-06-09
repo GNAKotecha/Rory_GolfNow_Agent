@@ -12,6 +12,7 @@ from app.services.auth import (
     create_access_token,
 )
 from app.api.auth_deps import get_current_user
+from app.api.schemas import UserResponse as UserResponseWithRBAC
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -102,7 +103,7 @@ def login(
     return TokenResponse(access_token=access_token)
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserResponseWithRBAC)
 def get_me(
     current_user: User = Depends(get_current_user),
 ):

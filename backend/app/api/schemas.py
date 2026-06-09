@@ -17,6 +17,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
     role: str
+    approval_status: str
     created_at: datetime
     # Phase 6: RBAC authentication fields
     auth_source: Optional[str] = None
