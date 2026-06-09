@@ -9,6 +9,7 @@ from app.models.models import TenantMCPIntegration
 from app.models.external_credential import ExternalCredential
 from app.services.mcp_client import MCPClient
 from app.services.jsonrpc_mcp_client import JsonRpcMCPClient
+from app.services.stdio_mcp_client import StdioMCPClient
 from app.services.mcp_registry import MCPToolRegistry
 from app.config.mcp_config import MCPServerConfig
 from gateway_mcp.core.credentials import CredentialEncryption
@@ -143,65 +144,84 @@ class TenantMCPConnectionManager:
             ValueError: If configuration is invalid
             Exception: If connection fails
         """
-        # Load credential
-        credential = db.query(ExternalCredential).filter(
-            ExternalCredential.integration_id == integration.id
-        ).first()
-
-        if not credential:
-            raise ValueError(f"No credential found for integration {integration.id}")
-
-        if not self.encryption:
-            raise RuntimeError("Encryption not initialized - cannot decrypt credentials")
-
-        # Decrypt credential
-        decrypted_secret = self.encryption.decrypt(credential.secret_enc)
-
-        # Build MCPServerConfig
-        base_url = integration.config.get("base_url", "")
-        if not base_url:
-            raise ValueError(f"Integration {integration.id} missing base_url in config")
-
-        timeout = integration.config.get("timeout", 30)
-
-        # Create server config
-        # Use tenant_{id}_{name} format to avoid conflicts with built-in servers
-        server_name = f"tenant_{integration.id}_{integration.integration_name}"
-        config = MCPServerConfig(
-            name=server_name,
-            url=base_url,
-            timeout_seconds=timeout
-        )
-
-        # Build authentication headers from decrypted credentials
-        auth_headers = {}
-        if integration.auth_type == "api_key":
-            auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
-        elif integration.auth_type == "oauth":
-            auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
-        # For other auth types, headers can be extended as needed
-
-        # Detect protocol type
+        # Detect protocol type first (needed for stdio check)
         protocol = self._detect_protocol_type(integration)
+        server_name = f"tenant_{integration.id}_{integration.integration_name}"
 
-        # Create client based on protocol
-        if protocol == "jsonrpc":
-            # JSON-RPC 2.0 MCP (Jira, GitHub, etc.)
-            client = JsonRpcMCPClient(config, auth_headers=auth_headers)
+        # Stdio protocol uses different initialization path
+        if protocol == "stdio":
+            # Stdio-based MCP (Playwright, filesystem, etc.)
+            command = integration.config.get("command")
+            args = integration.config.get("args", [])
+
+            if not command:
+                raise ValueError(f"Integration {integration.id} missing 'command' for stdio protocol")
+
+            client = StdioMCPClient(command, args, server_name)
             logger.info(
-                f"Using JSON-RPC 2.0 protocol for {server_name}",
-                extra={"server": server_name, "protocol": protocol}
+                f"Using stdio protocol for {server_name}",
+                extra={"server": server_name, "protocol": protocol, "command": command}
             )
+
+            # Initialize stdio client (spawns subprocess)
+            await client.initialize()
+
         else:
-            # REST/HTTP MCP (default, backward compatible)
-            client = MCPClient(config, auth_headers=auth_headers)
-            logger.info(
-                f"Using REST/HTTP protocol for {server_name}",
-                extra={"server": server_name, "protocol": protocol}
+            # REST/JSON-RPC protocols need credentials and URL
+            # Load credential
+            credential = db.query(ExternalCredential).filter(
+                ExternalCredential.integration_id == integration.id
+            ).first()
+
+            if not credential:
+                raise ValueError(f"No credential found for integration {integration.id}")
+
+            if not self.encryption:
+                raise RuntimeError("Encryption not initialized - cannot decrypt credentials")
+
+            # Decrypt credential
+            decrypted_secret = self.encryption.decrypt(credential.secret_enc)
+
+            # Build MCPServerConfig
+            base_url = integration.config.get("base_url", "")
+            if not base_url:
+                raise ValueError(f"Integration {integration.id} missing base_url in config")
+
+            timeout = integration.config.get("timeout", 30)
+
+            # Create server config
+            config = MCPServerConfig(
+                name=server_name,
+                url=base_url,
+                timeout_seconds=timeout
             )
 
-        # Initialize client
-        await client.initialize()
+            # Build authentication headers from decrypted credentials
+            auth_headers = {}
+            if integration.auth_type == "api_key":
+                auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
+            elif integration.auth_type == "oauth":
+                auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
+            # For other auth types, headers can be extended as needed
+
+            # Create client based on protocol
+            if protocol == "jsonrpc":
+                # JSON-RPC 2.0 MCP (Jira, GitHub, etc.)
+                client = JsonRpcMCPClient(config, auth_headers=auth_headers)
+                logger.info(
+                    f"Using JSON-RPC 2.0 protocol for {server_name}",
+                    extra={"server": server_name, "protocol": protocol}
+                )
+            else:
+                # REST/HTTP MCP (default, backward compatible)
+                client = MCPClient(config, auth_headers=auth_headers)
+                logger.info(
+                    f"Using REST/HTTP protocol for {server_name}",
+                    extra={"server": server_name, "protocol": protocol}
+                )
+
+            # Initialize client
+            await client.initialize()
 
         # Verify connection
         is_healthy = await client.health_check()
