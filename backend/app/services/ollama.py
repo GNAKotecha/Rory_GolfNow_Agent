@@ -2,8 +2,10 @@
 
 Task C1: HTTP client pooling for reduced connection churn and improved latency.
 Task C3: Tool-call protocol normalizer hardening with telemetry.
+Bug #11: LLM timeout fix with retry logic and increased timeout.
 """
 import asyncio
+import functools
 import httpx
 import json
 import logging
@@ -11,10 +13,57 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Dict, Optional, Any, Tuple, Callable, TypeVar, ParamSpec
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# ==============================================================================
+# Bug #11: Retry Decorator for LLM Requests
+# ==============================================================================
+
+P = ParamSpec('P')
+T = TypeVar('T')
+
+def retry_on_timeout(max_retries: int = 3):
+    """
+    Decorator to retry async functions on timeout/connection errors.
+
+    Bug #11 fix: Add exponential backoff retry logic for transient failures.
+    Retries on: httpx.TimeoutException, httpx.ConnectError
+    Backoff: 2^attempt seconds (1s, 2s, 4s)
+    """
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except (httpx.TimeoutException, httpx.ConnectError) as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        backoff_seconds = 2 ** attempt
+                        logger.warning(
+                            f"Request failed (attempt {attempt + 1}/{max_retries}), retrying in {backoff_seconds}s",
+                            extra={"error": str(e), "function": func.__name__}
+                        )
+                        await asyncio.sleep(backoff_seconds)
+                        continue
+                    logger.error(
+                        f"Request failed after {max_retries} attempts",
+                        extra={"error": str(e), "function": func.__name__}
+                    )
+                    raise
+                except Exception:
+                    # Non-retryable error - raise immediately
+                    raise
+            # Should not reach here
+            if last_exception:
+                raise last_exception
+            raise Exception("Unexpected retry loop exit")
+        return wrapper
+    return decorator
 
 
 # ==============================================================================
@@ -97,7 +146,8 @@ class OllamaHTTPClientPool:
     
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
-        self._default_timeout = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "60"))
+        # Bug #11 fix: Increase timeout from 60s to 180s for long-running workflows
+        self._default_timeout = float(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "180"))
         # Metrics for observability
         self._request_count = 0
         self._connection_reuse_count = 0
@@ -337,6 +387,7 @@ class OllamaClient:
         except Exception as e:
             raise OllamaError(f"Failed to list models: {e}")
 
+    @retry_on_timeout(max_retries=3)
     async def generate_chat_completion(
         self,
         messages: List[Dict[str, str]],
@@ -390,7 +441,7 @@ class OllamaClient:
                     url,
                     headers=headers,
                     json=payload,
-                    timeout=60.0,
+                    timeout=180.0,
                 )
             else:
                 response = await client.post(
@@ -401,7 +452,7 @@ class OllamaClient:
                         "stream": False,
                         "keep_alive": keep_alive,
                     },
-                    timeout=60.0,
+                    timeout=180.0,
                 )
 
             if response.status_code == 404:
@@ -471,6 +522,7 @@ class OllamaClient:
                 raise
             raise OllamaError(f"LLM request failed: {str(e)}")
 
+    @retry_on_timeout(max_retries=3)
     async def generate_chat_completion_with_tools(
         self,
         messages: List[Dict[str, str]],
@@ -534,7 +586,7 @@ class OllamaClient:
                     f"{self.base_url}/v1/chat/completions",
                     headers=self._api_headers(),
                     json=api_payload,
-                    timeout=60.0,
+                    timeout=180.0,
                 )
 
                 if response.status_code == 404:
