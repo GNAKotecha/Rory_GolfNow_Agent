@@ -392,6 +392,7 @@ class TenantSkill(Base):
     version = Column(Integer, nullable=False, default=1)  # Version number
     is_active = Column(Boolean, nullable=False, default=False)  # Whether this version is active
     intent_patterns = Column(JSON, nullable=True, default=list)  # Semantic matching patterns for skill invocation
+    timeout_seconds = Column(Integer, nullable=True, default=None)  # Bug #11: Optional per-skill timeout override
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who created this skill
