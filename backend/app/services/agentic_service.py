@@ -459,6 +459,34 @@ class AgenticService:
         Returns:
             AgenticResult with final response and execution trace
         """
+        # Bug #11 fix: Health check before skill execution
+        try:
+            health_ok = await self.ollama.check_connection()
+            if not health_ok:
+                logger.error(
+                    "LLM endpoint health check failed before skill execution",
+                    extra={"user_id": user.id, "session_id": session_id}
+                )
+                return AgenticResult(
+                    final_response="",
+                    steps=[],
+                    total_steps=0,
+                    stopped_reason="health_check_failed",
+                    error="LLM endpoint is not reachable",
+                )
+        except Exception as e:
+            logger.error(
+                f"LLM endpoint health check error: {e}",
+                extra={"user_id": user.id, "session_id": session_id}
+            )
+            return AgenticResult(
+                final_response="",
+                steps=[],
+                total_steps=0,
+                stopped_reason="health_check_error",
+                error=f"LLM endpoint health check failed: {str(e)}",
+            )
+
         try:
             return await asyncio.wait_for(
                 self._execute_internal(messages, user, session_id, model),
@@ -2543,11 +2571,29 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                 self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}, workflow_state={workflow_state}")
 
                 # Filter tools based on workflow state to guide progression
-                filtered_tools = available_tools
+                # Use deep copy to avoid modifying the original tool schemas
+                import copy
+                filtered_tools = copy.deepcopy(available_tools)
+
                 if workflow_state == "after_read":
                     # Remove read-only tools to force write operations
-                    read_only_tools = ['run_sql', 'get_config', 'list_tools']
-                    filtered_tools = [t for t in available_tools if t['function']['name'] not in read_only_tools]
+                    read_only_tools = ['run_sql', 'get_config', 'list_tools', 'get_schema']
+                    filtered_tools = [t for t in filtered_tools if t['function']['name'] not in read_only_tools]
+
+                    # Further constrain call_api to only allow write methods (PATCH, POST, PUT, DELETE)
+                    # This prevents the LLM from choosing GET when it should be making state changes
+                    for tool in filtered_tools:
+                        if tool['function']['name'] == 'call_api':
+                            # Modify the tool schema to restrict HTTP methods
+                            params = tool['function'].get('parameters', {})
+                            properties = params.get('properties', {})
+                            if 'method' in properties:
+                                # Override method enum to only allow write operations
+                                properties['method']['enum'] = ['PATCH', 'POST', 'PUT', 'DELETE']
+                                self.logger.info(f"🔒 Restricted call_api to write methods only: {properties['method']['enum']}")
+                                # Log the full modified tool schema to verify it's correct
+                                self.logger.debug(f"Modified call_api schema: {json.dumps(tool['function']['parameters']['properties']['method'], indent=2)}")
+
                     self.logger.info(f"🎯 Filtered to write tools only (removed read-only tools)")
 
                 # Call LLM with current context
@@ -2594,6 +2640,43 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                             "result": f"Invalid JSON arguments: {str(e)}"
                         })
                         continue
+
+                    # Validate tool call against workflow state constraints
+                    if workflow_state == "after_read" and tool_name == "call_api":
+                        method = tool_args.get("method", "").upper()
+                        if method == "GET":
+                            # Reject GET method in after_read state - force LLM to use write methods
+                            error_msg = (
+                                f"❌ Invalid method '{method}' in after_read state. "
+                                f"Only write methods (PATCH, POST, PUT, DELETE) are allowed. "
+                                f"You must use PATCH to rename the user to '{tool_args.get('path', '').split('/')[-1]}_deleted' "
+                                f"and then POST to create a new user."
+                            )
+                            self.logger.warning(error_msg)
+
+                            # Add error to tool results so LLM can correct itself
+                            tool_call_history.append({
+                                "tool": tool_name,
+                                "arguments": tool_args
+                            })
+                            tool_results_history.append({
+                                "tool": tool_name,
+                                "success": False,
+                                "result": error_msg
+                            })
+
+                            # Add tool call and error response to conversation
+                            messages.append({
+                                "role": "assistant",
+                                "content": "",
+                                "tool_calls": [tool_call]
+                            })
+                            messages.append({
+                                "role": "tool",
+                                "content": error_msg
+                            })
+
+                            continue  # Skip to next tool call
 
                     self.logger.info(f"Calling tool: {tool_name} with args: {tool_args}")
 
