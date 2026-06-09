@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 
 class AuthSource(str, Enum):
@@ -184,8 +184,8 @@ class LocalPrincipal(Principal):
     stored in the local database with hashed passwords.
     """
 
-    role: str  # "admin" or "user"
-    approval_status: str  # "pending", "approved", "rejected"
+    role: str = "user"  # "admin" or "user"
+    approval_status: str = "pending"  # "pending", "approved", "rejected"
 
     def __post_init__(self):
         """Set auth source after initialization."""
@@ -210,7 +210,7 @@ class SSOPrincipal(Principal):
     OIDC/SAML. The Job_Role claim from SSO determines permissions.
     """
 
-    job_role: str  # Job_Role from SSO claims (e.g., "support", "implementation")
+    job_role: str = "user"  # Job_Role from SSO claims (e.g., "support", "implementation")
     sso_claims: Dict[str, Any] = field(default_factory=dict)  # Full SSO token claims
     issuer: str = ""  # SSO issuer
 
@@ -239,9 +239,9 @@ class TeesheetPrincipal(Principal):
     These are short-lived sessions with club-scoped permissions.
     """
 
-    club_id: int  # Club ID from embed token
-    club_name: str  # Club name for display
-    teesheet_role: str  # Role at this club (e.g., "admin", "staff", "member")
+    club_id: int = 0  # Club ID from embed token
+    club_name: str = ""  # Club name for display
+    teesheet_role: str = "member"  # Role at this club (e.g., "admin", "staff", "member")
     embed_claims: Dict[str, Any] = field(default_factory=dict)  # Full embed token claims
     token_jti: str = ""  # JWT ID for replay protection
 
@@ -297,5 +297,5 @@ class AuthenticatedSession:
         }
 
 
-# Type alias for convenience
-PrincipalType = LocalPrincipal | SSOPrincipal | TeesheetPrincipal
+# Type alias for convenience (Union for Python 3.9 compatibility)
+PrincipalType = Union[LocalPrincipal, SSOPrincipal, TeesheetPrincipal]

@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.session import Base
+from app.core.rbac.models import AuthSource
 
 
 class Tenant(Base):
@@ -100,6 +101,22 @@ class User(Base):
 
     # Tool approval policy (defaults to not requiring approval unless explicitly enabled)
     require_tool_approval = Column(Boolean, default=False, nullable=False)
+
+    # Phase 6: RBAC Authentication Fields (Task 2)
+    # Auth source: LOCAL (email/password), SSO (sso.golfnow.com), TEESHEET_EMBED (brs-teesheet)
+    auth_source = Column(SQLEnum(AuthSource), default=AuthSource.LOCAL, nullable=False)
+
+    # External identity for SSO/embed users (e.g., SSO sub claim, teesheet user ID)
+    external_id = Column(String(255), nullable=True, index=True)
+
+    # SSO token claims (Job_Role, email, sub, etc.) - stored for permission mapping
+    sso_claims = Column(JSON, nullable=True)
+
+    # Teesheet club context {club_id, role, scope} for embedded auth users
+    club_context = Column(JSON, nullable=True)
+
+    # Last successful login timestamp - updated on every auth
+    last_login = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
