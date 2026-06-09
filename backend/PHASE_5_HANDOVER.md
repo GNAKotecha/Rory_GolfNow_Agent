@@ -1,9 +1,160 @@
 # Phase 5 Handover: Skill Invocation System
 
-**Date:** 2026-06-05 (Updated: 2026-06-09 18:25 UTC)
-**Status:** ✅ External MCP Gateway COMPLETE - Phase 6 extends with full protocol support
+**Date:** 2026-06-05 (Updated: 2026-06-09 13:27 UTC)
+**Status:** ⚠️ MCP INTEGRATION ISSUES FOUND - See Bug Report Below
 
 **🎉 Phase 6 Complete:** Full MCP protocol support (REST, JSON-RPC 2.0, Stdio) - See `PHASE_6_HANDOVER.md`
+
+## ❌ CRITICAL: MCP Integration E2E Test Results (2026-06-09)
+
+**Test Duration:** 15 minutes  
+**Focus:** External (Playwright) and Internal (Gateway MCP) integration via frontend UI  
+**Verdict:** NOT PRODUCTION READY - Critical authentication bug found
+
+### Test Results Summary
+
+| Category | Status | Details |
+|----------|--------|---------|
+| Environment Setup | ✅ PASS | Backend, Frontend, Gateway MCP running |
+| User Registration | ✅ PASS | Registration works |
+| User Login | ✅ PASS | Login returns JWT |
+| User Approval Flow | ⚠️ WORKAROUND | Manual admin approval required (poor UX) |
+| **MCP Tool Discovery** | ✅ PASS | Tools listed correctly in chat interface |
+| **MCP Tool Execution** | ❌ FAIL | 401 authentication errors from downstream APIs |
+| Playwright MCP | ⚠️ BLOCKED | Blocked by auth failure |
+| BRS Admin MCP | ⚠️ BLOCKED | Blocked by auth failure |
+
+### Critical Bugs Discovered
+
+#### Bug #12: MCP Authentication Failure (P0 - BLOCKING PRODUCTION)
+
+**Severity:** CRITICAL  
+**Status:** OPEN  
+**Impact:** MCP tool execution completely broken
+
+**Symptom:**
+```
+User: "Use get_club_by_name to look up 'brsgolfclubsales'"
+Assistant: "I encountered an authentication error... The API returned a 401 error"
+```
+
+**Root Cause:**
+- Gateway MCP calls downstream services (BRS Teesheet API, Jira) that require authentication
+- No BRS API credentials configured in Gateway MCP
+- No credential passthrough from Backend → Gateway MCP → Downstream APIs
+- Authentication tokens not being passed through the request chain
+
+**What Works:**
+- ✅ MCP tool discovery (tools are listed correctly)
+- ✅ Frontend → Backend communication
+- ✅ Backend → Gateway MCP connection
+- ✅ Gateway MCP server is healthy
+
+**What Fails:**
+- ❌ Gateway MCP → BRS API calls (401 Unauthorized)
+- ❌ Gateway MCP → Jira API calls (401 Unauthorized)
+- ❌ No credentials in Gateway MCP environment
+
+**Reproduction:**
+1. Login to frontend at http://localhost:3000
+2. Send message: "List available MCP tools" → ✅ Works
+3. Send message: "Use get_club_by_name to look up 'brsgolfclubsales'" → ❌ 401 Error
+
+**Required Fixes:**
+1. Add BRS API credentials to Gateway MCP `.env`
+2. Add Jira API credentials to Gateway MCP `.env`
+3. Implement credential passthrough: Frontend JWT → Backend → Gateway MCP → Downstream
+4. Add authentication middleware in Gateway MCP
+5. Add health checks that verify downstream API connectivity
+6. Document required environment variables
+
+**Files to Investigate:**
+- `backend/app/config/mcp_config.py` - MCP server configuration
+- `backend/app/services/mcp_client.py` - MCP client implementation
+- `backend/gateway_mcp/` - Gateway MCP server
+- `backend/gateway_mcp/tools/api.py` - BRS API integration
+- `backend/.env` - Environment variables
+
+**Estimated Fix Time:** 2-4 hours
+
+#### Bug #13: User Approval Workflow UX Issue (P1 - HIGH)
+
+**Severity:** HIGH  
+**Status:** WORKAROUND APPLIED  
+**Impact:** Every new user requires manual admin approval
+
+**Symptom:**
+- New users can register and login successfully
+- All API calls after login return 403 Forbidden: "User approval status is 'pending'"
+- No self-service approval mechanism
+- No frontend UI for admin approval
+
+**Workaround:**
+```bash
+# Admin must manually approve via API
+curl -X POST http://localhost:8000/api/admin/users/{user_id}/approve \
+  -H "Authorization: Bearer <admin_token>" \
+  -d '{"approve": true}'
+```
+
+**Required Fixes:**
+1. Add `AUTO_APPROVE_USERS=true` environment variable for dev/test
+2. Add approval status indicator in frontend login flow
+3. Create admin approval UI in frontend
+4. Document approval workflow in setup guide
+
+**Estimated Fix Time:** 1-2 hours
+
+#### Bug #14: Port Conflict (PHP vs FastAPI) (P0 - RESOLVED)
+
+**Severity:** CRITICAL  
+**Status:** ✅ RESOLVED  
+**Impact:** Backend completely inaccessible
+
+**Symptom:**
+- Backend health endpoint returned PHP errors
+- CORS failures in frontend
+- Login API calls failed with 500 errors
+
+**Root Cause:**
+Both PHP (Symfony BRS) and Python (FastAPI) were running on port 8000:
+```
+Python  21716  IPv4  *:8000 (LISTEN)
+php     67338  IPv6  [::1]:8000 (LISTEN)
+```
+
+**Fix:**
+```bash
+kill 67338  # Stop conflicting PHP server
+```
+
+**Prevention:**
+- Document port assignments clearly
+- Add startup validation script
+- Use different ports in docker-compose
+
+### Test Artifacts
+
+**Bug Report:** `docs/BUG_REPORT_MCP_INTEGRATION_2026-06-09.md` (comprehensive details)  
+**Screenshots:** `./mcp-auth-error.png` (shows 401 error in UI)  
+**Console Logs:** `.playwright-mcp/console-2026-06-09T13-*.log`  
+**Page Snapshots:** `.playwright-mcp/page-2026-06-09T13-*.yml`
+
+### Production Readiness Assessment
+
+**Blockers:**
+1. ❌ MCP authentication must be fixed before production
+2. ⚠️ User approval UX needs improvement
+
+**Estimated Time to Production:** 5-8 hours of focused development
+
+**Next Actions:**
+1. Fix Bug #12 (MCP auth) - PRIORITY 1
+2. Fix Bug #13 (user approval) - PRIORITY 2
+3. Add E2E test that verifies MCP tool execution
+4. Re-run production readiness loop
+
+---
 
 ## ✅ RESOLVED: Bug #11 - LLM Request Timeout
 
@@ -3443,3 +3594,172 @@ pytest tests/test_jsonrpc_mcp_client.py -v
 Rory now has full MCP ecosystem support with automatic protocol detection. All three protocol types (REST, JSON-RPC 2.0, Stdio) work simultaneously and seamlessly.
 
 **See `PHASE_6_HANDOVER.md` for complete implementation details.**
+
+---
+
+## Phase 1 MCP Authentication Backend Infrastructure (2026-06-09)
+
+**Date Started:** 2026-06-09 14:30 UTC  
+**Status:** 🟡 IN PROGRESS (Tasks 1-2 Complete, Tasks 3-8 Remaining)  
+**Objective:** Fix Bug #12 by implementing per-user MCP credential storage and passthrough
+
+### Progress Summary
+
+#### ✅ Completed Tasks
+
+**Task 1: Database Schema (COMPLETE)**
+- Created migration `m9n0o1p2q3r4_add_user_mcp_credentials_table`
+- Table: `user_mcp_credentials` with fields:
+  - id, user_id (FK to users), provider, auth_method
+  - access_token, refresh_token, token_type
+  - expires_at, scopes (array), provider_metadata (JSONB)
+  - created_at, updated_at
+- Indexes: user_id, provider, expires_at, unique(user_id, provider)
+- Migration tested: up/down both work
+- **Commit:** `e2bea26` - "feat(auth): Add user_mcp_credentials table migration"
+
+**Task 2: SQLAlchemy Model (COMPLETE)**
+- Created `app/models/user_mcp_credential.py`
+- Model: `UserMCPCredential` with:
+  - Properties: `is_expired`, `expires_soon`, `can_refresh`, `is_oauth2`
+  - Helper methods: `to_dict()`, `get_by_user_and_provider()`, `get_all_by_user()`
+  - Relationship to User model
+- Added to `app/models/__init__.py`
+- Model imports successfully
+- **NOTE:** Tokens stored in plaintext for now - encryption TODO
+- **Commit:** `97efe86` - "feat(auth): Add UserMCPCredential SQLAlchemy model"
+
+#### 🔄 Remaining Tasks (Estimated: 4-5 hours)
+
+**Task 3: Auth Storage API Endpoints**
+- POST /api/integrations/mcp/auth - Store credentials
+- GET /api/integrations/mcp/auth - List user's credentials
+- GET /api/integrations/mcp/auth/{provider} - Get specific provider
+- DELETE /api/integrations/mcp/auth/{provider} - Delete credentials
+- POST /api/integrations/mcp/auth/{provider}/refresh - Refresh token
+- Estimated: 1.5 hours
+
+**Task 4: Auth Check in MCP Client**
+- Modify `app/services/mcp_client.py`
+- Check for credentials before calling tools
+- Return `auth_required` response if missing
+- Pass credentials to Gateway MCP via headers
+- Estimated: 1 hour
+
+**Task 5: Credential Passthrough to Gateway MCP**
+- Modify Gateway MCP to accept auth headers
+- Extract credentials from headers
+- Pass to downstream API calls
+- Header format: `X-MCP-Auth-Provider`, `X-MCP-Auth-Token`, `X-MCP-Auth-Type`
+- Estimated: 1 hour
+
+**Task 6: Token Refresh Mechanism**
+- Add `refresh_token()` method to MCP client
+- Auto-refresh if expires within 5 minutes
+- Update database with new tokens
+- Handle refresh failures gracefully
+- Estimated: 45 minutes
+
+**Task 7: End-to-End Integration Test**
+- Test: Store BRS credentials → Call MCP tool → Verify success
+- Test: Missing credentials → Verify auth_required response
+- Test: Expired token → Verify auto-refresh
+- Test via frontend UI (Playwright)
+- Estimated: 45 minutes
+
+**Task 8: Documentation**
+- Update this handover with completion details
+- Document API endpoints usage
+- Document credential encryption approach
+- Document testing procedures
+- Estimated: 30 minutes
+
+### Files Modified
+
+```
+backend/
+├── alembic/versions/
+│   └── m9n0o1p2q3r4_add_user_mcp_credentials_table.py  [NEW]
+├── app/models/
+│   ├── user_mcp_credential.py  [NEW]
+│   └── __init__.py  [MODIFIED]
+└── PHASE_5_HANDOVER.md  [MODIFIED]
+```
+
+### Next Steps for Continuation
+
+1. **Start with Task 3** - Create API endpoints in `app/api/mcp_auth.py`
+2. **Test endpoints** with curl/Postman before moving to Task 4
+3. **Implement Tasks 4-6** sequentially (each depends on prior)
+4. **E2E Test via Frontend:**
+   - Login to http://localhost:3000
+   - Store BRS credentials via new API endpoint
+   - Send message: "Use get_club_by_name to look up 'brsgolfclubsales'"
+   - Verify: Tool executes successfully (no 401 error)
+5. **Update documentation** and mark Bug #12 as RESOLVED
+
+### Reference Documents
+
+- **Implementation Plan:** `.plans/phase-1-mcp-auth-backend.md`
+- **UX Proposal:** `docs/MCP_AUTH_UX_PROPOSAL.md`
+- **Bug Details:** See "Bug #12" section above
+- **API Contract Examples:** See MCP_AUTH_UX_PROPOSAL.md "Backend API Contract" section
+
+### Known Limitations
+
+1. **No Token Encryption Yet:**
+   - Tokens stored in plaintext in database
+   - TODO: Integrate with CredentialEncryption service
+   - Low priority - internal network only
+
+2. **No OAuth2 Flow Yet:**
+   - Manual credential storage only (POST /api/integrations/mcp/auth)
+   - Full OAuth2 flow will be Phase 2-3 of UX proposal
+
+3. **BRS API Credentials:**
+   - Need real BRS OAuth2 tokens for testing
+   - Current test approach: Use API key from env vars
+
+### Testing Strategy
+
+**Unit Tests:**
+```bash
+# Test model
+pytest tests/test_user_mcp_credential.py -v
+
+# Test API endpoints (after Task 3)
+pytest tests/test_mcp_auth_api.py -v
+```
+
+**Integration Test (after Task 7):**
+```bash
+# Start services
+docker-compose up -d
+
+# Run E2E test
+pytest tests/test_mcp_auth_e2e.py -v
+```
+
+**Manual Test via Frontend:**
+```bash
+# 1. Start backend
+cd backend && uvicorn app.main:app --reload
+
+# 2. Start frontend
+cd frontend && npm run dev
+
+# 3. Open browser: http://localhost:3000
+# 4. Login as test user
+# 5. Store credentials (via browser console or Postman):
+curl -X POST http://localhost:8000/api/integrations/mcp/auth \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"provider":"BRS","auth_method":"oauth2","access_token":"test_token"}'
+
+# 6. Test tool execution in chat:
+"Use get_club_by_name to look up 'brsgolfclubsales'"
+
+# Expected: No 401 error, tool returns club data
+```
+
+---
+
