@@ -40,7 +40,7 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column(
-            'metadata',
+            'provider_metadata',
             postgresql.JSONB() if conn.dialect.name == 'postgresql' else sa.JSON(),
             nullable=True,
         ),

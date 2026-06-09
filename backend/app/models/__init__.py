@@ -33,6 +33,11 @@ from app.models.test_run import (
     TestScenarioResult
 )
 
+# Import user MCP credential models
+from app.models.user_mcp_credential import (
+    UserMCPCredential
+)
+
 __all__ = [
     "WorkflowTemplate",
     "WorkflowRun",
@@ -47,4 +52,5 @@ __all__ = [
     "CredentialType",
     "TestRun",
     "TestScenarioResult",
+    "UserMCPCredential",
 ]
