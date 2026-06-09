@@ -1,7 +1,7 @@
 # Phase 6 Handover: SSO, Embedded Auth, and Role-Based Access Control
 
 ## Status
-🟡 **IN PROGRESS** - Task 1 Complete
+🟡 **IN PROGRESS** - Task 2 Complete
 
 ## Summary
 Phase 6 adds three-way authentication (local, SSO, teesheet embedded) with a unified RBAC layer that determines tool access, data permissions, and actions based on principal type and role.
@@ -118,20 +118,35 @@ Teesheet Roles:
 
 ## Remaining Tasks
 
-### 🔲 Task 2: Add Database Fields
-**Status**: NOT STARTED
+### ✅ Task 2: Add Database Fields (2026-06-09)
+**Status**: COMPLETE
 
-**Required Changes**:
-- Add `auth_source` column to users table
-- Add `external_id` column for SSO/embed user IDs
-- Add `sso_claims` JSON column for SSO token claims
-- Add `club_context` JSON column for teesheet users
-- Add `last_login` timestamp
-- Create Alembic migration script
+**What Was Implemented**:
+- Added 5 new fields to User model for RBAC authentication
+- Created Alembic migration eac10a7850ae with autogenerate
+- Fixed Python 3.9 compatibility issues in RBAC models
+- Added comprehensive test suite (12 test cases)
 
-**Deliverables**:
-- Migration file: `backend/alembic/versions/XXX_add_rbac_fields.py`
-- Updated User model in `backend/app/models/models.py`
+**Files Created/Modified**:
+1. `backend/app/models/models.py` - Added auth_source, external_id, sso_claims, club_context, last_login fields
+2. `backend/app/core/rbac/models.py` - Fixed Python 3.9 compatibility (Union instead of |)
+3. `backend/alembic/versions/eac10a7850ae_add_rbac_authentication_fields_to_user_.py` - Migration script
+4. `backend/tests/test_user_rbac_fields.py` - Test suite for new fields
+
+**Key Features**:
+- auth_source defaults to LOCAL for backward compatibility
+- external_id indexed for fast lookups
+- Migration includes server_default='LOCAL' for existing users
+- All fields nullable except auth_source
+
+**Testing Status**:
+- ✅ Python syntax validated
+- ✅ Migration generated
+- ⏳ Migration upgrade pending (needs backend running)
+- ⏳ Unit tests pending (needs database)
+
+**Commit**: `da58c8f` - "feat(phase6): Add database fields for RBAC authentication (Task 2)"
+**Branch**: `phase-6-task-2-database-fields`
 
 ---
 

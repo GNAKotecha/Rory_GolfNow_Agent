@@ -13,8 +13,8 @@ Create Phase 6 as a focused auth/RBAC phase that adds:
 - Update future AGENTS/task references to use PHASE_6 when this phase starts.
 
 ## Task Checklist
-- [ ] **Task 1:** Define principal/RBAC model for local, SSO, and teesheet users.
-- [ ] **Task 2:** Add database fields for auth source, external identity, SSO claims, club context, and last login.
+- [x] **Task 1:** Define principal/RBAC model for local, SSO, and teesheet users.
+- [x] **Task 2:** Add database fields for auth source, external identity, SSO claims, club context, and last login.
 - [ ] **Task 3:** Add SSO login/callback endpoints and config for `https://sso.golfnow.com/app/`.
 - [ ] **Task 4:** Add `Sign in with SSO` button to current Next login page.
 - [ ] **Task 5:** Add modular embedded auth exchange for `brs-teesheet` signed JWTs.
