@@ -13,7 +13,11 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Tuple, Callable, TypeVar, ParamSpec
+from typing import List, Dict, Optional, Any, Tuple, Callable, TypeVar
+try:
+    from typing import ParamSpec
+except ImportError:
+    from typing_extensions import ParamSpec
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
