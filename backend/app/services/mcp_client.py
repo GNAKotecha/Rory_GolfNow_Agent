@@ -8,6 +8,7 @@ Provides a unified interface for calling remote MCP servers with:
 - Request/response logging
 
 Task C2: MCP error envelope enrichment - structured fields for precise error classification.
+Phase 1 MCP Auth: Per-user credential check before tool execution (Bug #12 fix).
 """
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
@@ -27,6 +28,19 @@ from .async_event_loop import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Maps gateway-mcp tool names to their auth provider.
+# Tools not listed here are considered provider-agnostic (no credential check).
+TOOL_PROVIDER_MAP: Dict[str, str] = {
+    "get_club_by_name": "BRS",
+    "verify_club_setup": "BRS",
+    "get_club_config": "BRS",
+    "call_api": "BRS",
+    "create_jira_issue": "Jira",
+    "get_jira_issue": "Jira",
+    "update_jira_issue": "Jira",
+    "search_jira": "Jira",
+}
 
 
 # ==============================================================================
@@ -134,14 +148,16 @@ class MCPErrorType(Enum):
 class MCPClient:
     """Client for interacting with a remote MCP server."""
 
-    def __init__(self, config: MCPServerConfig):
+    def __init__(self, config: MCPServerConfig, auth_headers: Optional[Dict[str, str]] = None):
         """
         Initialize MCP client.
 
         Args:
             config: MCP server configuration
+            auth_headers: Optional authentication headers for external MCP servers
         """
         self.config = config
+        self.auth_headers = auth_headers or {}
         self.session: Optional[aiohttp.ClientSession] = None
         self._tools_cache: Optional[List[MCPTool]] = None
         self._cache_timestamp: Optional[datetime] = None
@@ -184,7 +200,10 @@ class MCPClient:
             session = safe_async_call(self._get_session)
             url = f"{self.config.url}/health"
 
-            async with session.get(url) as response:
+            # Include auth headers for authenticated MCP servers
+            headers = dict(self.auth_headers)
+
+            async with session.get(url, headers=headers) as response:
                 return response.status == 200
 
         except Exception as e:
@@ -212,9 +231,10 @@ class MCPClient:
         try:
             session = await self._get_session()
             url = f"{self.config.url}/tools/list"
-            
-            # Build auth headers (gateway-mcp requires service token)
+
+            # Build auth headers (gateway-mcp requires service token, external MCPs use instance auth_headers)
             headers = self._build_auth_headers(user_id=None)
+            headers.update(self.auth_headers)
 
             # Prefer POST for Gateway MCP transport; fallback to GET for legacy servers.
             response_data = None
@@ -330,6 +350,11 @@ class MCPClient:
         start_time = datetime.now(timezone.utc)
         retry_count = 0
 
+        # Phase 1 MCP Auth: check user credentials before calling any gateway tool
+        preflight = self._preflight_credential_check(tool_name, user_id)
+        if preflight is not None:
+            return preflight
+
         for attempt in range(self.config.max_retries + 1):
             try:
                 session = await self._get_session()
@@ -340,7 +365,9 @@ class MCPClient:
                     "arguments": arguments,
                 }
 
+                # Merge gateway auth headers with instance auth headers
                 headers = self._build_auth_headers(user_id)
+                headers.update(self.auth_headers)
 
                 async with session.post(url, json=payload, headers=headers) as response:
                     elapsed_ms = (
@@ -569,6 +596,113 @@ class MCPClient:
             headers["X-User-Id"] = str(user_id)
 
         return headers
+
+    def _get_provider_for_tool(self, tool_name: str) -> Optional[str]:
+        """Return the auth provider for a gateway tool, or None if no credential required."""
+        return TOOL_PROVIDER_MAP.get(tool_name)
+
+    def _check_user_credential(
+        self, user_id: int, provider: str
+    ) -> "Optional[Any]":
+        """
+        Look up UserMCPCredential for (user_id, provider).
+
+        Returns the credential object if valid, None if not found.
+        Import is lazy to avoid circular imports at module level.
+        """
+        try:
+            from app.db.session import SessionLocal
+            from app.models.user_mcp_credential import UserMCPCredential
+
+            db = SessionLocal()
+            try:
+                return UserMCPCredential.get_by_user_and_provider(db, user_id, provider)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"Credential lookup failed for user={user_id} provider={provider}: {e}")
+            return None
+
+    def _make_auth_required_result(self, tool_name: str, provider: str) -> MCPToolResult:
+        """Return a structured auth_required MCPToolResult."""
+        return MCPToolResult(
+            success=False,
+            error=json.dumps({
+                "type": "auth_required",
+                "message": f"Authentication required for {provider} to use tool '{tool_name}'",
+                "tool_name": tool_name,
+                "auth_config": {
+                    "provider": provider,
+                    "store_url": "/api/integrations/mcp/auth",
+                },
+            }),
+            error_category="auth_required",
+            is_semantic_error=True,
+            terminal_hint=True,
+        )
+
+    def _preflight_credential_check(
+        self, tool_name: str, user_id: Optional[int]
+    ) -> "Optional[MCPToolResult]":
+        """
+        Check user credentials before tool execution.
+
+        Returns an auth_required MCPToolResult if credentials are missing/expired,
+        or None if the call should proceed normally.
+
+        Only runs for gateway-mcp tools with a mapped provider.
+        """
+        if self.config.name != "gateway-mcp" or user_id is None:
+            return None
+
+        provider = self._get_provider_for_tool(tool_name)
+        if provider is None:
+            return None  # Tool has no credential requirement
+
+        cred = self._check_user_credential(user_id, provider)
+
+        if cred is None:
+            logger.info(
+                f"No credentials for user={user_id} provider={provider} tool={tool_name} — returning auth_required"
+            )
+            return self._make_auth_required_result(tool_name, provider)
+
+        if cred.is_expired:
+            logger.info(
+                f"Credentials expired for user={user_id} provider={provider} — returning auth_required"
+            )
+            return self._make_auth_required_result(tool_name, provider)
+
+        if cred.expires_soon:
+            # Token expires within 5 minutes — try refresh if possible, else continue.
+            # If refresh fails we still proceed since the token is technically still valid.
+            if cred.can_refresh:
+                try:
+                    self._try_refresh_credential(cred, user_id)
+                except Exception as refresh_err:
+                    logger.warning(
+                        f"Token refresh failed for user={user_id} provider={provider}: {refresh_err}"
+                        " — proceeding with existing token"
+                    )
+
+        # Credential valid (possibly just refreshed) — proceed with call
+        return None
+
+    def _try_refresh_credential(self, cred: Any, user_id: int) -> None:
+        """
+        Attempt to refresh an OAuth2 credential that is expiring soon.
+
+        Updates the credential in the database if successful.
+        Raises on failure so the caller can log and continue with the existing token.
+
+        Note: Provider-specific refresh endpoints are not yet implemented.
+        This is a stub that logs the attempt and raises NotImplementedError
+        until BRS OAuth2 refresh details are documented.
+        """
+        raise NotImplementedError(
+            f"Token refresh for provider={cred.provider} not yet implemented. "
+            "Re-authenticate via POST /api/integrations/mcp/auth."
+        )
 
     def _extract_error_text(self, data: Dict[str, Any]) -> str:
         """Extract error text from MCP content blocks."""

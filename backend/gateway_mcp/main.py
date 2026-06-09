@@ -331,41 +331,67 @@ def _create_executor_router(
     else:
         brs_backend = MockExecutorBackend()
     
-    # Create credential fetcher that uses CredentialStore
+    # Create credential fetcher that uses CredentialStore (OAuth) with
+    # fallback to UserMCPCredential for providers like BRS stored via the
+    # /api/integrations/mcp/auth endpoints.
     def credential_fetcher(user_id: str, provider: str) -> str:
         """
-        Fetch OAuth credential for user/provider from CredentialStore.
-        
+        Fetch credential for user/provider.
+
+        Resolution order:
+        1. CredentialStore (OAuth flows — Atlassian, GitHub, etc.)
+        2. UserMCPCredential table (BRS API keys / direct OAuth tokens)
+
         Args:
             user_id: User ID (string, converted to int for DB lookup)
-            provider: Provider name (e.g., "atlassian", "github")
-            
+            provider: Provider name (e.g., "BRS", "atlassian", "github")
+
         Returns:
             Bearer token string (format: "Bearer <token>")
-            
+
         Raises:
-            CredentialMissingError: If no credential found or store not available
+            CredentialMissingError: If no credential found in either store
         """
-        store = _init_credential_store()
-        
-        if store is None:
-            raise CredentialMissingError(
-                provider=provider,
-                reconnect_url=f"/api/credentials/{provider}/authorize",
-                audit_id=None,
-            )
-        
         try:
             user_id_int = int(user_id)
         except (ValueError, TypeError):
             raise CredentialMissingError(
                 provider=provider,
-                reconnect_url=f"/api/credentials/{provider}/authorize",
+                reconnect_url=f"/api/integrations/mcp/auth",
                 audit_id=None,
             )
-        
-        credential = store.get_credential(user_id_int, provider)
-        return credential.as_bearer()
+
+        # 1. Try CredentialStore (existing OAuth credentials)
+        store = _init_credential_store()
+        if store is not None:
+            try:
+                credential = store.get_credential(user_id_int, provider)
+                return credential.as_bearer()
+            except Exception:
+                pass  # Fall through to UserMCPCredential
+
+        # 2. Try UserMCPCredential (per-user tokens stored via /api/integrations/mcp/auth)
+        try:
+            from app.db.session import SessionLocal
+            from app.models.user_mcp_credential import UserMCPCredential
+
+            db = SessionLocal()
+            try:
+                cred = UserMCPCredential.get_by_user_and_provider(db, user_id_int, provider)
+            finally:
+                db.close()
+
+            if cred is not None and not cred.is_expired:
+                token_type = cred.token_type or "Bearer"
+                return f"{token_type} {cred.access_token}"
+        except Exception as e:
+            logger.warning(f"UserMCPCredential lookup failed for user={user_id} provider={provider}: {e}")
+
+        raise CredentialMissingError(
+            provider=provider,
+            reconnect_url=f"/api/integrations/mcp/auth",
+            audit_id=None,
+        )
     
     # Create MCP proxy backend for external tools
     mcp_proxy: MCPProxyBackend | None = None

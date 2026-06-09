@@ -23,24 +23,28 @@ from app.api.ollama_compat import router as ollama_compat_router
 from app.api.credentials import router as credentials_router
 from app.api.tenants import router as tenants_router
 from app.api.integrations import router as integrations_router
+from app.api.mcp_auth import router as mcp_auth_router
 from app.api.skills import router as skills_router
 from app.api.workflows import router as workflows_router
 from app.api.test_results import router as test_results_router
 from app.api.traces import router as traces_router
+from app.api.tools import router as tools_router
 
-# Global MCP registry instance
+# Global MCP registry and tenant connection manager instances
 _global_mcp_registry = None
+_global_tenant_mcp_manager = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan context manager."""
-    global _global_mcp_registry
+    global _global_mcp_registry, _global_tenant_mcp_manager
 
     # Startup
     from app.db.init_db import init_db
     from app.services.ollama import startup_ollama_client_pool
     from app.services.mcp_registry import MCPToolRegistry
+    from app.services.tenant_mcp_manager import TenantMCPConnectionManager
     from app.config.mcp_config import Environment
     import os
 
@@ -57,6 +61,11 @@ async def lifespan(app: FastAPI):
     await _global_mcp_registry.initialize()
     logging.info("MCP registry initialized with pre-created aiohttp sessions")
 
+    # Initialize tenant MCP connection manager
+    _global_tenant_mcp_manager = TenantMCPConnectionManager(_global_mcp_registry)
+    await _global_tenant_mcp_manager.initialize()
+    logging.info("Tenant MCP connection manager initialized")
+
     yield
 
     # Shutdown
@@ -64,6 +73,15 @@ async def lifespan(app: FastAPI):
 
     # Task C1: Shutdown shared HTTP client pool
     await shutdown_ollama_client_pool()
+
+    # Close tenant MCP connections
+    if _global_tenant_mcp_manager:
+        for integration_id in _global_tenant_mcp_manager.list_connected_integrations():
+            try:
+                await _global_tenant_mcp_manager.disconnect_integration(integration_id)
+            except Exception as e:
+                logging.error(f"Error disconnecting integration {integration_id}: {e}")
+        logging.info("Tenant MCP connections closed")
 
     # Close MCP registry sessions
     if _global_mcp_registry:
@@ -105,15 +123,22 @@ app.include_router(ollama_compat_router)  # Ollama-compatible endpoints for Open
 app.include_router(credentials_router, prefix="/api")  # Credential management
 app.include_router(tenants_router, prefix="/api/admin", tags=["admin"])  # Tenant management
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])  # MCP integrations management
+app.include_router(mcp_auth_router, prefix="/api", tags=["mcp-auth"])  # Per-user MCP credential management
 app.include_router(skills_router, prefix="/api", tags=["skills"])  # Skills management
 app.include_router(workflows_router, prefix="/api", tags=["workflows"])  # Workflows management
 app.include_router(test_results_router, tags=["test-results"])  # Test result tracking
 app.include_router(traces_router, prefix="/api", tags=["admin"])  # Langfuse trace exploration
+app.include_router(tools_router, prefix="/api", tags=["tools"])  # Tools discovery
 
 
 def get_global_mcp_registry():
     """Get the global MCP registry instance."""
     return _global_mcp_registry
+
+
+def get_global_tenant_mcp_manager():
+    """Get the global tenant MCP connection manager instance."""
+    return _global_tenant_mcp_manager
 
 
 @app.get("/")
