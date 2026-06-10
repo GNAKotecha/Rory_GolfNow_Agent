@@ -55,3 +55,14 @@ logs/
 # DeepEval local cache
 .deepeval/
 .deepeval-cache/
+
+# Playwright MCP snapshots/screenshots (generated during testing)
+.playwright-mcp/
+
+# Python virtual environments
+.venv/
+backend/.venv/
+
+# Temporary / dev files
+backend/cookies.txt
+.plans/
