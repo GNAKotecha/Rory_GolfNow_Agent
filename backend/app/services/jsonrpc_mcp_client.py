@@ -41,6 +41,7 @@ class JsonRpcMCPClient:
         self.auth_headers = auth_headers or {}
         self.session: Optional[aiohttp.ClientSession] = None
         self.session_id: Optional[str] = None
+        self._initialized = False
         self._request_id = 0
         self._tools_cache: Optional[List[MCPTool]] = None
 
@@ -63,6 +64,7 @@ class JsonRpcMCPClient:
 
         if response and "result" in response:
             self.session_id = response["result"].get("sessionId")
+            self._initialized = True
             logger.info(
                 f"Initialized JSON-RPC MCP session: {self.config.name}",
                 extra={"server": self.config.name, "session_id": self.session_id}
@@ -81,14 +83,14 @@ class JsonRpcMCPClient:
 
     @mcp_async_method
     async def health_check(self) -> bool:
-        """Check if MCP server is reachable and session is valid."""
-        if not self.session_id:
+        """Check if MCP server is reachable and responding."""
+        if not self._initialized:
             return False
 
         # Try to list tools as health check
         try:
             tools = await self.list_tools()
-            return True
+            return len(tools) >= 0  # empty list is still valid
         except Exception:
             return False
 
@@ -98,13 +100,17 @@ class JsonRpcMCPClient:
         if not force_refresh and self._tools_cache:
             return self._tools_cache
 
-        if not self.session_id:
-            logger.error(f"No session ID for {self.config.name} - call initialize() first")
+        if not self._initialized:
+            logger.error(f"Not initialized for {self.config.name} - call initialize() first")
             return []
 
-        response = await self._jsonrpc_request("tools/list", {
-            "sessionId": self.session_id
-        })
+        # Include sessionId only if present (stateful servers like Atlassian require it;
+        # stateless servers like GitHub ignore it)
+        params: Dict[str, Any] = {}
+        if self.session_id:
+            params["sessionId"] = self.session_id
+
+        response = await self._jsonrpc_request("tools/list", params)
 
         if not response or "result" not in response:
             logger.error(
@@ -139,20 +145,20 @@ class JsonRpcMCPClient:
         user_id: Optional[int] = None,
     ) -> MCPToolResult:
         """Call a tool on the MCP server."""
-        if not self.session_id:
+        if not self._initialized:
             return MCPToolResult(
                 success=False,
-                error="No session ID - server not initialized",
+                error="Server not initialized - call initialize() first",
                 http_status=None,
             )
 
         start_time = datetime.now(timezone.utc)
 
-        response = await self._jsonrpc_request("tools/call", {
-            "sessionId": self.session_id,
-            "name": tool_name,
-            "arguments": arguments
-        })
+        params: Dict[str, Any] = {"name": tool_name, "arguments": arguments}
+        if self.session_id:
+            params["sessionId"] = self.session_id
+
+        response = await self._jsonrpc_request("tools/call", params)
 
         elapsed_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
@@ -206,7 +212,13 @@ class JsonRpcMCPClient:
         try:
             async with self.session.post(self.config.url, json=payload, headers=headers) as response:
                 if response.status == 200:
-                    return await response.json()
+                    content_type = response.headers.get("Content-Type", "")
+                    if "text/event-stream" in content_type:
+                        # SSE response (GitHub MCP, Atlassian MCP): parse first data event
+                        text = await response.text()
+                        return self._parse_sse_response(text, method)
+                    else:
+                        return await response.json()
                 else:
                     text = await response.text()
                     logger.error(
@@ -225,3 +237,25 @@ class JsonRpcMCPClient:
                 extra={"server": self.config.name, "method": method, "error": str(e)}
             )
             return None
+
+    def _parse_sse_response(self, text: str, method: str) -> Optional[Dict[str, Any]]:
+        """Parse a Server-Sent Events response to extract the JSON-RPC payload."""
+        import json as json_module
+        data_lines = []
+        for line in text.splitlines():
+            if line.startswith("data:"):
+                data_lines.append(line[5:].strip())
+            elif line == "" and data_lines:
+                raw = "\n".join(data_lines)
+                try:
+                    return json_module.loads(raw)
+                except Exception:
+                    data_lines = []
+        # Try last accumulated data if no blank-line terminator
+        if data_lines:
+            raw = "\n".join(data_lines)
+            try:
+                return json_module.loads(raw)
+            except Exception:
+                logger.error(f"Failed to parse SSE data for {method}: {raw[:200]}")
+        return None

@@ -961,8 +961,9 @@ To use a tool, respond with a function call in the format expected by the API.""
                                 })
                                 continue
 
-                    # Health check for tool availability
-                    if self.health_checker:
+                    # Health check for tool availability (skip for simple built-in tools)
+                    _simple_tool_names = ["store_memory", "retrieve_memory", "list_memory_keys", "calculate", "retrieve_historical_context"]
+                    if self.health_checker and tool_name not in _simple_tool_names:
                         is_write = self.health_checker.is_write_tool(tool_name)
                         tool_ok, tool_msg = self.health_checker.check_tool_for_execution(
                             tool_name, is_write=is_write
@@ -2344,73 +2345,48 @@ To use a tool, respond with a function call in the format expected by the API.""
         user_message = context.get("user_message", "")
 
         instructions = f"""
-# MANDATORY SKILL EXECUTION: {skill.skill_name}
+You are executing the "{skill.skill_name}" skill on behalf of the user.
 
-⚠️ **CRITICAL**: You MUST execute this skill immediately. Do NOT ask clarifying questions first. Start execution NOW.
+Skill description: {skill.description or 'No description provided'}
+User request: {user_message}
 
-**Matched Skill:** {skill.skill_name}
-**Description:** {skill.description or 'No description provided'}
-**User Request:** {user_message}
-
-**Skill Configuration:**
+Skill configuration:
 ```json
 {json.dumps(skill_data, indent=2)}
 ```
 
-## 🚀 IMMEDIATE EXECUTION REQUIRED
-
-You have been matched to this skill based on the user's intent. You MUST begin execution immediately using the available MCP tools.
-
-**Available MCP Tools:**
-- `run_sql` - Execute SELECT queries on BRS database
+## Available tools
+- `run_sql` - Execute SELECT queries on the BRS database
 - `call_api` - Make HTTP requests to BRS API endpoints
 - `call_internal_api` - Call internal agent API endpoints
-- Other registered MCP tools
 
-## 📋 THE WORKFLOW (MANDATORY EXECUTION ORDER)
+## Workflow steps
 
-This workflow has EXACTLY 5 steps. Execute them IN ORDER. DO NOT skip steps. DO NOT repeat steps.
+Execute the following steps in order. Complete each step before moving to the next.
 
----
+### Step 1: Parse the user request
 
-### Step 1: Extract Username (NO TOOL CALLS)
-
-Parse "{user_message}" and extract the username.
+Extract the username or member identifier from: "{user_message}"
 
 Examples:
 - "Reinstate user 98765432" → username = "98765432"
 - "Restore account john.doe" → username = "john.doe"
 
-**After extraction, IMMEDIATELY proceed to Step 2. DO NOT ask for confirmation.**
+Proceed directly to Step 2 with the extracted value.
 
----
+### Step 2: Look up the user in the database
 
-### Step 2: Find User (EXACTLY ONE run_sql CALL)
-
-**MANDATORY:** Call `run_sql` with this EXACT query (replace extracted_username):
+Call `run_sql` once with this query (substituting the extracted username):
 ```sql
 SELECT uid, username, email, firstname, surname, usergroup FROM fe_users WHERE username = 'extracted_username' LIMIT 1;
 ```
 
-**After calling run_sql, examine the result:**
+- If no rows returned: stop and report "User not found. Cannot reinstate."
+- If one row returned: save uid, firstname, surname, email and proceed to Step 3.
 
-**Case A: No rows returned**
-→ STOP. Return message: "User {{extracted_username}} not found. Cannot reinstate."
-→ DO NOT make any more tool calls.
+### Step 3: Archive the existing user record
 
-**Case B: One row returned**
-→ Save: uid, firstname, surname, email
-→ IMMEDIATELY proceed to Step 3
-→ DO NOT call run_sql again
-→ DO NOT ask questions
-→ **YOUR NEXT TOOL CALL MUST BE call_api WITH METHOD PATCH**
-
----
-
-### Step 3: Archive Old User (EXACTLY ONE call_api WITH PATCH)
-
-**MANDATORY:** You found the user in Step 2. Now call `call_api` with:
-
+Call `call_api` with a PATCH request to rename the old user:
 ```json
 {{
   "method": "PATCH",
@@ -2421,26 +2397,12 @@ SELECT uid, username, email, firstname, surname, usergroup FROM fe_users WHERE u
 }}
 ```
 
-Replace {{uid}} with the uid from Step 2.
-Replace {{original_username}} with the username you extracted.
+- If the API returns an error: stop and report the error.
+- If the API succeeds: proceed to Step 4.
 
-**After calling call_api:**
+### Step 4: Create the reinstated user
 
-**Case A: API returns error**
-→ STOP. Return the error message.
-→ DO NOT make any more tool calls.
-
-**Case B: API succeeds**
-→ IMMEDIATELY proceed to Step 4
-→ DO NOT verify with SQL
-→ **YOUR NEXT TOOL CALL MUST BE call_api WITH METHOD POST**
-
----
-
-### Step 4: Create New User (EXACTLY ONE call_api WITH POST)
-
-**MANDATORY:** Old user is renamed. Now call `call_api` with:
-
+Call `call_api` with a POST request to create the new user record:
 ```json
 {{
   "method": "POST",
@@ -2454,75 +2416,24 @@ Replace {{original_username}} with the username you extracted.
 }}
 ```
 
-Replace {{original_username}}, {{saved_firstname}}, {{saved_surname}}, {{saved_email}} with values from Step 2.
+- If the API returns an error: stop and report the error.
+- If the API succeeds: proceed to Step 5.
 
-**After calling call_api:**
+### Step 5: Verify the reinstatement
 
-**Case A: API returns error**
-→ STOP. Return the error message.
-→ DO NOT make any more tool calls.
-
-**Case B: API succeeds**
-→ IMMEDIATELY proceed to Step 5
-→ **YOUR NEXT TOOL CALL MUST BE run_sql**
-
----
-
-### Step 5: Verify Both Records (EXACTLY ONE run_sql CALL)
-
-**MANDATORY:** Call `run_sql` to verify both old and new users exist:
-
+Call `run_sql` to confirm both records exist:
 ```sql
 SELECT uid, username, email, firstname, surname FROM fe_users WHERE username = '{{original_username}}' OR username = '{{original_username}}_deleted' ORDER BY uid DESC LIMIT 2;
 ```
 
-**After calling run_sql:**
+Report the results. The expected output is two rows: the archived record (with `_deleted` suffix) and the new reinstated record. Summarise the outcome for the user.
 
-Examine the results:
-- Should see 2 rows: one with "_deleted" suffix, one without
-- Report both UIDs to the user
-- **STOP. DO NOT make any more tool calls.**
-- Return final message: "✅ User reinstated successfully. Old UID: X (renamed to {{username}}_deleted), New UID: Y (username: {{username}})"
+## Notes
 
----
-
-## 🚨 CRITICAL RULES
-
-**Rule 1: NEVER call run_sql twice in a row**
-If you just called run_sql and got results, your next call MUST be call_api (unless stopping).
-
-**Rule 2: NEVER call run_sql for Step 2 more than once**
-One query is enough. If you got results, move to Step 3. If you got no results, stop.
-
-**Rule 3: Tool call sequence MUST follow this pattern:**
-run_sql → call_api (PATCH) → call_api (POST) → run_sql → STOP
-
-**Rule 4: DO NOT ask questions between steps**
-Extract parameters, execute tools, report results. No clarifications mid-workflow.
-
-**Rule 5: Maximum 4 tool calls total**
-- 1 run_sql (Step 2)
-- 1 call_api PATCH (Step 3)
-- 1 call_api POST (Step 4)
-- 1 run_sql (Step 5)
-
-If you reach 4 tool calls, you MUST stop and return a final message. NO exceptions.
-
----
-
-## 🎯 WHAT TO DO RIGHT NOW
-
-1. Look at the user message: "{user_message}"
-2. Extract the username
-3. Call run_sql (Step 2) to find the user
-4. When you get the result, immediately proceed to Step 3 (call_api PATCH)
-5. DO NOT stop to think between steps
-6. DO NOT call run_sql multiple times
-7. Follow the exact tool call sequence: run_sql → call_api → call_api → run_sql → DONE
-
-## 🎯 START EXECUTION NOW
-
-Begin with Step 1 immediately. Do not respond with questions or requests for more information first.
+- Execute steps sequentially: run_sql → call_api (PATCH) → call_api (POST) → run_sql
+- Total tool calls should be 4. Stop after the final verification.
+- Do not repeat the Step 2 lookup if you already have the user data.
+- Start executing now using the user request provided above.
 """
 
         return instructions.strip()
@@ -2568,6 +2479,11 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
 
         while iteration < max_iterations:
             try:
+                # Halt immediately if workflow reached completed state
+                if workflow_state == "complete":
+                    self.logger.info("✅ Workflow state is 'complete' — halting skill loop")
+                    break
+
                 self.logger.info(f"Skill execution iteration {iteration + 1}/{max_iterations}, workflow_state={workflow_state}")
 
                 # Filter tools based on workflow state to guide progression
@@ -2705,6 +2621,7 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                                 elif workflow_state == "after_write":
                                     workflow_state = "complete"
                                     self.logger.info(f"✅ State transition: after_write → complete (final verification done)")
+                                    break  # Stop processing remaining tool calls in this batch
                             elif tool_name in write_tools:
                                 workflow_state = "after_write"
                                 self.logger.info(f"✏️ State transition: after_read → after_write (write tool completed)")
@@ -2725,6 +2642,26 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                                 "result": mcp_result.error
                             })
                             tool_result_content = mcp_result.error
+
+                            # Halt immediately on auth_required — retrying is pointless
+                            try:
+                                err_obj = json.loads(mcp_result.error) if isinstance(mcp_result.error, str) else mcp_result.error
+                            except (json.JSONDecodeError, TypeError):
+                                err_obj = {}
+                            if isinstance(err_obj, dict) and err_obj.get("type") == "auth_required":
+                                provider = err_obj.get("auth_config", {}).get("provider", "BRS")
+                                self.logger.warning(f"🔐 auth_required for {provider} — halting skill loop")
+                                return {
+                                    "success": False,
+                                    "skill_name": skill_name,
+                                    "message": (
+                                        f"Authentication required for **{provider}**. "
+                                        f"Please connect your {provider} account via Settings → Integrations, then retry."
+                                    ),
+                                    "tool_calls": tool_call_history,
+                                    "tool_results": tool_results_history,
+                                    "stopped_reason": "auth_required",
+                                }
 
                         # Add tool result to conversation for next LLM call
                         messages.append({
@@ -2758,6 +2695,11 @@ Begin with Step 1 immediately. Do not respond with questions or requests for mor
                             "role": "tool",
                             "content": f"Error: {str(e)}"
                         })
+
+                # Check if workflow completed during this iteration's tool calls
+                if workflow_state == "complete":
+                    self.logger.info("✅ Workflow reached 'complete' state — halting after tool batch")
+                    break
 
                 iteration += 1
 

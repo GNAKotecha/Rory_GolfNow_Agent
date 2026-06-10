@@ -114,6 +114,8 @@ class OAuthService:
             return OAuthService._build_github_authorize_url(config, state, base_url)
         elif integration_name == "gitlab":
             return OAuthService._build_gitlab_authorize_url(config, state, base_url)
+        elif integration_name in ("jira", "jira-mcp", "atlassian"):
+            return OAuthService._build_atlassian_authorize_url(config, state, base_url)
         else:
             raise ValueError(f"Unsupported integration: {integration_name}")
 
@@ -163,6 +165,8 @@ class OAuthService:
             return OAuthService._exchange_github_token(config, code)
         elif integration_name == "gitlab":
             return OAuthService._exchange_gitlab_token(config, code)
+        elif integration_name in ("jira", "jira-mcp", "atlassian"):
+            return OAuthService._exchange_atlassian_token(config, code)
         else:
             raise ValueError(f"Unsupported integration: {integration_name}")
 
@@ -211,6 +215,56 @@ class OAuthService:
 
             if response.status_code != 200:
                 raise ValueError(f"Token exchange failed: HTTP {response.status_code}")
+
+            data = response.json()
+            if "error" in data:
+                raise ValueError(f"Token exchange failed: {data.get('error_description', data['error'])}")
+
+            return data
+
+        except Exception as e:
+            raise ValueError(f"Token exchange failed: {str(e)}")
+
+    @staticmethod
+    def _build_atlassian_authorize_url(config: dict, state: str, base_url: str) -> str:
+        """Build Atlassian OAuth 2.0 (3LO) authorization URL.
+
+        Atlassian uses https://auth.atlassian.com/authorize with offline_access
+        scope required for refresh token support.
+        """
+        scopes = config.get("scopes", ["read:jira-work", "write:jira-work", "offline_access"])
+        if "offline_access" not in scopes:
+            scopes = list(scopes) + ["offline_access"]
+        params = {
+            "audience": "api.atlassian.com",
+            "client_id": config["client_id"],
+            "scope": " ".join(scopes),
+            "redirect_uri": base_url,
+            "state": state,
+            "response_type": "code",
+            "prompt": "consent"
+        }
+        return f"https://auth.atlassian.com/authorize?{urlencode(params)}"
+
+    @staticmethod
+    def _exchange_atlassian_token(config: dict, code: str) -> dict:
+        """Exchange Atlassian authorization code for access token."""
+        try:
+            response = requests.post(
+                "https://auth.atlassian.com/oauth/token",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "grant_type": "authorization_code",
+                    "client_id": config["client_id"],
+                    "client_secret": config["client_secret"],
+                    "code": code,
+                    "redirect_uri": config.get("redirect_uri", "")
+                },
+                timeout=10
+            )
+
+            if response.status_code != 200:
+                raise ValueError(f"Token exchange failed: HTTP {response.status_code} — {response.text}")
 
             data = response.json()
             if "error" in data:

@@ -72,8 +72,8 @@ class TenantMCPConnectionManager:
         if "command" in config:
             return "stdio"
 
-        # 3. JSON-RPC URL patterns
-        base_url = config.get("base_url", "")
+        # 3. JSON-RPC URL patterns (check both base_url and server_url keys)
+        base_url = config.get("base_url") or config.get("server_url", "")
         jsonrpc_patterns = [
             "mcp.atlassian.com",
             "api.githubcopilot.com/mcp",
@@ -168,24 +168,37 @@ class TenantMCPConnectionManager:
 
         else:
             # REST/JSON-RPC protocols need credentials and URL
-            # Load credential
+
+            # Resolve the credential secret: prefer ExternalCredential table (encrypted),
+            # fall back to plaintext value stored directly in config["credentials"].
+            decrypted_secret: Optional[str] = None
+
             credential = db.query(ExternalCredential).filter(
                 ExternalCredential.integration_id == integration.id
             ).first()
 
-            if not credential:
-                raise ValueError(f"No credential found for integration {integration.id}")
-
-            if not self.encryption:
-                raise RuntimeError("Encryption not initialized - cannot decrypt credentials")
-
-            # Decrypt credential
-            decrypted_secret = self.encryption.decrypt(credential.secret_enc)
+            if credential:
+                if not self.encryption:
+                    raise RuntimeError("Encryption not initialized - cannot decrypt credentials")
+                decrypted_secret = self.encryption.decrypt(credential.secret_enc)
+            else:
+                # Credentials stored inline in config (used by the AddMCPModal flow)
+                decrypted_secret = integration.config.get("credentials") or integration.config.get("api_key")
+                if not decrypted_secret:
+                    raise ValueError(
+                        f"No credential found for integration {integration.id}: "
+                        "neither ExternalCredential row nor config.credentials present"
+                    )
+                logger.info(
+                    f"Using inline config credentials for {server_name}",
+                    extra={"server": server_name}
+                )
 
             # Build MCPServerConfig
-            base_url = integration.config.get("base_url", "")
+            # URL can be under base_url or server_url (older integrations used server_url)
+            base_url = integration.config.get("base_url") or integration.config.get("server_url", "")
             if not base_url:
-                raise ValueError(f"Integration {integration.id} missing base_url in config")
+                raise ValueError(f"Integration {integration.id} missing base_url/server_url in config")
 
             timeout = integration.config.get("timeout", 30)
 
@@ -196,11 +209,9 @@ class TenantMCPConnectionManager:
                 timeout_seconds=timeout
             )
 
-            # Build authentication headers from decrypted credentials
+            # Build authentication headers
             auth_headers = {}
-            if integration.auth_type == "api_key":
-                auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
-            elif integration.auth_type == "oauth":
+            if integration.auth_type in ("api_key", "oauth", "pat"):
                 auth_headers["Authorization"] = f"Bearer {decrypted_secret}"
             # For other auth types, headers can be extended as needed
 
@@ -233,8 +244,10 @@ class TenantMCPConnectionManager:
         # Store client
         self.tenant_clients[integration.id] = client
 
-        # Register with global registry
+        # Register with global registry and invalidate tool catalog cache
+        # so the next agent run rebuilds the catalog including this new client
         self.registry.clients[server_name] = client
+        self.registry._discovery_cache = None
 
         logger.info(
             f"Connected tenant integration: {server_name}",

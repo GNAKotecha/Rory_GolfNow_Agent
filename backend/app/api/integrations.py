@@ -15,6 +15,18 @@ from app.services.oauth_service import OAuthService
 from app.services.credential_service import CredentialService
 from gateway_mcp.core.credentials import CredentialEncryption
 
+
+def get_tenant_mcp_manager():
+    """Dependency to get the global tenant MCP connection manager."""
+    from app.main import get_global_tenant_mcp_manager
+    manager = get_global_tenant_mcp_manager()
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Tenant MCP manager not initialized"
+        )
+    return manager
+
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 # Valid auth types
@@ -60,11 +72,12 @@ class TenantMCPIntegrationResponse(BaseModel):
 
 # REST Endpoints
 @router.post("", response_model=TenantMCPIntegrationResponse, status_code=status.HTTP_201_CREATED)
-def create_integration(
+async def create_integration(
     integration_data: TenantMCPIntegrationCreate,
     current_user: User = Depends(get_approved_user),
     tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
+    manager = Depends(get_tenant_mcp_manager),
 ):
     """Create a new MCP integration for the authenticated tenant."""
     # Validate auth_type
@@ -104,6 +117,21 @@ def create_integration(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Integration '{integration_data.integration_name}' already exists for this tenant"
         )
+
+    # Auto-connect if enabled and has credentials
+    if integration.is_enabled:
+        # Check if credentials exist
+        credential = db.query(ExternalCredential).filter(
+            ExternalCredential.integration_id == integration.id
+        ).first()
+
+        if credential:
+            try:
+                await manager.connect_integration(integration.id)
+            except Exception as e:
+                # Log error but don't fail the request
+                import logging
+                logging.error(f"Failed to auto-connect integration {integration.id}: {e}")
 
     return integration
 
@@ -187,11 +215,12 @@ def update_integration(
 
 
 @router.delete("/{integration_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_integration(
+async def delete_integration(
     integration_id: int,
     current_user: User = Depends(get_approved_user),
     tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
+    manager = Depends(get_tenant_mcp_manager),
 ):
     """Remove an MCP integration (must belong to tenant)."""
     integration = db.query(TenantMCPIntegration).filter(
@@ -205,16 +234,24 @@ def delete_integration(
             detail="Integration not found"
         )
 
+    # Disconnect before deleting
+    try:
+        await manager.disconnect_integration(integration_id)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to disconnect integration {integration_id} before delete: {e}")
+
     db.delete(integration)
     db.commit()
 
 
 @router.post("/{integration_id}/enable", response_model=TenantMCPIntegrationResponse)
-def enable_integration(
+async def enable_integration(
     integration_id: int,
     current_user: User = Depends(get_approved_user),
     tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
+    manager = Depends(get_tenant_mcp_manager),
 ):
     """Enable an MCP integration (must belong to tenant)."""
     integration = db.query(TenantMCPIntegration).filter(
@@ -232,15 +269,24 @@ def enable_integration(
     db.commit()
     db.refresh(integration)
 
+    # Connect the integration
+    try:
+        await manager.connect_integration(integration_id)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to connect integration {integration_id} after enable: {e}")
+        # Don't fail the request - integration is enabled in DB even if connection failed
+
     return integration
 
 
 @router.post("/{integration_id}/disable", response_model=TenantMCPIntegrationResponse)
-def disable_integration(
+async def disable_integration(
     integration_id: int,
     current_user: User = Depends(get_approved_user),
     tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
+    manager = Depends(get_tenant_mcp_manager),
 ):
     """Disable an MCP integration (must belong to tenant)."""
     integration = db.query(TenantMCPIntegration).filter(
@@ -258,15 +304,23 @@ def disable_integration(
     db.commit()
     db.refresh(integration)
 
+    # Disconnect the integration
+    try:
+        await manager.disconnect_integration(integration_id)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to disconnect integration {integration_id} after disable: {e}")
+
     return integration
 
 
 @router.post("/{integration_id}/health")
-def health_check(
+async def health_check(
     integration_id: int,
     current_user: User = Depends(get_approved_user),
     tenant_id: int = Depends(get_current_user_tenant_id),
     db: Session = Depends(get_db),
+    manager = Depends(get_tenant_mcp_manager),
 ):
     """Perform health check on an MCP integration (must belong to tenant)."""
     integration = db.query(TenantMCPIntegration).filter(
@@ -280,12 +334,17 @@ def health_check(
             detail="Integration not found"
         )
 
-    # Basic health check: verify integration exists and is configured
+    # Get connection status from manager
+    connection_status = await manager.get_connection_status(integration_id)
+
     return {
-        "status": "healthy" if integration.is_enabled else "disabled",
+        "status": "healthy" if (integration.is_enabled and connection_status.get("healthy")) else "degraded",
         "integration_id": integration.id,
         "integration_name": integration.integration_name,
         "is_enabled": integration.is_enabled,
+        "connected": connection_status.get("connected", False),
+        "healthy": connection_status.get("healthy", False),
+        "error": connection_status.get("error"),
         "checked_at": datetime.utcnow().isoformat()
     }
 

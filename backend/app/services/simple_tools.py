@@ -7,12 +7,22 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+# Module-level memory keyed by session_id so store/retrieve work across
+# multiple requests in the same chat session (AgenticService is per-request).
+_SESSION_MEMORY: Dict[int, Dict[str, Any]] = {}
+
 
 class MemoryStore:
     """Simple in-memory key-value store for agent memory."""
 
     def __init__(self):
         self._store: Dict[str, Any] = {}
+
+    def attach_session(self, session_id: int) -> None:
+        """Point this store at the persistent per-session dict."""
+        if session_id not in _SESSION_MEMORY:
+            _SESSION_MEMORY[session_id] = {}
+        self._store = _SESSION_MEMORY[session_id]
 
     def store(self, key: str, value: str) -> str:
         """Store a value."""
@@ -97,6 +107,7 @@ class SimpleTool:
         self._db_session = db_session
         self._tenant_id = tenant_id
         self._session_id = session_id
+        self.memory.attach_session(session_id)
 
     @staticmethod
     def get_tool_definitions() -> List[Dict[str, Any]]:
