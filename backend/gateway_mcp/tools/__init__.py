@@ -17,10 +17,8 @@ Agent Memory Tools (4):
 - store_session_summary
 - get_historical_context
 
-Atlassian Tools (3):
-- create_ticket
-- get_ticket_status
-- add_comment
+External MCP tools (Jira, Atlassian, etc.) are proxied dynamically based on
+connections added via the admin UI — no hardcoded tool schemas required.
 """
 
 from typing import Any, Optional
@@ -179,9 +177,6 @@ from gateway_mcp.tools.api import API_TOOLS
 # Import Agent Memory tools
 from gateway_mcp.tools.memory import MEMORY_TOOLS
 
-# Import Atlassian/Jira tools
-from gateway_mcp.tools.jira import JIRA_TOOLS
-
 # Import Teesheet tools (low-level access)
 from gateway_mcp.tools.teesheet import TEESHEET_TOOLS
 
@@ -222,43 +217,29 @@ def create_full_registry() -> ToolRegistry:
     Create a registry with all Gateway tools registered.
 
     BRS Tools (7):
-    - create_club
-    - get_club_by_name
-    - verify_club_setup
-    - get_club_config
-    - create_admin_user
-    - authenticate_club (secure credential handling)
-    - call_internal_api
+    - create_club, get_club_by_name, verify_club_setup, get_club_config,
+      create_admin_user, authenticate_club, call_internal_api
 
     Agent Memory Tools (4):
-    - get_working_memory
-    - update_working_memory
-    - store_session_summary
-    - get_historical_context
+    - get_working_memory, update_working_memory, store_session_summary,
+      get_historical_context
 
     Teesheet Tools (4):
-    - list_routes (discover API routes)
-    - call_api (generic HTTP client)
-    - run_sql (read-only SQL queries)
-    - get_config (configuration lookup)
+    - list_routes, call_api, run_sql, get_config
 
-    Atlassian Tools (3):
-    - create_ticket
-    - get_ticket_status
-    - add_comment
+    External MCP tools are proxied dynamically from tenant-registered connections.
 
     Returns:
-        ToolRegistry with all 18 tools
+        ToolRegistry with all built-in tools
     """
     registry = create_brs_registry()
     registry.register_all(MEMORY_TOOLS)
     registry.register_all(TEESHEET_TOOLS)
-    registry.register_all(JIRA_TOOLS)
     return registry
 
 
-# All tools combined
-ALL_TOOLS = BRS_TOOLS + AGENT_MEMORY_TOOLS + JIRA_TOOLS
+# All built-in tools combined
+ALL_TOOLS = BRS_TOOLS + AGENT_MEMORY_TOOLS
 
 
 # Exports
@@ -283,7 +264,6 @@ __all__ = [
     # Agent Memory tool collections
     "AGENT_MEMORY_TOOLS",
     "MEMORY_TOOLS",
-    # Atlassian tool collections
-    "JIRA_TOOLS",
+    # All built-in tools
     "ALL_TOOLS",
 ]

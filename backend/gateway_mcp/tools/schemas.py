@@ -4,9 +4,8 @@ Gateway MCP Schemas
 Pydantic models for all Gateway tool inputs and outputs.
 
 This module adapts Phase 2 BRS tool schemas and adds new schemas for:
-- BRS tools (6): create_club, get_club_by_name, get_club_config, 
+- BRS tools (6): create_club, get_club_by_name, get_club_config,
                  create_admin_user, call_internal_api, verify_club_setup
-- Atlassian tools (3): create_ticket, get_ticket_status, add_comment
 
 Schemas define the contract between the agent and the Gateway.
 Input schemas are validated before handler execution.
@@ -23,13 +22,6 @@ from pydantic import BaseModel, Field, field_validator
 # ============================================================================
 # Enums
 # ============================================================================
-
-class IssueType(str, Enum):
-    """Jira issue types."""
-    TASK = "Task"
-    BUG = "Bug"
-    STORY = "Story"
-
 
 class AdminRole(str, Enum):
     """Admin user roles."""
@@ -259,107 +251,6 @@ class AuthenticateClubOutput(BaseModel):
     )
 
 
-# ============================================================================
-# Atlassian Tool Schemas (3 tools)
-# ============================================================================
-
-# --- create_ticket ---
-
-class CreateTicketInput(BaseModel):
-    """Input for create_ticket tool."""
-    
-    project_key: str = Field(
-        ...,
-        description="Jira project key (e.g., 'GOLF')",
-        min_length=1,
-        max_length=10,
-    )
-    summary: str = Field(
-        ...,
-        description="Ticket summary/title",
-        min_length=1,
-        max_length=255,
-    )
-    description: Optional[str] = Field(
-        None,
-        description="Ticket description (markdown supported)",
-        max_length=32768,  # 32KB
-    )
-    issue_type: IssueType = Field(
-        default=IssueType.TASK,
-        description="Issue type (Task, Bug, Story)",
-    )
-    labels: list[str] = Field(
-        default_factory=list,
-        description="Labels to apply",
-    )
-    
-    @field_validator("project_key")
-    @classmethod
-    def validate_project_key(cls, v: str) -> str:
-        return v.upper()
-
-
-class CreateTicketOutput(BaseModel):
-    """Output for create_ticket tool."""
-    
-    ticket_id: str = Field(..., description="Jira internal ticket ID")
-    ticket_key: str = Field(..., description="Ticket key (e.g., 'GOLF-123')")
-    url: str = Field(..., description="URL to view ticket")
-    status: str = Field(..., description="Initial ticket status")
-    created_at: datetime = Field(..., description="Creation timestamp")
-
-
-# --- get_ticket_status ---
-
-class GetTicketStatusInput(BaseModel):
-    """Input for get_ticket_status tool."""
-    
-    ticket_key: str = Field(
-        ...,
-        description="Ticket key (e.g., 'GOLF-123')",
-        min_length=1,
-    )
-
-
-class GetTicketStatusOutput(BaseModel):
-    """Output for get_ticket_status tool. Returns None values if not found."""
-    
-    ticket_key: Optional[str] = Field(None, description="Ticket key")
-    summary: Optional[str] = Field(None, description="Ticket summary")
-    status: Optional[str] = Field(None, description="Current status")
-    assignee: Optional[str] = Field(None, description="Assignee email/name")
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
-    url: Optional[str] = Field(None, description="URL to view ticket")
-    found: bool = Field(False, description="Whether ticket was found")
-
-
-# --- add_comment ---
-
-class AddCommentInput(BaseModel):
-    """Input for add_comment tool."""
-    
-    ticket_key: str = Field(
-        ...,
-        description="Ticket key (e.g., 'GOLF-123')",
-        min_length=1,
-    )
-    comment_body: str = Field(
-        ...,
-        description="Comment text (markdown supported)",
-        min_length=1,
-        max_length=32768,  # 32KB
-    )
-
-
-class AddCommentOutput(BaseModel):
-    """Output for add_comment tool."""
-    
-    ticket_key: str = Field(..., description="Ticket key")
-    comment_id: str = Field(..., description="Comment ID")
-    author: str = Field(..., description="Comment author")
-    created_at: datetime = Field(..., description="Comment creation timestamp")
-
 
 # ============================================================================
 # Phase 2 Schema Adapters
@@ -407,7 +298,6 @@ except ImportError:
 
 __all__ = [
     # Enums
-    "IssueType",
     "AdminRole",
     "InternalApiOperation",
     # BRS Input schemas
@@ -417,7 +307,7 @@ __all__ = [
     "CreateAdminUserInput",
     "CallInternalApiInput",
     "VerifyClubSetupInput",
-    "AuthenticateClubInput",  # Replaces GetSuperuserApiKeyInput (secure)
+    "AuthenticateClubInput",
     # BRS Output schemas
     "CreateClubOutput",
     "GetClubByNameOutput",
@@ -425,15 +315,7 @@ __all__ = [
     "CreateAdminUserOutput",
     "CallInternalApiOutput",
     "VerifyClubSetupOutput",
-    "AuthenticateClubOutput",  # Replaces GetSuperuserApiKeyOutput (secure)
-    # Atlassian Input schemas
-    "CreateTicketInput",
-    "GetTicketStatusInput",
-    "AddCommentInput",
-    # Atlassian Output schemas
-    "CreateTicketOutput",
-    "GetTicketStatusOutput",
-    "AddCommentOutput",
+    "AuthenticateClubOutput",
     # Phase 2 adapters
     "BRSTeesheetInitOutput",
     "BRSSuperuserCreateOutput",
