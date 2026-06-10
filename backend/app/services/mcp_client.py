@@ -40,6 +40,11 @@ TOOL_PROVIDER_MAP: Dict[str, str] = {
     "get_jira_issue": "Jira",
     "update_jira_issue": "Jira",
     "search_jira": "Jira",
+    # Gateway MCP Jira tools
+    "create_ticket": "Jira",
+    "get_ticket_status": "Jira",
+    "add_comment": "Jira",
+    "edit_ticket": "Jira",
 }
 
 
@@ -817,7 +822,10 @@ class MCPClient:
             return "upstream_error"
         
         # Auth errors
-        if any(p in msg_lower for p in ["401", "unauthorized", "invalid token", "expired token"]):
+        if any(p in msg_lower for p in [
+            "401", "unauthorized", "invalid token", "expired token",
+            "missing authorization", "authorization header", "not authorized",
+        ]):
             return "auth_failure"
         
         if any(p in msg_lower for p in ["403", "forbidden", "permission denied"]):

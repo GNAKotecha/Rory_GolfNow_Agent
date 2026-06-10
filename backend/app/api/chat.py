@@ -1,5 +1,5 @@
 """Chat endpoint for LLM completions."""
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import uuid
 
@@ -27,7 +27,7 @@ from app.api.auth_deps import get_approved_user
 from app.services.workflow_classifier import classify_workflow
 from app.services.workflow_analytics import log_unknown_workflow
 from app.services.rate_limiter import get_rate_limiter, RateLimitConfig
-from app.services.mcp_health import get_health_checker, ServerRequirement
+from app.services.mcp_health import get_health_checker, ServerRequirement, HealthStatus
 from app.services.run_state import (
     RunState, ApprovalService, get_approval_service,
     PendingToolCall, ApprovalDecision,
@@ -153,7 +153,17 @@ async def initialize_mcp_infrastructure() -> MCPToolRegistry:
 
 
 async def get_mcp_registry() -> MCPToolRegistry:
-    """Get or create MCP registry with health checks."""
+    """Return the global MCP registry (shared with tenant manager).
+
+    Using the global registry ensures tenant-registered clients (GitHub, Jira, etc.)
+    are visible to AgenticService. The local _mcp_registry singleton is kept as a
+    fallback for environments where main.py lifespan hasn't run (e.g. tests).
+    """
+    from app.main import get_global_mcp_registry
+    global_registry = get_global_mcp_registry()
+    if global_registry is not None:
+        return global_registry
+    # Fallback: create local registry (tests / standalone usage)
     global _mcp_registry
     if _mcp_registry is None:
         return await initialize_mcp_infrastructure()
@@ -521,6 +531,25 @@ async def chat(
             """Get approval policy for a tool."""
             return TOOL_APPROVAL_POLICIES.get(tool_name)
         
+        # Register any tenant MCP servers with the health checker that aren't yet known.
+        # Tenant clients are added to the global registry after startup, so the health
+        # checker (populated during initialize_mcp_infrastructure) misses them.
+        known_servers = set(health_checker.get_all_server_statuses().keys())
+        for server_name, client in mcp_registry.clients.items():
+            if server_name not in known_servers:
+                health_checker.register_server(
+                    server_name=server_name,
+                    requirement=ServerRequirement.OPTIONAL,
+                )
+                # Mark healthy with discovered tools so check_tool_for_execution passes
+                if client._tools_cache:
+                    tool_names = [t.name for t in client._tools_cache]
+                    state = health_checker._server_states.get(server_name)
+                    if state:
+                        state.status = HealthStatus.HEALTHY
+                        state.discovered_tools = tool_names
+                        state.last_success_time = datetime.now(timezone.utc)
+
         agentic_service = AgenticService(
             ollama_client=ollama_client,
             mcp_registry=mcp_registry,
@@ -568,8 +597,8 @@ async def chat(
             model=resolved_model,
         )
 
-        # Check for errors
-        if agentic_result.error:
+        # Check for errors — skip for ask_user (controlled pause, error=reason is a user message not a failure)
+        if agentic_result.error and agentic_result.stopped_reason != "ask_user":
             logger.error(
                 f"Agentic workflow failed: {agentic_result.error}",
                 extra={

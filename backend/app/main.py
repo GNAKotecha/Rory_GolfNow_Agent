@@ -66,6 +66,31 @@ async def lifespan(app: FastAPI):
     await _global_tenant_mcp_manager.initialize()
     logging.info("Tenant MCP connection manager initialized")
 
+    # Initialize health checker with core MCP servers so discovered_tools is
+    # populated before the first request. Without this, the per-request code
+    # registers gateway-mcp with an empty _tools_cache and the health checker
+    # blocks every tool execution with "Tool not found on any server".
+    from app.services.mcp_health import get_health_checker, ServerRequirement, HealthStatus
+    _health_checker = get_health_checker()
+    for server_name, client in _global_mcp_registry.clients.items():
+        requirement = (
+            ServerRequirement.REQUIRED if "gateway" in server_name.lower()
+            else ServerRequirement.OPTIONAL
+        )
+        _health_checker.register_server(server_name=server_name, requirement=requirement)
+        try:
+            tools = await client.list_tools(force_refresh=True)
+            state = _health_checker._server_states.get(server_name)
+            if state and tools:
+                state.status = HealthStatus.HEALTHY
+                state.discovered_tools = [t.name for t in tools]
+                from datetime import datetime, timezone
+                state.last_success_time = datetime.now(timezone.utc)
+            logging.info(f"Health checker: {server_name} registered with {len(tools)} tools")
+        except Exception as e:
+            logging.warning(f"Health checker: {server_name} probe failed at startup: {e}")
+    logging.info("Health checker initialized for core MCP servers")
+
     yield
 
     # Shutdown

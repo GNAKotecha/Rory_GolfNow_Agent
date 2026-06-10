@@ -193,6 +193,7 @@ def classify_error_from_category(error_category: Optional[str], http_status: Opt
         
         # Credential/auth issues
         "auth_failure": ErrorType.AUTH_FAILURE,
+        "auth_required": ErrorType.AUTH_FAILURE,
         "permission_denied": ErrorType.AUTH_FAILURE,  # Legacy category
         
         # Validation issues
@@ -244,9 +245,10 @@ def classify_error_from_message(error_message: str, http_status: Optional[int] =
     # e.g., "Upstream service error: API returned 401" should be AUTH_FAILURE, not RESOURCE_EXHAUSTED
     # =========================================================================
     if any(term in msg_lower for term in [
-        "unauthorized", "authentication", "401", "403", 
+        "unauthorized", "authentication", "401", "403",
         "forbidden", "invalid token", "expired token",
-        "invalid api key", "missing credentials", "not authenticated"
+        "invalid api key", "missing credentials", "not authenticated",
+        "missing authorization", "authorization header", "not authorized",
     ]):
         return ErrorType.AUTH_FAILURE
     
