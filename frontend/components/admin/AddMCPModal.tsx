@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { TenantMCPIntegrationCreate } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { TenantMCPIntegration, TenantMCPIntegrationCreate, TenantMCPIntegrationUpdate } from '@/lib/api';
 import { getMCPFormDefaults } from '@/lib/formDefaults';
 
 interface AddMCPModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (data: TenantMCPIntegrationCreate) => Promise<void>;
+  onUpdate?: (id: number, data: TenantMCPIntegrationUpdate) => Promise<void>;
+  editIntegration?: TenantMCPIntegration | null;
   loading: boolean;
 }
 
@@ -17,17 +19,50 @@ const AUTH_TYPES = [
   { value: 'pat', label: 'Personal Access Token' },
 ];
 
-export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPModalProps) {
+export default function AddMCPModal({
+  isOpen,
+  onClose,
+  onAdd,
+  onUpdate,
+  editIntegration,
+  loading,
+}: AddMCPModalProps) {
+  const isEditMode = !!editIntegration;
   const [formData, setFormData] = useState(getMCPFormDefaults());
   const [error, setError] = useState<string | null>(null);
 
+  // Populate form when editing
+  useEffect(() => {
+    if (editIntegration) {
+      setFormData({
+        integration_name: editIntegration.integration_name,
+        auth_type: editIntegration.auth_type as 'oauth' | 'api_key' | 'pat',
+        config: { ...editIntegration.config, credentials: '' },
+      });
+    } else {
+      setFormData(getMCPFormDefaults());
+    }
+    setError(null);
+  }, [editIntegration, isOpen]);
+
   if (!isOpen) return null;
+
+  const credentialLabel = {
+    api_key: 'API Key',
+    pat: 'Personal Access Token',
+    oauth: 'OAuth Credentials',
+  }[formData.auth_type] ?? 'Credentials';
+
+  const credentialPlaceholder = {
+    oauth: 'client_id:client_secret (optional for some MCPs)',
+    api_key: 'Your API key',
+    pat: 'Your personal access token',
+  }[formData.auth_type] ?? '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate required fields
     if (!formData.integration_name.trim()) {
       setError('Connection name is required');
       return;
@@ -37,21 +72,27 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
       return;
     }
 
-    // Validate credentials are provided for selected auth type
-    if (!formData.config?.credentials?.trim()) {
-      setError('Credentials are required for the selected authentication method');
-      return;
-    }
-
     try {
-      await onAdd({
-        integration_name: formData.integration_name,
-        auth_type: formData.auth_type,
-        config: formData.config,
-      });
+      if (isEditMode && onUpdate && editIntegration) {
+        const updatePayload: TenantMCPIntegrationUpdate = {
+          integration_name: formData.integration_name,
+          config: { ...formData.config },
+        };
+        // Only include credentials if the user typed something new
+        if (!formData.config?.credentials?.trim()) {
+          delete updatePayload.config!.credentials;
+        }
+        await onUpdate(editIntegration.id, updatePayload);
+      } else {
+        await onAdd({
+          integration_name: formData.integration_name,
+          auth_type: formData.auth_type,
+          config: formData.config,
+        });
+      }
       setFormData(getMCPFormDefaults());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add connection');
+      setError(err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'add'} connection`);
     }
   };
 
@@ -66,9 +107,13 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Add MCP Connection</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {isEditMode ? 'Edit MCP Connection' : 'Add MCP Connection'}
+          </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Configure a new external MCP server connection
+            {isEditMode
+              ? 'Update the configuration for this MCP server'
+              : 'Configure a new external MCP server connection'}
           </p>
         </div>
 
@@ -87,19 +132,12 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
             <input
               type="text"
               value={formData.integration_name}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  integration_name: e.target.value,
-                })
-              }
+              onChange={(e) => setFormData({ ...formData, integration_name: e.target.value })}
               placeholder="e.g., github-api"
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Unique identifier for this MCP connection
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Unique identifier for this MCP connection</p>
           </div>
 
           {/* Server URL */}
@@ -109,36 +147,25 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
               type="url"
               value={formData.config?.server_url || ''}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  config: {
-                    ...formData.config,
-                    server_url: e.target.value,
-                  },
-                })
+                setFormData({ ...formData, config: { ...formData.config, server_url: e.target.value } })
               }
               placeholder="http://localhost:3000 or https://api.example.com"
               className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Full URL to the MCP server endpoint
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Full URL to the MCP server endpoint</p>
           </div>
 
-          {/* Auth Type */}
+          {/* Auth Type — read-only in edit mode */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-900">Authentication Type</label>
             <select
               value={formData.auth_type}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  auth_type: e.target.value as 'oauth' | 'api_key' | 'pat',
-                })
+                setFormData({ ...formData, auth_type: e.target.value as 'oauth' | 'api_key' | 'pat' })
               }
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              disabled={loading}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+              disabled={loading || isEditMode}
             >
               {AUTH_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -147,43 +174,32 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Select how to authenticate with the MCP server
+              {isEditMode ? 'Auth type cannot be changed after creation' : 'Select how to authenticate with the MCP server'}
             </p>
           </div>
 
-          {/* Credentials */}
+          {/* Credentials — always optional */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-900">
-              {formData.auth_type === 'api_key' && 'API Key'}
-              {formData.auth_type === 'pat' && 'Personal Access Token'}
-              {formData.auth_type === 'oauth' && 'OAuth Client ID:Secret'}
+              {credentialLabel}
+              <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
             </label>
-              <input
-                type="password"
-                value={formData.config?.credentials || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    config: {
-                      ...formData.config,
-                      credentials: e.target.value,
-                    },
-                  })
-                }
-                placeholder={
-                  formData.auth_type === 'oauth'
-                    ? 'client_id:client_secret'
-                    : formData.auth_type === 'api_key'
-                      ? 'Your API key'
-                      : 'Your personal access token'
-                }
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Credentials are encrypted and stored securely
-              </p>
-            </div>
+            <input
+              type="password"
+              value={formData.config?.credentials || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, config: { ...formData.config, credentials: e.target.value } })
+              }
+              placeholder={isEditMode ? 'Leave blank to keep existing credentials' : credentialPlaceholder}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              disabled={loading}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {isEditMode
+                ? 'Credentials are encrypted and stored securely. Leave blank to keep current value.'
+                : 'Credentials are encrypted and stored securely. Not required for all MCP types.'}
+            </p>
+          </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-4">
@@ -200,7 +216,9 @@ export default function AddMCPModal({ isOpen, onClose, onAdd, loading }: AddMCPM
               disabled={loading}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Adding...' : 'Add Connection'}
+              {loading
+                ? isEditMode ? 'Saving...' : 'Adding...'
+                : isEditMode ? 'Save Changes' : 'Add Connection'}
             </button>
           </div>
         </form>

@@ -118,6 +118,13 @@ interface HealthCheckResponse {
   checked_at: string;
 }
 
+interface MCPToolSchema {
+  name: string;
+  description: string;
+  server: string;
+  inputSchema: Record<string, unknown>;
+}
+
 interface TracePreview {
   trace_id: string;
   user_id?: string | null;
@@ -432,6 +439,16 @@ class ApiClient {
     return this.checkIntegrationHealth(integrationId);
   }
 
+  async listAvailableTools(): Promise<MCPToolSchema[]> {
+    const response = await this.request<{ tools: Array<{ name: string; description: string; server: string; input_schema: Record<string, unknown> }> }>('/api/tools');
+    return (response.tools || []).map((t) => ({
+      name: t.name,
+      description: t.description,
+      server: t.server,
+      inputSchema: t.input_schema,
+    }));
+  }
+
   // Traces endpoints
   async getTraces(limit: number = 50, offset: number = 0): Promise<TraceListResponse> {
     const params = new URLSearchParams();
@@ -623,6 +640,7 @@ export type {
   TenantMCPIntegrationCreate,
   TenantMCPIntegrationUpdate,
   HealthCheckResponse,
+  MCPToolSchema,
   TracePreview,
   TraceDetail,
   SpanDetail,

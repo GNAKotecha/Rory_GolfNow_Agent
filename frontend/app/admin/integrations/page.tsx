@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient, TenantMCPIntegration, TenantMCPIntegrationCreate, HealthCheckResponse } from '@/lib/api';
+import { apiClient, TenantMCPIntegration, TenantMCPIntegrationCreate, TenantMCPIntegrationUpdate, HealthCheckResponse } from '@/lib/api';
 import IntegrationFiltersPanel from '@/components/admin/IntegrationFiltersPanel';
 import IntegrationListTable from '@/components/admin/IntegrationListTable';
 import IntegrationDetailModal from '@/components/admin/IntegrationDetailModal';
 import IntegrationCreateModal from '@/components/admin/IntegrationCreateModal';
 import CredentialSetupModal from '@/components/admin/CredentialSetupModal';
+import EditMCPModal from '@/components/admin/EditMCPModal';
 
 const DEFAULT_LIMIT = 10;
 
@@ -31,6 +32,7 @@ export default function IntegrationsPage() {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showCredentialModal, setShowCredentialModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<TenantMCPIntegration | null>(null);
   const [selectedAuthType, setSelectedAuthType] = useState<'oauth' | 'api_key' | 'pat'>('api_key');
@@ -130,10 +132,19 @@ export default function IntegrationsPage() {
 
   const handleEditIntegration = (integration: TenantMCPIntegration) => {
     setSelectedIntegration(integration);
-    setShowDetailModal(true);
-    // Fetch health status if not already cached
-    if (!(integration.id in healthStatus)) {
-      fetchHealthStatus(integration.id);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (id: number, data: TenantMCPIntegrationUpdate) => {
+    setOperationLoading(true);
+    try {
+      await apiClient.updateIntegration(id, data);
+      setSuccessMessage('Integration updated successfully');
+      setShowEditModal(false);
+      setSelectedIntegration(null);
+      await fetchIntegrations();
+    } finally {
+      setOperationLoading(false);
     }
   };
 
@@ -362,6 +373,17 @@ export default function IntegrationsPage() {
           isLoading={operationLoading || selectedHealthId === selectedIntegration.id}
         />
       )}
+
+      <EditMCPModal
+        isOpen={showEditModal}
+        integration={selectedIntegration}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedIntegration(null);
+        }}
+        onSave={handleSaveEdit}
+        loading={operationLoading}
+      />
 
       {showCredentialModal && selectedIntegration && (
         <CredentialSetupModal

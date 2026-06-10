@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient, TenantMCPIntegration, TenantMCPIntegrationCreate } from '@/lib/api';
+import { apiClient, TenantMCPIntegration, TenantMCPIntegrationCreate, TenantMCPIntegrationUpdate } from '@/lib/api';
 import MCPConnectionsList from '@/components/admin/MCPConnectionsList';
 import AddMCPModal from '@/components/admin/AddMCPModal';
 import TestConnectionModal from '@/components/admin/TestConnectionModal';
@@ -26,6 +26,7 @@ export default function MCPConnectionsPage() {
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editConnection, setEditConnection] = useState<TenantMCPIntegration | null>(null);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showDiscoverModal, setShowDiscoverModal] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<TenantMCPIntegration | null>(null);
@@ -89,6 +90,24 @@ export default function MCPConnectionsPage() {
       setError(
         err instanceof Error ? err.message : 'Failed to add MCP connection'
       );
+    } finally {
+      setOperationLoading(false);
+    }
+  };
+
+  const handleEditConnection = (connection: TenantMCPIntegration) => {
+    setEditConnection(connection);
+  };
+
+  const handleUpdateConnection = async (id: number, data: TenantMCPIntegrationUpdate) => {
+    setOperationLoading(true);
+    try {
+      await apiClient.updateIntegration(id, data);
+      setSuccessMessage('MCP connection updated successfully');
+      setEditConnection(null);
+      await fetchConnections();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update MCP connection');
     } finally {
       setOperationLoading(false);
     }
@@ -226,6 +245,7 @@ export default function MCPConnectionsPage() {
               connections={connections}
               onTest={handleTestConnection}
               onDiscoverTools={handleDiscoverTools}
+              onEdit={handleEditConnection}
               onDelete={handleDeleteConnection}
               onToggleStatus={handleToggleStatus}
               loading={loading || operationLoading}
@@ -269,9 +289,11 @@ export default function MCPConnectionsPage() {
 
       {/* Modals */}
       <AddMCPModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        isOpen={showAddModal || editConnection !== null}
+        onClose={() => { setShowAddModal(false); setEditConnection(null); }}
         onAdd={handleAddConnection}
+        onUpdate={handleUpdateConnection}
+        editIntegration={editConnection}
         loading={operationLoading}
       />
 

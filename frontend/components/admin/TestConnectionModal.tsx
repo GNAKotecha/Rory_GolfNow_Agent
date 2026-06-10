@@ -101,7 +101,7 @@ export default function TestConnectionModal({
                       </div>
                       <p className="text-sm text-gray-600 mt-2">{testStatus.message}</p>
                       <p className="text-xs text-gray-500 mt-2">
-                        Tested: {new Date(testStatus.timestamp).toLocaleString()}
+                        Tested: {new Date(testStatus.timestamp.endsWith('Z') || testStatus.timestamp.includes('+') ? testStatus.timestamp : testStatus.timestamp + 'Z').toLocaleString()}
                       </p>
                     </div>
 

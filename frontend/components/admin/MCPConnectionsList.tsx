@@ -6,13 +6,19 @@ interface MCPConnectionsListProps {
   connections: TenantMCPIntegration[];
   onTest: (connection: TenantMCPIntegration) => void;
   onDiscoverTools: (connection: TenantMCPIntegration) => void;
+  onEdit: (connection: TenantMCPIntegration) => void;
   onDelete: (connection: TenantMCPIntegration) => void;
   onToggleStatus: (connection: TenantMCPIntegration) => void;
   loading: boolean;
 }
 
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
+  // Backend returns naive UTC strings without 'Z'; append it so browsers parse correctly
+  const normalized = dateString && !dateString.endsWith('Z') && !dateString.includes('+')
+    ? dateString + 'Z'
+    : dateString;
+  const date = new Date(normalized);
+  if (isNaN(date.getTime())) return dateString;
   return date.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -39,6 +45,7 @@ export default function MCPConnectionsList({
   connections,
   onTest,
   onDiscoverTools,
+  onEdit,
   onDelete,
   onToggleStatus,
   loading,
@@ -108,6 +115,13 @@ export default function MCPConnectionsList({
                   className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Tools
+                </button>
+                <button
+                  onClick={() => onEdit(connection)}
+                  disabled={loading}
+                  className="text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Edit
                 </button>
                 <button
                   onClick={() => onToggleStatus(connection)}
